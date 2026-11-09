@@ -1,0 +1,22 @@
+# OtariOptm Configuration Example
+
+otari:
+  base_url: "https://eu.api.otari.ai/api/v1"
+  auth_token: "${OTARI_API_KEY}"  # Read from environment
+
+models:
+  default: "alibaba/qwen-3.5-35b-a3b"
+  fallback: "openai:gpt-4o-mini"
+
+budget:
+  project_cap: 5.00  # USD per project
+  per_user: 2.00     # USD per user
+
+workflows:
+  max_steps: 10
+  max_tokens: 4000
+
+profiles:
+  code-exec: true
+  web-search: true
+  guardrails: true
