@@ -1,7 +1,29 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { Reveal, CountUp, useLiveGuard } from "../../lib/landing/Reveal";
+
+// The 3D routing sphere loads only on the client, after hydration, so the
+// three.js bundle never blocks the first paint.
+const RoutingScene = dynamic(() => import("./RoutingScene"), { ssr: false });
+
+function useRoutingSphere(): boolean {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      try {
+        const c = document.createElement("canvas");
+        if (c.getContext("webgl2") || c.getContext("webgl")) setEnabled(true);
+      } catch {
+        /* no WebGL: keep the SVG fallback */
+      }
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, []);
+  return enabled;
+}
 
 const PRIMARY =
   "group inline-flex h-12 items-center gap-2 rounded-lg bg-[#C6F36B] px-6 text-sm font-semibold text-[#10140A] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50";
@@ -47,6 +69,7 @@ const HEX = "234,150 217,179.4 183,179.4 166,150 183,120.6 217,120.6";
 export default function Hero() {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const live = useLiveGuard();
+  const sphere = useRoutingSphere();
 
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = panelRef.current;
@@ -168,9 +191,15 @@ export default function Hero() {
               GATEWAY LIVE TRACE (DEMO)
             </p>
             <p className="absolute bottom-3 right-4 z-10 font-mono text-[10px] tracking-[0.2em] text-[#293239]">
-              LOOP 4.2S
+              {sphere ? "WEBGL ROUTING SPHERE" : "LOOP 4.2S"}
             </p>
 
+            {sphere && (
+              <div className="absolute inset-0" aria-hidden>
+                <RoutingScene />
+              </div>
+            )}
+            {!sphere && (
             <svg viewBox="0 0 400 300" className="absolute inset-0 h-full w-full" aria-hidden>
               <line x1="16" y1="150" x2="166" y2="150" stroke="#293239" strokeWidth="1" />
               <text x="52" y="136" fill="#929DA5" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="2">REQUEST</text>
@@ -214,6 +243,7 @@ export default function Hero() {
                 </g>
               ))}
             </svg>
+            )}
 
             <div className="absolute bottom-3 left-4 z-10 w-52 rounded-lg border border-[#293239] bg-[#090B0D]/90 px-3 py-2.5">
               <p className="font-mono text-[9px] tracking-[0.2em] text-[#929DA5]">
