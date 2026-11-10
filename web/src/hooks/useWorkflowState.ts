@@ -132,10 +132,15 @@ export function useWorkflowState(options?: { persist?: boolean }): {
       const id = `node-${Date.now().toString(36)}-${counterRef.current}-${Math.random()
         .toString(36)
         .slice(2, 6)}`;
-      const offset = clamp(40 + nodes.length * 30, 0, 620);
+      // Cascade new nodes across the canvas instead of stacking them.
+      const idx = nodes.length;
+      const position = {
+        x: clamp(80 + (idx % 2) * 560, 0, 900),
+        y: 60 + (Math.floor(idx / 2) % 4) * 300,
+      };
       setNodes((prev) => [
         ...prev,
-        { id, type, position: { x: offset, y: offset }, data: defaultNodeData(type) },
+        { id, type, position, data: defaultNodeData(type) },
       ]);
       return id;
     },

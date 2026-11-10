@@ -132,3 +132,10 @@ is a vendored registry tarball in node_modules):
   node-identity accents instead of the landing's lime system.
 - End-to-end re-verified: backend health/budget/models, demo-mode workflow
   run with `{{nodeId}}` substitution, landing 200, studio 200.
+- Studio UX fix: newly added nodes cascaded at 30px offsets and stacked under
+  each other; they now place on a 560x300 grid so every added node is visible.
+  Verified in a real browser run (positions 80/640 grid, run completes,
+  activity feed + budget meter live).
+- Pre-existing: `npm run lint` reports 16 errors / 2 warnings (mostly
+  react-hooks/set-state-in-effect in studio hooks and landing Reveal). Left
+  as-is this pass; production build and TypeScript both pass.
