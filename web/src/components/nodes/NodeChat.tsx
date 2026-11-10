@@ -33,7 +33,7 @@ export function NodeChat(props: any) {
   const title = data.label || NODE_LABELS[type] || "Model Chat";
 
   return (
-    <div className="w-56 rounded-xl border border-indigo-500/60 bg-neutral-900/90 p-3 shadow-xl backdrop-blur">
+    <div className="w-56 rounded-xl border border-[#C6F36B] bg-[#171D22] p-3">
       <Handle
         type="target"
         position={Position.Top}

@@ -1,10 +1,44 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
+
+const plexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "600"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-plex-mono",
+});
+
 export const metadata: Metadata = {
-  title: "OtariOptm - AI-First Cost-Optimized Workflows",
+  title: "OtariOptm - Intelligent AI Orchestration",
   description:
-    "Design, run, and monitor cost-optimized AI workflows with live budget guardrails.",
+    "Route every AI workload to the right model. Control spending, monitor every execution, one unified gateway built on the Otari hosted gateway.",
+  keywords: [
+    "AI gateway",
+    "LLM routing",
+    "cost optimization",
+    "budget enforcement",
+    "AI workflows",
+    "Otari",
+  ],
+  openGraph: {
+    title: "OtariOptm - Intelligent AI Orchestration",
+    description:
+      "Every AI request deserves a smarter route. Less cost, more intelligence, full budget control.",
+    type: "website",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#090B0D",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -14,7 +48,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="bg-neutral-950 text-neutral-100 antialiased">
+      <body
+        className={`${inter.variable} ${plexMono.variable} bg-obsidian text-ice antialiased`}
+      >
         {children}
       </body>
     </html>

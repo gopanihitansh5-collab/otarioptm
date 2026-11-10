@@ -3,6 +3,10 @@ export default function Footer() {
     { label: "otari.ai", href: "https://otari.ai" },
     { label: "github.com/mozilla-ai/otari", href: "https://github.com/mozilla-ai/otari" },
     { label: "dorahacks.io", href: "https://dorahacks.io" },
+    {
+      label: "source",
+      href: "https://github.com/gopanihitansh5-collab/otarioptm",
+    },
   ];
   return (
     <footer className="border-t border-[#293239]">

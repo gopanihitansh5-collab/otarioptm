@@ -33,7 +33,7 @@ export function NodeWebSearch(props: any) {
   const title = data.label || NODE_LABELS[type] || "Web Search";
 
   return (
-    <div className="w-56 rounded-xl border border-sky-500/60 bg-neutral-900/90 p-3 shadow-xl backdrop-blur">
+    <div className="w-56 rounded-xl border border-[#65C9E8] bg-[#171D22] p-3">
       <Handle
         type="target"
         position={Position.Top}

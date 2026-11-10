@@ -36,8 +36,8 @@ export function NodeGuardrails(props: any) {
   return (
     <div
       className={`w-56 rounded-xl border ${
-        blocked ? "border-red-500/70" : "border-amber-500/60"
-      } bg-neutral-900/90 p-3 shadow-xl backdrop-blur`}
+        blocked ? "border-[#E05353]" : "border-[#C6F36B]"
+      } bg-[#171D22] p-3`}
     >
       <Handle
         type="target"

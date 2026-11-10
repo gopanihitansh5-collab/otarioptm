@@ -1,10 +1,41 @@
 @import "tailwindcss";
 
+@theme inline {
+  --color-obsidian: #090b0d;
+  --color-graphite: #111519;
+  --color-elevated: #171d22;
+  --color-steel: #293239;
+  --color-steel-dim: #1c2429;
+  --color-lime: #c6f36b;
+  --color-lime-ink: #10140a;
+  --color-ice: #f3f5f2;
+  --color-silver: #929da5;
+  --color-signal: #65c9e8;
+  --color-amber: #e8b44a;
+  --color-fail: #e05353;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 :root {
-  --accent: #6366f1;
-  --accent-strong: #818cf8;
-  --accent-dim: rgba(99, 102, 241, 0.35);
-  --accent-contrast: #eef2ff;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-activate: 300ms;
+  --dur-reveal: 500ms;
+  --ease-out-sharp: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --accent: #c6f36b;
+  --accent-strong: #e6ff8f;
+  --accent-dim: rgba(198, 243, 107, 0.35);
+  --accent-contrast: #10140a;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #090b0d;
+  color: #f3f5f2;
 }
 
 ::selection {
@@ -50,4 +81,72 @@
 .scroll-thin {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.mono-label {
+  font-family: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.panel {
+  border: 1px solid #293239;
+  background: #171d22;
+  border-radius: 12px;
+  transition:
+    transform var(--dur-base) var(--ease-out-sharp),
+    border-color var(--dur-base) var(--ease-out-sharp);
+}
+
+.panel:hover {
+  transform: translateY(-3px);
+  border-color: rgba(198, 243, 107, 0.5);
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity var(--dur-reveal) var(--ease-out-sharp),
+    transform var(--dur-reveal) var(--ease-out-sharp);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes oo-float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .panel:hover {
+    transform: none;
+  }
 }

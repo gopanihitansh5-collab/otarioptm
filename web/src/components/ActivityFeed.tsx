@@ -59,7 +59,7 @@ export function ActivityFeed({ events }: ActivityFeedProps) {
       </div>
       {events.length === 0 ? (
         <div className="px-4 pb-4 text-[11px] text-neutral-600">
-          No activity yet — run a workflow.
+          No activity yet. Run a workflow.
         </div>
       ) : (
         <ul className="scroll-thin min-h-0 flex-1 space-y-1.5 overflow-y-auto px-4 pb-4">

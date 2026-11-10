@@ -33,7 +33,7 @@ export function NodeCodeExec(props: any) {
   const title = data.label || NODE_LABELS[type] || "Code Exec";
 
   return (
-    <div className="w-56 rounded-xl border border-emerald-500/60 bg-neutral-900/90 p-3 shadow-xl backdrop-blur">
+    <div className="w-56 rounded-xl border border-[#E8B44A] bg-[#171D22] p-3">
       <Handle
         type="target"
         position={Position.Top}

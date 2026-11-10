@@ -82,7 +82,7 @@ export default function Architecture() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="font-mono text-[10px] tracking-[0.25em] text-[#C6F36B]">
-              03 — ARCHITECTURE
+              ARCHITECTURE
             </p>
             <h2 className="mt-3 text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#F3F5F2]">
               One request, six layers, zero blind spots.
