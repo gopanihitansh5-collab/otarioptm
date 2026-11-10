@@ -23,7 +23,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
   {
     title: "Acceptable use",
     body: [
-      "Do not use the demo gateway for unlawful content, to probe or disrupt the service, or to process data you do not have the right to share. Guardrails in the product block configured terms; they are a safety aid, not a guarantee.",
+      "Do not use a gateway running this code for unlawful content, to probe or disrupt services, or to process data you do not have the right to share. Guardrails in the product block configured terms; they are a safety aid, not a guarantee.",
     ],
   },
   {
@@ -56,7 +56,8 @@ export default function TermsPage() {
         Terms of use
       </h1>
       <p className="mt-3 text-sm leading-6 text-[#929DA5]">
-        Last updated November 10, 2026.
+        Draft for the current beta, pending owner review. Last updated
+        November 10, 2026.
       </p>
       <div className="mt-10 space-y-8">
         {SECTIONS.map((s) => (

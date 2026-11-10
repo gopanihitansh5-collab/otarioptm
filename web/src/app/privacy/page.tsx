@@ -11,7 +11,8 @@ const SECTIONS: { title: string; body: string[] }[] = [
   {
     title: "The short version",
     body: [
-      "OtariOptm is a beta hackathon project. It has no accounts, no sign-in, no tracking cookies, and no analytics pipeline. We do not sell, share, or broker any data because there is effectively nothing to sell.",
+      "OtariOptm is a beta hackathon project. It has no accounts, no sign-in, no tracking cookies, and no analytics pipeline, so there is no advertising or analytics profile built about you.",
+      "What does move is what you run: prompts and search queries are sent to the providers described below whenever you execute a workflow. Don't put anything in a workflow you wouldn't send to those providers.",
     ],
   },
   {
@@ -25,13 +26,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     title: "What the gateway processes when you run a workflow",
     body: [
       "When you press Run Workflow, the node definitions and prompts are sent to the gateway you are connected to so it can execute them. Execution events (node, model, token counts, cost, latency) are held in memory by that gateway process to power the activity feed, budget meter and CSV export, and are discarded when the process restarts.",
-      "The hosted demo gateway is operated as a hackathon showcase. Do not paste personal data, credentials or confidential material into demo workflows.",
+      "If you connect to a gateway operated by someone else, treat everything in your workflows as visible to that operator.",
     ],
   },
   {
     title: "Third-party providers",
     body: [
-      "Depending on configuration, a gateway may forward prompts to the Otari hosted gateway, Groq, or Exa/DuckDuckGo (web search node). Those requests are governed by the respective providers' own privacy policies. Without API keys the gateway runs a deterministic local demo tier that sends nothing anywhere.",
+      "Depending on configuration, a gateway may forward prompts to the Otari hosted gateway, Groq, or Exa for search. Those requests carry your prompt or query text and are governed by the respective providers' own privacy policies.",
+      "Without API keys, chat, code-exec and guardrails nodes run locally in the gateway process and make no external calls. The web-search node is the exception: it always queries DuckDuckGo (or Exa, when a key is configured) with your search text, even in demo mode.",
     ],
   },
   {
@@ -64,8 +66,8 @@ export default function PrivacyPage() {
         Privacy &amp; data retention
       </h1>
       <p className="mt-3 text-sm leading-6 text-[#929DA5]">
-        Last updated November 10, 2026. This policy describes the current beta;
-        it will be revised if accounts or hosted persistence are introduced.
+        Draft for the current beta, pending owner review. Last updated
+        November 10, 2026.
       </p>
       <div className="mt-10 space-y-8">
         {SECTIONS.map((s) => (
