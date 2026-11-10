@@ -1,20 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "OtariOptm",
-  description: "AI-First Cost-Optimized Workflow Engine",
+  title: "OtariOptm - AI-First Cost-Optimized Workflows",
+  description:
+    "Design, run, and monitor cost-optimized AI workflows with live budget guardrails.",
 };
 
 export default function RootLayout({
@@ -23,11 +13,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-neutral-950 text-neutral-100 antialiased">
         {children}
       </body>
     </html>

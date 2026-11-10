@@ -1,69 +1,54 @@
 # OtariOptm Quickstart
 
-## Prerequisites
+Ten-minute launch guide. No API keys required — the gateway falls back to a zero-cost demo mode.
 
-- Node.js 18+ and Python 3.12+
-- Otari API key (`OTARI_API_KEY` env var)
-- Docker (optional, for self-hosted gateway)
+## 1. Backend (port 8000)
 
-## 1. Bootstrap the Project
+From the repo root:
 
 ```bash
-git clone https://github.com/your-handle/otarioptm.git
-cd otarioptm
-uv sync --extra dev
+pip install -r requirements.txt
+copy .env.example .env
+python run_server.py
 ```
 
-## 2. Start the OTARI Gateway
+- `.env` keys are optional: `OTARI_API_KEY` (Otari hosted gateway), `GROQ_API_KEY` (Groq free tier). With neither set, the gateway runs in demo mode: deterministic local responses, cost 0, outputs labeled `demo`.
+- Gateway listens on http://localhost:8000. Verify: http://localhost:8000/api/v1/health
 
-```bash
-# Using hosted Otari.ai (recommended for hackathon)
-export OTARI_API_KEY="pk-…from-otari.ai"
-uv run otari serve --config config/example.yml
+## 2. Frontend (port 3000)
 
-# Or self-hosted
-docker compose up -d
-```
-
-## 3. Launch the Frontend
+In a second terminal:
 
 ```bash
 cd web
-npm install && npm run dev
+npm install        # if @xyflow/react is not installed yet
+npm run dev
 ```
 
-Open http://localhost:5173 to see the composer.
+- Landing page: http://localhost:3000 (in progress)
+- Studio: http://localhost:3000/studio
 
-## 4. Build Your First Workflow
+The frontend talks to `http://localhost:8000` by default (override with `NEXT_PUBLIC_GATEWAY_URL`).
 
-1. **Drag a "Model Chat" node** onto the canvas
-2. **Set model**: `alibaba/qwen-3.5-35b-a3b` (or any `provider:model`)
-3. **Drag a "Web Search" node** and query: `"latest AI funding news"`
-4. **Drag a "Code Exec" node** with script: `print("Hello from sandbox")`
-5. **Connect nodes**: Chat → Search → Code
-6. **Hit "Run"** and watch live cost/tokens in the sidebar
+## 3. First workflow (5 minutes)
 
-## 5. Test Budget Enforcement
+1. Open `/studio`.
+2. Drag a **Model Chat** node onto the canvas — the default prompt works as-is.
+3. Drag a **Web Search** node — optional query template; downstream outputs can be injected as `{{nodeId}}` placeholders.
+4. Drag a **Code Exec** node — default script is `print("hello")` style Python.
+5. Drag a **Guardrails** node — it can abort the run on rule violations.
+6. Connect them (Chat → Search → Code Exec, guardrails where you want an abort checkpoint).
+7. Hit **Run Workflow** — the graph executes in topological order and POSTs `{nodes, edges}` to the backend.
+8. Watch the sidebar: the **budget meter** updates live from WebSocket snapshots and the **activity feed** shows per-node events.
+9. Click **Export CSV** to download the full activity log with a TOTAL row.
 
-- Set per-project budget: `$5.00` in workflow config
-- Run workflow until spend approaches limit
-- Verify request blocking at cap
+Your graph is saved to localStorage (key `otarioptm.workflow.v1`) automatically. Undo/redo with Ctrl+Z / Ctrl+Y, delete selected with Delete, save with Ctrl+S.
 
-## 6. Export & Share
+## Troubleshooting
 
-- **Save workflow** as JSON/YAML
-- **Share API key** with scoped budget
-- **Export activity CSV** from dashboard
-
-## 7. Record Your Demo (3‑5 min)
-
-1. Open the app at localhost:5173
-2. Build a research agent (Search → LLM → Code)
-3. Show live cost ticking in sidebar
-4. Demonstrate auto‑model switch when latency spikes
-5. Export activity log and review spend
-6. Stop recording (~3 minutes)
-
-## 7. Submit to DoraHacks
-
-See `docs/submission.md` for the full checklist.
+| Symptom | Cause | Fix |
+|---|---|---|
+| HTTP 402 on run | Budget cap reached | Raise `budget.project_cap` in `config/config.yml` (or use `config/example.yml` as a template; default cap is $5.00) |
+| Outputs labeled `demo`, cost $0.00 | No API keys configured — this is expected demo mode | Set `OTARI_API_KEY` and/or `GROQ_API_KEY` in `.env` and restart the backend |
+| `ECONNREFUSED` in the studio | Backend not started | Start `python run_server.py` first |
+| Activity feed stops updating | WebSocket dropped | The client reconnects automatically; refresh the page if it stays stalled |

@@ -1,62 +1,186 @@
-import { useState, useCallback } from "react";
+"use client";
 
-type NodeType = "NodeChat" | "NodeWebSearch" | "NodeCodeExec" | "NodeGuardrails" | "NodeBudgetMeter" | "NodeOrchestration" | "NodeExport";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { NODE_LABELS, type NodeType, type WorkflowNodeData } from "@/lib/types";
 
-type Node = {
-  id: string;
-  type: NodeType;
-  position: { x: number; y: number };
-  data: any;
-};
+export type { WorkflowNode, WorkflowEdge } from "@/lib/types";
+import type { WorkflowNode, WorkflowEdge } from "@/lib/types";
 
-type Connection = {
-  id: string;
-  source: string;
-  target: string;
-};
+export type NodeChange = any;
+export type EdgeChange = any;
 
-export type { Node, Connection };
+const STORAGE_KEY = "otarioptm.workflow.v1";
+const SAVE_DEBOUNCE_MS = 300;
 
-export const useWorkflowState = () => {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Connection[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
 
-  const addNode = useCallback((node: Omit<Node, "id">>) => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setNodes([...nodes, { id, ...node }]);
-  }, [nodes]);
+function defaultNodeData(type: NodeType): WorkflowNodeData {
+  switch (type) {
+    case "chat":
+      return { label: NODE_LABELS.chat, prompt: "" };
+    case "web-search":
+      return { label: NODE_LABELS["web-search"], query: "" };
+    case "code-exec":
+      return { label: NODE_LABELS["code-exec"], code: 'print("hello")' };
+    case "guardrails":
+      return { label: NODE_LABELS.guardrails, banned: [], stop_on_block: true };
+  }
+}
 
-  const removeNode = useCallback((nodeId: string) => {
-    setNodes(nodes.filter((n) => n.id !== nodeId));
-    setEdges(edges.filter((e) => e.source !== nodeId && e.target !== nodeId));
-  }, [nodes, edges]);
+export function useWorkflowState(options?: { persist?: boolean }): {
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  onNodesChange: (changes: NodeChange[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
+  onConnect: (connection: { source: string; target: string }) => void;
+  addNode: (type: NodeType) => string;
+  removeNode: (id: string) => void;
+  updateNodeData: (id: string, data: Partial<WorkflowNodeData>) => void;
+  clearAll: () => void;
+  setGraph: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
+} {
+  const persist = options?.persist !== false;
+  const [nodes, setNodes] = useState<WorkflowNode[]>([]);
+  const [edges, setEdges] = useState<WorkflowEdge[]>([]);
+  const counterRef = useRef(0);
 
-  const updateEdge = useCallback((edge: Connection) => {
-    setEdges((prev) => {
-      const existingIndex = prev.findIndex((e) => e.id === edge.id);
-      if (existingIndex >= 0) {
-        return [...prev.slice(0, existingIndex), edge, ...prev.slice(existingIndex + 1)];
+  useEffect(() => {
+    if (!persist || typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        nodes?: unknown;
+        edges?: unknown;
+      };
+      if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
+        setNodes(parsed.nodes as WorkflowNode[]);
+        setEdges(parsed.edges as WorkflowEdge[]);
       }
-      return [...prev, edge];
+    } catch {
+      /* corrupt snapshot ignored */
+    }
+  }, [persist]);
+
+  const serialized = JSON.stringify({ nodes, edges });
+
+  useEffect(() => {
+    if (!persist || typeof window === "undefined") return;
+    const timer = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, serialized);
+      } catch {
+        /* quota exceeded ignored */
+      }
+    }, SAVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [serialized, persist]);
+
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setNodes((prev) => {
+      let next: WorkflowNode[] | null = null;
+      for (const change of changes) {
+        const c = change as {
+          id?: string;
+          type?: string;
+          position?: { x: number; y: number };
+          positionAbsolute?: { x: number; y: number };
+        };
+        if (typeof c.id !== "string") continue;
+        if (c.type === "remove") {
+          next = (next ?? prev).filter((n) => n.id !== c.id);
+        } else if (c.type === "position" && (c.position || c.positionAbsolute)) {
+          const position = c.position ?? c.positionAbsolute!;
+          next = (next ?? prev).map((n) =>
+            n.id === c.id ? { ...n, position } : n,
+          );
+        }
+        /* select / dimensions / others: no-op */
+      }
+      return next ?? prev;
     });
   }, []);
+
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    setEdges((prev) => {
+      let next: WorkflowEdge[] | null = null;
+      for (const change of changes) {
+        const c = change as { id?: string; type?: string };
+        if (c.type === "remove" && typeof c.id === "string") {
+          next = (next ?? prev).filter((e) => e.id !== c.id);
+        }
+      }
+      return next ?? prev;
+    });
+  }, []);
+
+  const onConnect = useCallback((connection: { source: string; target: string }) => {
+    const { source, target } = connection;
+    if (!source || !target) return;
+    setEdges((prev) => {
+      if (prev.some((e) => e.source === source && e.target === target)) {
+        return prev;
+      }
+      return [...prev, { id: `e-${source}-${target}`, source, target }];
+    });
+  }, []);
+
+  const addNode = useCallback(
+    (type: NodeType): string => {
+      counterRef.current += 1;
+      const id = `node-${Date.now().toString(36)}-${counterRef.current}-${Math.random()
+        .toString(36)
+        .slice(2, 6)}`;
+      const offset = clamp(40 + nodes.length * 30, 0, 620);
+      setNodes((prev) => [
+        ...prev,
+        { id, type, position: { x: offset, y: offset }, data: defaultNodeData(type) },
+      ]);
+      return id;
+    },
+    [nodes.length],
+  );
+
+  const removeNode = useCallback((id: string) => {
+    setNodes((prev) => prev.filter((n) => n.id !== id));
+    setEdges((prev) =>
+      prev.filter((e) => e.source !== id && e.target !== id),
+    );
+  }, []);
+
+  const updateNodeData = useCallback(
+    (id: string, data: Partial<WorkflowNodeData>) => {
+      setNodes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...data } } : n)),
+      );
+    },
+    [],
+  );
 
   const clearAll = useCallback(() => {
     setNodes([]);
     setEdges([]);
   }, []);
 
+  const setGraph = useCallback(
+    (nextNodes: WorkflowNode[], nextEdges: WorkflowEdge[]) => {
+      setNodes(nextNodes);
+      setEdges(nextEdges);
+    },
+    [],
+  );
+
   return {
     nodes,
     edges,
-    isLoading,
-    error,
-    setError,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
     addNode,
     removeNode,
-    updateEdge,
+    updateNodeData,
     clearAll,
+    setGraph,
   };
-};
+}

@@ -56,6 +56,11 @@ class OTARIClient:
         raise NotImplementedError("WebSocket activity stream - use FastAPI WebSocket endpoint directly")
 
 
+    async def close(self) -> None:
+        """Release the underlying httpx connection pool."""
+        await self.client.aclose()
+
+
 def get_otari_client() -> OTARIClient:
     api_key = os.environ.get("OTARI_API_KEY")
     if not api_key:

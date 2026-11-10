@@ -1,23 +1,53 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@theme inline {
-  --color-background: #0a0a0a;
-  --color-foreground: #ededed;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  --accent: #6366f1;
+  --accent-strong: #818cf8;
+  --accent-dim: rgba(99, 102, 241, 0.35);
+  --accent-contrast: #eef2ff;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --color-background: #ffffff;
-    --color-foreground: #171717;
-  }
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
 }
 
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  font-family: var(--font-sans);
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
