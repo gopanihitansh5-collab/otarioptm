@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { activityWebSocketUrl } from "@/lib/api";
 import type { ActivityEvent, BudgetSnapshot } from "@/lib/types";
 

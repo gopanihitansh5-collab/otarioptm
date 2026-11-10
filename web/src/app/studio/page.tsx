@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ReactFlowProvider } from "@xyflow/react";
 
 import { Canvas } from "@/components/Canvas";
@@ -125,9 +126,9 @@ function StudioInner() {
   return (
     <div className="flex h-screen flex-col bg-[#0b0b0d] text-neutral-100">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#0d0d10] px-4">
-        <a href="/" className="text-sm font-semibold tracking-tight text-neutral-100">
+        <Link href="/" className="text-sm font-semibold tracking-tight text-neutral-100">
           OtariOptm
-        </a>
+        </Link>
         <span className="text-[10px] uppercase tracking-widest text-neutral-600">studio</span>
         <span
           className="ml-2 flex items-center gap-1.5 rounded-full border border-white/10 bg-neutral-900 px-2.5 py-1 text-[10px] text-neutral-400"

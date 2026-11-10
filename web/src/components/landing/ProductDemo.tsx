@@ -34,13 +34,14 @@ const STEPS = [
 export default function ProductDemo() {
   const [active, setActive] = useState(0);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [staticAll, setStaticAll] = useState(false);
+  const [staticAll] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setStaticAll(true);
-      return;
-    }
+    if (staticAll) return;
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -54,7 +55,7 @@ export default function ProductDemo() {
     );
     stepRefs.current.forEach((el) => el && io.observe(el));
     return () => io.disconnect();
-  }, []);
+  }, [staticAll]);
 
   const stage = staticAll ? STEPS.length : active;
 

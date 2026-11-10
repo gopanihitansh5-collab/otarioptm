@@ -10,15 +10,21 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import type { WorkflowEdge, WorkflowNode } from "@/lib/types";
+import type {
+  Connection,
+  EdgeChange,
+  NodeChange,
+  NodeTypes,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 type CanvasProps = {
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
-  onNodesChange: (changes: any[]) => void;
-  onEdgesChange: (changes: any[]) => void;
-  onConnect: (connection: any) => void;
-  nodeTypes: any;
+  onNodesChange: (changes: NodeChange[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
+  onConnect: (connection: Connection) => void;
+  nodeTypes: NodeTypes;
   onNodeClick?: (node: WorkflowNode) => void;
   onPaneClick?: () => void;
 };

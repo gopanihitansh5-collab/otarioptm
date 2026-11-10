@@ -136,6 +136,9 @@ is a vendored registry tarball in node_modules):
   each other; they now place on a 560x300 grid so every added node is visible.
   Verified in a real browser run (positions 80/640 grid, run completes,
   activity feed + budget meter live).
-- Pre-existing: `npm run lint` reports 16 errors / 2 warnings (mostly
-  react-hooks/set-state-in-effect in studio hooks and landing Reveal). Left
-  as-is this pass; production build and TypeScript both pass.
+- Lint cleanup: all 16 errors and 2 warnings resolved (reduced-motion and
+  localStorage hydration moved to lazy state initializers, architecture
+  trace state moved into the click handler, xyflow types replace `any`,
+  internal nav uses next/link). `npm run lint` now reports 0 problems and
+  the production build passes; landing and studio re-verified in a real
+  browser after the refactor.

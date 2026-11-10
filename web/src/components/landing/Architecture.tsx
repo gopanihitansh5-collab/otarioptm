@@ -54,24 +54,23 @@ export default function Architecture() {
   const [staticAll, setStaticAll] = useState(false);
 
   useEffect(() => {
-    if (!tracing) return;
-    if (isReducedMotion()) {
-      setStaticAll(true);
-      setStep(-1);
-      return;
-    }
-    setStaticAll(false);
-    setStep(0);
+    if (!tracing || staticAll) return;
     const id = setInterval(() => setStep((s) => (s + 1) % LAYERS.length), 800);
     return () => clearInterval(id);
-  }, [tracing]);
+  }, [tracing, staticAll]);
 
   const toggle = () => {
     if (tracing) {
       setTracing(false);
       setStaticAll(false);
       setStep(-1);
+    } else if (isReducedMotion()) {
+      setStaticAll(true);
+      setStep(-1);
+      setTracing(true);
     } else {
+      setStaticAll(false);
+      setStep(0);
       setTracing(true);
     }
   };

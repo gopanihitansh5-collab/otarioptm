@@ -20,15 +20,15 @@ export function Reveal({
   as?: "div" | "section" | "li" | "span";
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [seen, setSeen] = useState(false);
+  const [seen, setSeen] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
 
   useEffect(() => {
     const el = ref.current;
     if (!el || seen) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setSeen(true);
-      return;
-    }
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -65,18 +65,17 @@ export function CountUp({
   className?: string;
 }) {
   const [display, setDisplay] = useState(0);
+  const [reduced] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const ref = useRef<HTMLSpanElement | null>(null);
   const started = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    const reduced =
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      setDisplay(value);
-      return;
-    }
+    if (!el || reduced) return;
     const io = new IntersectionObserver((entries) => {
       if (!entries.some((e) => e.isIntersecting) || started.current) return;
       started.current = true;
@@ -93,13 +92,14 @@ export function CountUp({
     });
     io.observe(el);
     return () => io.disconnect();
-  }, [value]);
+  }, [value, reduced]);
 
+  const shown = reduced ? value : display;
   return (
     <span ref={ref} className={className}>
       {format
-        ? format(display)
-        : display.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+        ? format(shown)
+        : shown.toLocaleString(undefined, { maximumFractionDigits: 2 })}
     </span>
   );
 }

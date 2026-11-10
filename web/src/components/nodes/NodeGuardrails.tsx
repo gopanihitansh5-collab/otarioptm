@@ -1,6 +1,7 @@
 "use client";
 
 import { Handle, Position } from "@xyflow/react";
+import type { NodeProps } from "@xyflow/react";
 import {
   NODE_LABELS,
   type NodeRunStatus,
@@ -23,8 +24,9 @@ const STATUS_CHIPS: Record<NodeRunStatus, string> = {
 const FIELD =
   "nodrag w-full rounded-md border border-white/10 bg-neutral-950/80 px-2 py-1.5 text-[11px] text-neutral-200 outline-none focus:border-amber-500/60";
 
-export function NodeGuardrails(props: any) {
-  const { id, data } = props as { id: string; data: WorkflowNodeData };
+export function NodeGuardrails(props: NodeProps) {
+  const id = props.id;
+  const data = props.data as WorkflowNodeData;
   const type: NodeType = (props.type as NodeType) ?? "guardrails";
   const onPatch = useNodePatch();
 

@@ -6,14 +6,35 @@ import { NODE_LABELS, type NodeType, type WorkflowNodeData } from "@/lib/types";
 export type { WorkflowNode, WorkflowEdge } from "@/lib/types";
 import type { WorkflowNode, WorkflowEdge } from "@/lib/types";
 
-export type NodeChange = any;
-export type EdgeChange = any;
+export type { NodeChange, EdgeChange } from "@xyflow/react";
+import type { Connection, NodeChange, EdgeChange } from "@xyflow/react";
 
 const STORAGE_KEY = "otarioptm.workflow.v1";
 const SAVE_DEBOUNCE_MS = 300;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
+
+function loadSnapshot(persist: boolean): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
+  if (!persist || typeof window === "undefined") return { nodes: [], edges: [] };
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { nodes: [], edges: [] };
+    const parsed = JSON.parse(raw) as {
+      nodes?: unknown;
+      edges?: unknown;
+    };
+    if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
+      return {
+        nodes: parsed.nodes as WorkflowNode[],
+        edges: parsed.edges as WorkflowEdge[],
+      };
+    }
+  } catch {
+    /* corrupt snapshot ignored */
+  }
+  return { nodes: [], edges: [] };
+}
 
 function defaultNodeData(type: NodeType): WorkflowNodeData {
   switch (type) {
@@ -33,7 +54,7 @@ export function useWorkflowState(options?: { persist?: boolean }): {
   edges: WorkflowEdge[];
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
-  onConnect: (connection: { source: string; target: string }) => void;
+  onConnect: (connection: Connection) => void;
   addNode: (type: NodeType) => string;
   removeNode: (id: string) => void;
   updateNodeData: (id: string, data: Partial<WorkflowNodeData>) => void;
@@ -41,27 +62,9 @@ export function useWorkflowState(options?: { persist?: boolean }): {
   setGraph: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
 } {
   const persist = options?.persist !== false;
-  const [nodes, setNodes] = useState<WorkflowNode[]>([]);
-  const [edges, setEdges] = useState<WorkflowEdge[]>([]);
+  const [nodes, setNodes] = useState<WorkflowNode[]>(() => loadSnapshot(persist).nodes);
+  const [edges, setEdges] = useState<WorkflowEdge[]>(() => loadSnapshot(persist).edges);
   const counterRef = useRef(0);
-
-  useEffect(() => {
-    if (!persist || typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as {
-        nodes?: unknown;
-        edges?: unknown;
-      };
-      if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
-        setNodes(parsed.nodes as WorkflowNode[]);
-        setEdges(parsed.edges as WorkflowEdge[]);
-      }
-    } catch {
-      /* corrupt snapshot ignored */
-    }
-  }, [persist]);
 
   const serialized = JSON.stringify({ nodes, edges });
 
@@ -115,7 +118,7 @@ export function useWorkflowState(options?: { persist?: boolean }): {
     });
   }, []);
 
-  const onConnect = useCallback((connection: { source: string; target: string }) => {
+  const onConnect = useCallback((connection: Connection) => {
     const { source, target } = connection;
     if (!source || !target) return;
     setEdges((prev) => {
