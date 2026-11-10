@@ -30,7 +30,7 @@ The backend executes each chat step through a fallback chain, so the app works e
 
 ```bash
 pip install -r requirements.txt
-copy .env.example .env          # optional keys: OTARI_API_KEY, GROQ_API_KEY
+cp .env.example .env            # optional keys: OTARI_API_KEY, GROQ_API_KEY (Windows: copy)
 python run_server.py            # http://localhost:8000
 ```
 
@@ -44,8 +44,23 @@ npm install        # if @xyflow/react is not installed yet
 npm run dev        # http://localhost:3000
 ```
 
-- `http://localhost:3000` — landing page (in progress)
+- `http://localhost:3000` — landing page
 - `http://localhost:3000/studio` — workflow editor
+
+### Docker
+
+```bash
+docker compose up --build       # gateway on :8000, web on :3000
+```
+
+or the gateway alone:
+
+```bash
+docker build -t otarioptm .
+docker run --env-file .env -p 8000:8000 otarioptm
+```
+
+Keys stay in the environment / `.env`; nothing is baked into the images.
 
 ## Features
 
@@ -61,6 +76,8 @@ npm run dev        # http://localhost:3000
 | Zero-key demo mode | Deterministic local execution so the full stack runs with no API keys configured |
 
 ## API endpoints
+
+Full request/response reference: [docs/api.md](docs/api.md).
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -81,7 +98,7 @@ See [docs/architecture.md](docs/architecture.md) for the gateway, budget manager
 
 - `config/config.yml` — project budget cap (`budget.project_cap`, default $5.00) and model settings; falls back to built-in defaults in `src/services/budget.py`
 - `config/example.yml` — template
-- `.env.example` — `OTARI_API_KEY`, `GROQ_API_KEY`, `OTARIOPTM_CONFIG`
+- `.env.example` — `OTARI_API_KEY`, `GROQ_API_KEY`, `EXA_API_KEY`, `RESEND_API_KEY`, `BUDGET_ALERT_EMAIL`, `OTARIOPTM_CONFIG`
 
 ## License
 

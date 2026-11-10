@@ -108,3 +108,27 @@ is a vendored registry tarball in node_modules):
 - Registry stubs in this environment: @next/swc-win32-x64-msvc binary corrupt
   (webpack only), @tailwindcss/postcss vendored manually.
 - Optional future: Framer Motion / R3F if wanted (not installed, by design).
+
+## 2026-11-10 evening pass (pre-submission completion)
+
+- Regenerated `web/package-lock.json`: the committed lockfile carried a
+  corrupt nested entry (`eslint-plugin-react-hooks/node_modules/zod` with no
+  version) that broke fresh `npm install` / `npm ci`. Fresh install and
+  `npm run build` (exit 0) verified after regeneration.
+- Em-dash sweep: zero U+2014 in `web/src`; the earlier build-output flag is
+  resolved in source.
+- Added `Dockerfile` + `.dockerignore` + `docker-compose.yml` (gateway) and
+  `web/Dockerfile` + `web/.dockerignore` (frontend). Statically validated
+  only: no Docker daemon in this environment, so images were not built here.
+- Added `docs/api.md` endpoint reference, verified against
+  `src/gateway/main.py`; README quickstart made cross-platform, Docker
+  section added; Apache 2.0 `LICENSE` file added (README already declared
+  it); `.env.example` Resend/BUDGET_ALERT_EMAIL comments corrected to match
+  the wired alert path.
+- Landing page audited against the design brief checklist: all 14 sections
+  present; desktop 1440px and mobile 390px screenshots inspected. Deliberate
+  deviations: nav uses flat links instead of Product/Solutions dropdowns and
+  has no Sign-in (single-page beta, no accounts); studio keeps its indigo
+  node-identity accents instead of the landing's lime system.
+- End-to-end re-verified: backend health/budget/models, demo-mode workflow
+  run with `{{nodeId}}` substitution, landing 200, studio 200.

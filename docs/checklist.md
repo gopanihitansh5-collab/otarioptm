@@ -12,17 +12,19 @@
 - Endpoints: health, budget, models, chat/completions, workflow/run, export (CSV + TOTAL row), activity (GET + WS)
 - Frontend studio at `/studio` (Next.js 16 App Router, React 19, Tailwind v4, React Flow) with 4 node types: Model Chat, Web Search, Code Exec, Guardrails
 - Studio UX: localStorage persistence (`otarioptm.workflow.v1`), undo/redo, keyboard shortcuts (Ctrl+Z/Y, Delete, Ctrl+S), Run Workflow, CSV export link, budget meter, live activity sidebar over WebSocket
-- Landing page at `/`: in progress (dark graphite + electric lime art direction)
+- Landing page at `/`: complete to the design brief (dark graphite + electric lime art direction; announcement bar, split hero with live gateway status, problem/solution, pinned 5-step product demo, routing simulator, budget governance, observability with honest offline state, interactive architecture map, DX tabs, trust/limits, use cases, pricing, FAQ, CTA, footer)
+- Dockerfile + docker-compose.yml for the gateway (and `web/Dockerfile` for the frontend)
+- API reference at `docs/api.md`; Apache 2.0 LICENSE added
 
 ### Still TODO (human actions for submission)
 - [ ] Demo video (3–5 min) recorded and hosted (YouTube/Loom)
 - [ ] Feedback screen recording
 - [ ] 1–2 PRs or issues opened on `mozilla-ai/otari`
 - [ ] Submission form fields filled on DoraHacks
-- [ ] Landing page finished
+- [x] Landing page finished
 
 ### Launch prep (next 24h)
-- [ ] Run the full stack end-to-end (backend 8000 + frontend 3000) and run a 4-node workflow
+- [x] Run the full stack end-to-end (backend 8000 + frontend 3000) and run a 4-node workflow
 - [ ] Record demo video: build workflow → run → budget meter → CSV export
 - [ ] Record feedback recording
 - [ ] Fill submission form: name, email, one-line description, GitHub link + branch, video links, Otari features used, PRs/issues

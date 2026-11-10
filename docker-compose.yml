@@ -1,0 +1,26 @@
+# Convenience only: the gateway runs fine alone with `docker build` + `docker run`.
+# Keys come from the host environment or a local .env (never committed).
+services:
+  gateway:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      OTARI_API_KEY: ${OTARI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      EXA_API_KEY: ${EXA_API_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      BUDGET_ALERT_EMAIL: ${BUDGET_ALERT_EMAIL:-}
+      OTARIOPTM_CONFIG: ${OTARIOPTM_CONFIG:-}
+
+  web:
+    build:
+      context: ./web
+      args:
+        # The browser talks to the gateway directly, so this stays localhost
+        # unless the gateway is reached through another public address.
+        NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
