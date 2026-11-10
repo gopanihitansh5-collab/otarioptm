@@ -35,7 +35,7 @@
 - [ ] Project name: `OtariOptm: AI workflow builder with auto-cost optimization`
 - [ ] One-line description: `OtariOptm: Visual workflow engine with auto-model routing, budget enforcement, and activity analytics`
 - [ ] Email address: _(valid email for submissions)_
-- [ ] Public GitHub repository: `github.com/gopanihitansh5/otarioptm`
+- [ ] Public GitHub repository: `github.com/gopanihitansh5-collab/otarioptm`
 - [ ] First commit using Otari.ai visible in git history
 - [ ] Demo video (3-5 min): Walkthrough of building & running a workflow
 - [ ] Feedback screen recording: Talking-head or narration format

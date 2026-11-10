@@ -66,7 +66,7 @@ find . -name "README.md" -exec cat {} \;
 
 ## Recommended Workflow for OtariOptm Hackathon
 
-1. **Clone your repo**: `git clone https://github.com/your-handle/otarioptm.git`
+1. **Clone your repo**: `git clone https://github.com/gopanihitansh5-collab/otarioptm.git`
 2. **Read local docs**: `cat otarioptm/docs/overview.md`
 3. **Check git status**: `git status` (no token needed)
 4. **Commit changes**: `git add . && git commit -m "feat: add budget node"` 

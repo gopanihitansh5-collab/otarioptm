@@ -27,7 +27,7 @@
 
 ```bash
 # 1. Clone & bootstrap (run once)
-git clone https://github.com/your-handle/otarioptm.git
+git clone https://github.com/gopanihitansh5-collab/otarioptm.git
 cd otarioptm
 uv sync --extra dev
 

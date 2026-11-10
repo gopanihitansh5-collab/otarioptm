@@ -8,7 +8,7 @@ From the repo root:
 
 ```bash
 pip install -r requirements.txt
-copy .env.example .env
+cp .env.example .env   # Windows: copy
 python run_server.py
 ```
 
@@ -25,7 +25,7 @@ npm install        # if @xyflow/react is not installed yet
 npm run dev
 ```
 
-- Landing page: http://localhost:3000 (in progress)
+- Landing page: http://localhost:3000
 - Studio: http://localhost:3000/studio
 
 The frontend talks to `http://localhost:8000` by default (override with `NEXT_PUBLIC_GATEWAY_URL`).
