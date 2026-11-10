@@ -127,9 +127,9 @@ is a vendored registry tarball in node_modules):
   the wired alert path.
 - Landing page audited against the design brief checklist: all 14 sections
   present; desktop 1440px and mobile 390px screenshots inspected. Deliberate
-  deviations: nav uses flat links instead of Product/Solutions dropdowns and
-  has no Sign-in (single-page beta, no accounts); studio keeps its indigo
-  node-identity accents instead of the landing's lime system.
+  deviations: studio keeps its indigo node-identity accents instead of the
+  landing's lime system. (The nav deviations noted here earlier - flat
+  links, no Sign-in - were closed in session 2 below.)
 - End-to-end re-verified: backend health/budget/models, demo-mode workflow
   run with `{{nodeId}}` substitution, landing 200, studio 200.
 - Studio UX fix: newly added nodes cascaded at 30px offsets and stacked under
@@ -137,8 +137,53 @@ is a vendored registry tarball in node_modules):
   Verified in a real browser run (positions 80/640 grid, run completes,
   activity feed + budget meter live).
 - Lint cleanup: all 16 errors and 2 warnings resolved (reduced-motion and
-  localStorage hydration moved to lazy state initializers, architecture
+  localStorage initialization reworked (see session 2 for the final
+  approach), architecture
   trace state moved into the click handler, xyflow types replace `any`,
   internal nav uses next/link). `npm run lint` now reports 0 problems and
   the production build passes; landing and studio re-verified in a real
   browser after the refactor.
+
+## Session 2 (2026-11-10, evening)
+
+- Studio fit-view: the one-time `fitView` over-zoomed to 2.5x after the
+  first node add, pushing nodes offscreen. Now refits on node-count change
+  with `maxZoom: 1.1`; complete 4-node workflow readable at 1440x900,
+  browser-verified.
+- Studio persistence bug: `useWorkflowState` read localStorage in the lazy
+  `useState` initializer, so SSR rendered an empty canvas and React kept
+  the SSR `disabled` attribute on Run Workflow after hydration - a real
+  production bug. Fixed by hydrating from localStorage in an effect.
+- Landing nav rebuilt per the brief: Product/Solutions/Developers hover +
+  focus dropdowns, flat Pricing link, disabled Sign-in per the brief's
+  disabled-button spec; `#use-cases` anchor added.
+- `/privacy` and `/terms` pages (marked draft pending owner review) with
+  content verified against the implementation (localStorage-only studio
+  persistence, in-memory gateway activity, env-only keys, web-search
+  node's keyless DuckDuckGo traffic disclosed); footer gained Legal and
+  Developers link columns.
+- Gateway test suite: 18 pytest tests (budget caps/reservations, router
+  ranking and budget-aware selection, demo-tier API behavior) in `tests/`,
+  all passing; `requirements-dev.txt` added.
+- GitHub Actions CI (`.github/workflows/ci.yml`): gateway pytest job and
+  web lint+build job, green on every push including the latest commit.
+- Hero centerpiece: React Three Fiber routing sphere - wireframe engine
+  sphere, labeled provider nodes in orbit (QWEN / GPT-4O-MINI / CLAUDE),
+  lime pulse traveling ingress -> engine -> selected provider on a 6s
+  loop, 4-stage request indicator synced to it. three.js is code-split
+  via `next/dynamic`; dpr capped, low-power GL, deterministic seeded
+  particle field. Fallbacks browser-verified: reduced-motion, no WebGL,
+  or viewport <768px all keep the static SVG trace.
+- Honest status badges: hero and observability now distinguish DEMO TIER
+  (gateway up, no provider keys) from LIVE (otari/groq configured),
+  reading `/api/v1/health`.
+- Clean-room Docker proxy (no container runtime available anywhere in
+  scope, so images remain unbuilt): from a pristine `git archive` copy,
+  fresh venv + `pip install -r requirements.txt` boots the gateway and
+  serves health/workflow/export in demo mode; fresh `npm ci` from the
+  regenerated lockfile (388 packages) + `npm run build` passes. This
+  exercises each Dockerfile's build steps short of the daemon.
+
+Still outstanding: live-provider verification (awaiting key scope
+approval), actual `docker build`/`docker compose up` (no Docker runtime
+available in the build environment).
