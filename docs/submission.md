@@ -87,5 +87,22 @@ activity tracking, fallback/reselection
 
 - [ ] Record demo video per script above, upload, paste link into the form
 - [ ] Record feedback recording
-- [ ] Open 1-2 issues/PRs on https://github.com/mozilla-ai/otari
+- [ ] Open 1-2 issues/PRs on https://github.com/mozilla-ai/otari (drafts below)
 - [ ] Submit the DoraHacks form before Nov 11, 11:59 PM IST
+
+## Draft Issues for mozilla-ai/otari (review, then post yourself)
+
+**Draft 1 - feature request: normalized per-request cost in responses**
+> A normalized `usage.cost_usd` field (even estimated from catalogue
+> prices) on every completion response would let downstream tools enforce
+> budgets without maintaining their own price tables. Context: we built a
+> budget-enforcing workflow gateway on Otari and currently estimate cost
+> from catalogue pricing fields, which vary in shape between models.
+
+**Draft 2 - feature request: latency + health signals in the model catalogue**
+> Client-side routers need recency signals beyond ids and prices: measured
+> latency percentiles and a health indicator per model. Even a coarse
+> `status: ok|degraded|down` plus rolling p50 latency would make routing
+> far more accurate than static tables; today clients must fall back to
+> defaults when these fields are absent. Happy to share the scoring
+> weights we use (0.45 cost, 0.35 latency, 0.20 health) as a reference.
