@@ -126,6 +126,9 @@ type LiveState = {
   status: "idle" | "live" | "offline";
   budget?: BudgetSnapshot;
   events: ActivityEvent[];
+  /** True when the gateway has a real provider key configured (otari/groq).
+   *  False means it answers from the deterministic demo tier. */
+  liveProviders?: boolean;
 };
 
 const GATEWAY_URL =
@@ -140,18 +143,25 @@ export function useLiveGuard(pollMs = 15000): LiveState {
 
     const pull = async () => {
       try {
-        const [budgetRes, activityRes] = await Promise.all([
+        const [budgetRes, activityRes, healthRes] = await Promise.all([
           fetch(`${GATEWAY_URL}/api/v1/budget`, { cache: "no-store" }),
           fetch(`${GATEWAY_URL}/api/v1/activity`, { cache: "no-store" }),
+          fetch(`${GATEWAY_URL}/api/v1/health`, { cache: "no-store" }),
         ]);
-        if (!budgetRes.ok || !activityRes.ok) throw new Error("gateway");
+        if (!budgetRes.ok || !activityRes.ok || !healthRes.ok)
+          throw new Error("gateway");
         const budget = (await budgetRes.json()) as BudgetSnapshot;
         const body = (await activityRes.json()) as { events?: ActivityEvent[] };
+        const health = (await healthRes.json()) as {
+          otari?: boolean;
+          groq?: boolean;
+        };
         if (cancelled) return;
         setState({
           status: "live",
           budget,
           events: (body.events ?? []).slice(-6).reverse(),
+          liveProviders: Boolean(health.otari || health.groq),
         });
       } catch {
         if (!cancelled) {

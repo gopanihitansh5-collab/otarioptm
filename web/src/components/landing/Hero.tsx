@@ -13,6 +13,8 @@ function useRoutingSphere(): boolean {
   useEffect(() => {
     const t = window.setTimeout(() => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      // Small screens keep the lightweight static SVG trace.
+      if (window.innerWidth < 768) return;
       try {
         const c = document.createElement("canvas");
         if (c.getContext("webgl2") || c.getContext("webgl")) setEnabled(true);
@@ -60,6 +62,12 @@ const CSS = `
 .oo-p1 { animation-delay: 4.2s; }
 .oo-p2 { animation-delay: 8.4s; }
 @media (prefers-reduced-motion: reduce) { .oo-anim, .oo-anim * { animation: none !important; } }
+@keyframes oo-stage { 0%,100% { opacity: 0.35; } }
+.oo-stage { animation: oo-stage 6s linear infinite; }
+.oo-st0 { animation-name: oo-st0; } @keyframes oo-st0 { 0%,23% { opacity: 1; color: #C6F36B; } 23.1%,100% { opacity: 0.35; } }
+.oo-st1 { animation-name: oo-st1; } @keyframes oo-st1 { 0%,23% { opacity: 0.35; } 23%,40% { opacity: 1; color: #C6F36B; } 40.1%,100% { opacity: 0.35; } }
+.oo-st2 { animation-name: oo-st2; } @keyframes oo-st2 { 0%,40% { opacity: 0.35; } 40%,67% { opacity: 1; color: #C6F36B; } 67.1%,100% { opacity: 0.35; } }
+.oo-st3 { animation-name: oo-st3; } @keyframes oo-st3 { 0%,67% { opacity: 0.35; } 67%,93% { opacity: 1; color: #C6F36B; } 93.1%,100% { opacity: 0.35; } }
 `;
 
 type DotStyle = React.CSSProperties & Record<"--dx" | "--dy", string>;
@@ -85,7 +93,14 @@ export default function Hero() {
     if (el) el.style.transform = "translate(0px, 0px)";
   };
 
-  const status = live.status === "live" ? "LIVE" : live.status === "idle" ? "CONNECTING" : "OFFLINE";
+  const status =
+    live.status === "live"
+      ? live.liveProviders
+        ? "LIVE"
+        : "DEMO TIER"
+      : live.status === "idle"
+        ? "CONNECTING"
+        : "OFFLINE";
 
   return (
     <section id="top" className="relative overflow-hidden pt-6">
@@ -197,6 +212,17 @@ export default function Hero() {
             {sphere && (
               <div className="absolute inset-0" aria-hidden>
                 <RoutingScene />
+              </div>
+            )}
+            {sphere && (
+              <div className="oo-anim absolute right-4 top-3 z-10 flex gap-2 font-mono text-[9px] tracking-[0.15em] text-[#929DA5]" aria-hidden>
+                <span className="oo-stage oo-st0">RECEIVED</span>
+                <span aria-hidden>→</span>
+                <span className="oo-stage oo-st1">CLASSIFYING</span>
+                <span aria-hidden>→</span>
+                <span className="oo-stage oo-st2">ROUTING</span>
+                <span aria-hidden>→</span>
+                <span className="oo-stage oo-st3">EXECUTED</span>
               </div>
             )}
             {!sphere && (

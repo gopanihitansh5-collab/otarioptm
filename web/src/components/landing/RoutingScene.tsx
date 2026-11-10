@@ -27,6 +27,26 @@ const BASE_ANGLE = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3];
 const ORBIT_SPEED = 0.22;
 const LOOP = 6; // seconds per routed request
 const INGRESS = new THREE.Vector3(-3.4, 0.1, 0);
+const NODE_NAMES = ["QWEN", "GPT-4O-MINI", "CLAUDE"];
+
+function makeLabel(text: string): THREE.Sprite {
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 96;
+  const ctx = c.getContext("2d")!;
+  ctx.font = "600 44px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#929DA5";
+  ctx.fillText(text, 256, 48);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }),
+  );
+  sprite.scale.set(1.15, 0.22, 1);
+  return sprite;
+}
 
 function nodePos(i: number, time: number, out: THREE.Vector3) {
   const a = BASE_ANGLE[i] + time * ORBIT_SPEED;
@@ -42,6 +62,8 @@ function Engine() {
   const coreMat = useRef<THREE.MeshBasicMaterial>(null);
   const nodeRefs = useRef<(THREE.Mesh | null)[]>([]);
   const ringRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const labelRefs = useRef<(THREE.Sprite | null)[]>([]);
+  const labels = useMemo(() => NODE_NAMES.map(makeLabel), []);
 
   const lines = useMemo(
     () =>
@@ -124,8 +146,11 @@ function Engine() {
       attr.needsUpdate = true;
       const mat = line.material as THREE.LineBasicMaterial;
       const active = i === route && loopT >= 2.4 && loopT < 4.6;
-      mat.color.set(active ? CYAN : STEEL);
-      mat.opacity = active ? 1 : 0.55;
+      // Lime marks the successfully selected route (brief's usage rule).
+      mat.color.set(active ? LIME : "#3d4a56");
+      mat.opacity = active ? 1 : 0.8;
+      const label = labelRefs.current[i];
+      if (label) label.position.set(tmp.x, tmp.y + 0.34, tmp.z);
       const ring = ringRefs.current[i];
       if (ring) {
         ring.position.copy(tmp);
@@ -168,7 +193,7 @@ function Engine() {
       {/* routing engine */}
       <mesh ref={wire}>
         <icosahedronGeometry args={[1.15, 1]} />
-        <meshBasicMaterial color="#3a4550" wireframe transparent opacity={0.85} />
+        <meshBasicMaterial color="#5a6b78" wireframe transparent opacity={0.95} />
       </mesh>
       <mesh ref={core}>
         <sphereGeometry args={[0.42, 24, 24]} />
@@ -195,6 +220,15 @@ function Engine() {
       ))}
       {lines.map((l, i) => (
         <primitive key={i} object={l} />
+      ))}
+      {labels.map((s, i) => (
+        <primitive
+          key={i}
+          object={s}
+          ref={(r: THREE.Sprite | null) => {
+            labelRefs.current[i] = r;
+          }}
+        />
       ))}
 
       {/* request pulse */}

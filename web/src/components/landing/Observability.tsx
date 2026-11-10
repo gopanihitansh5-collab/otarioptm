@@ -38,7 +38,9 @@ export default function Observability() {
                 }`}
               >
                 {live.status === "live"
-                  ? "GATEWAY LIVE"
+                  ? live.liveProviders
+                    ? "GATEWAY LIVE"
+                    : "GATEWAY LIVE - DEMO TIER"
                   : live.status === "offline"
                     ? "GATEWAY OFFLINE"
                     : "CONNECTING"}
