@@ -40,13 +40,16 @@ export function Canvas({
   onPaneClick,
 }: CanvasProps) {
   const rf = useReactFlow();
+  const nodeCount = nodes.length;
 
+  // Keep every node in view: refit whenever the node count changes, capped
+  // at a readable zoom so a single node never fills the screen.
   useEffect(() => {
     const t = setTimeout(() => {
-      rf.fitView({ padding: 0.25 });
+      rf.fitView({ padding: 0.25, maxZoom: 1.1 });
     }, 100);
     return () => clearTimeout(t);
-  }, [rf]);
+  }, [rf, nodeCount]);
 
   return (
     <ReactFlow
@@ -58,7 +61,7 @@ export function Canvas({
       nodeTypes={nodeTypes}
       colorMode="dark"
       fitView
-      fitViewOptions={{ padding: 0.25 }}
+      fitViewOptions={{ padding: 0.25, maxZoom: 1.1 }}
       minZoom={0.25}
       maxZoom={2.5}
       className="h-full w-full"

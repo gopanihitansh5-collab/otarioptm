@@ -62,14 +62,31 @@ export function useWorkflowState(options?: { persist?: boolean }): {
   setGraph: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
 } {
   const persist = options?.persist !== false;
-  const [nodes, setNodes] = useState<WorkflowNode[]>(() => loadSnapshot(persist).nodes);
-  const [edges, setEdges] = useState<WorkflowEdge[]>(() => loadSnapshot(persist).edges);
+  // Start empty so SSR and first client render match; hydrate from
+  // localStorage in an effect to avoid a hydration mismatch (React keeps
+  // stale SSR attributes such as a wrongly-disabled Run button).
+  const [nodes, setNodes] = useState<WorkflowNode[]>([]);
+  const [edges, setEdges] = useState<WorkflowEdge[]>([]);
+  const hydratedRef = useRef(false);
   const counterRef = useRef(0);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      hydratedRef.current = true;
+      const snapshot = loadSnapshot(persist);
+      if (snapshot.nodes.length > 0 || snapshot.edges.length > 0) {
+        setNodes(snapshot.nodes);
+        setEdges(snapshot.edges);
+      }
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [persist]);
 
   const serialized = JSON.stringify({ nodes, edges });
 
   useEffect(() => {
-    if (!persist || typeof window === "undefined") return;
+    if (!persist || typeof window === "undefined" || !hydratedRef.current)
+      return;
     const timer = window.setTimeout(() => {
       try {
         window.localStorage.setItem(STORAGE_KEY, serialized);

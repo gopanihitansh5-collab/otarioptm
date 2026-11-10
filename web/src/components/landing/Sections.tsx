@@ -25,7 +25,7 @@ export function UseCases() {
     },
   ];
   return (
-    <section className="border-y border-[#293239] bg-[#111519]">
+    <section id="use-cases" className="scroll-mt-24 border-y border-[#293239] bg-[#111519]">
       <div className="mx-auto max-w-6xl px-4 py-20 md:px-6 md:py-24">
         <Reveal>
           <p className="font-mono text-[10px] tracking-[0.25em] text-[#C6F36B]">
