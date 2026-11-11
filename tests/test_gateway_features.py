@@ -231,12 +231,18 @@ def test_models_carry_labeled_probe_values_demo_mode():
 # --- P0-6: CORS ----------------------------------------------------------------
 
 def test_cors_allows_vercel_origin():
+    # Previews are scoped to the project's own Vercel team slug; see
+    # tests/test_cors_scoping.py for the full policy matrix.
     app2 = gw.create_app()
     r = TestClient(app2).get(
-        "/api/v1/health", headers={"Origin": "https://otarioptm-abc.vercel.app"}
+        "/api/v1/health",
+        headers={"Origin": "https://otarioptm-abc-hitanshuser50s-projects.vercel.app"},
     )
     assert r.status_code == 200
-    assert r.headers.get("access-control-allow-origin") == "https://otarioptm-abc.vercel.app"
+    assert (
+        r.headers.get("access-control-allow-origin")
+        == "https://otarioptm-abc-hitanshuser50s-projects.vercel.app"
+    )
 
 
 def test_cors_rejects_unknown_origin():

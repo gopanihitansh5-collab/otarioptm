@@ -1417,13 +1417,31 @@ async def chat_completions_stream(request: Request) -> Response:
 # ---------------------------------------------------------------------------
 
 def _allowed_origins() -> List[str]:
-    """Explicit origins; the Vercel wildcard is handled by allow_origin_regex."""
-    origins = ["http://localhost:3000", "http://localhost:5173"]
+    """Explicit origins: local dev and the production deployment.
+
+    Production calls the API same-origin through /api rewrites, so the
+    production origin is belt-and-braces; no broad wildcard is needed.
+    Extra origins come from ALLOWED_ORIGINS (comma-separated).
+    """
+    origins = ["http://localhost:3000", "http://localhost:5173", "https://otarioptm.vercel.app"]
     for raw in (os.environ.get("ALLOWED_ORIGINS") or "").split(","):
         origin = raw.strip()
         if origin and origin not in origins:
             origins.append(origin)
     return origins
+
+
+# Preview deployments are scoped to the project's own Vercel team: Vercel
+# preview URLs end with "-<team-slug>.vercel.app" (both the git-branch
+# and deployment-hash forms), so this admits only this team's previews.
+# The regex is END-ANCHORED - an unanchored pattern would also match
+# attacker domains such as "https://x.vercel.app.evil.example".
+# Override with ALLOWED_ORIGIN_REGEX for other setups.
+_PREVIEW_ORIGIN_REGEX = r"https://.*-hitanshuser50s-projects\.vercel\.app$"
+
+
+def _allow_origin_regex() -> str:
+    return os.environ.get("ALLOWED_ORIGIN_REGEX") or _PREVIEW_ORIGIN_REGEX
 
 
 def create_app() -> FastAPI:
@@ -1436,7 +1454,7 @@ def create_app() -> FastAPI:
     application.add_middleware(
         CORSMiddleware,
         allow_origins=_allowed_origins(),
-        allow_origin_regex=r"https://.*\.vercel\.app",
+        allow_origin_regex=_allow_origin_regex(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
