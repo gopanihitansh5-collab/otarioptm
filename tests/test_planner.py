@@ -69,6 +69,40 @@ class _FakeOtari:
         }
 
 
+
+
+class _FakeGroq:
+    """Free-tier Groq mock: every planning stage call returns the same content."""
+
+    def __init__(self, content):
+        self.content = content
+
+    async def get(self, path):
+        class _R:
+            status_code = 200
+
+            def json(self):
+                return {"data": [{"id": "llama-3.3-70b-versatile"}]}
+
+        return _R()
+
+    async def post(self, path, json=None):
+        content = self.content
+
+        class _R:
+            status_code = 200
+            text = ""
+
+            def json(self):
+                return {
+                    "model": "llama-3.3-70b-versatile",
+                    "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
+                    "usage": {"total_tokens": 100},
+                    "cost": 0.0002,
+                }
+
+        return _R()
+
 def _plan(task="compare two products", **kw):
     return client.post("/api/v1/workflow/plan", json={"task": task, **kw})
 
@@ -76,8 +110,9 @@ def _plan(task="compare two products", **kw):
 # --- happy path -------------------------------------------------------------
 
 def test_plan_returns_validated_graph_from_live_model(monkeypatch):
-    monkeypatch.setattr(gw, "otari_client", _FakeOtari(json.dumps(VALID_PLAN)))
-    monkeypatch.setattr(gw, "groq_client", None)
+    monkeypatch.setattr(gw, "groq_client", _FakeGroq(json.dumps(VALID_PLAN)))
+    monkeypatch.setattr(gw, "otari_client", None)
+    monkeypatch.setattr(gw, "_groq_model_cache", "llama-3.3-70b-versatile")
     with _isolated_budget():
         r = _plan()
     assert r.status_code == 200
@@ -96,12 +131,13 @@ def test_plan_returns_validated_graph_from_live_model(monkeypatch):
     # planner spend is budget-accounted and reported
     assert body["planner"]["cost"] == pytest.approx(0.0002)
     assert body["planner"]["costSource"] == "provider-reported"
-    assert body["planner"]["provider"] == "otari"
+    assert body["planner"]["provider"] == "groq"
 
 
 def test_plan_accepts_fenced_json(monkeypatch):
-    monkeypatch.setattr(gw, "otari_client", _FakeOtari("```json\n" + json.dumps(VALID_PLAN) + "\n```"))
-    monkeypatch.setattr(gw, "groq_client", None)
+    monkeypatch.setattr(gw, "groq_client", _FakeGroq("```json\n" + json.dumps(VALID_PLAN) + "\n```"))
+    monkeypatch.setattr(gw, "otari_client", None)
+    monkeypatch.setattr(gw, "_groq_model_cache", "llama-3.3-70b-versatile")
     with _isolated_budget():
         r = _plan()
     assert r.status_code == 200
@@ -109,8 +145,9 @@ def test_plan_accepts_fenced_json(monkeypatch):
 
 def test_plan_graph_executes_through_existing_runner(monkeypatch):
     """The planned graph must be directly runnable by /api/v1/workflow/run."""
-    monkeypatch.setattr(gw, "otari_client", _FakeOtari(json.dumps(VALID_PLAN)))
-    monkeypatch.setattr(gw, "groq_client", None)
+    monkeypatch.setattr(gw, "groq_client", _FakeGroq(json.dumps(VALID_PLAN)))
+    monkeypatch.setattr(gw, "otari_client", _FakeOtari("workflow answer"))
+    monkeypatch.setattr(gw, "_groq_model_cache", "llama-3.3-70b-versatile")
 
     async def fake_search(query, objective=None):
         return {"results_text": f"results for {query}", "cost": 0.0, "provider": "stub", "objective": objective}
@@ -128,8 +165,9 @@ def test_plan_graph_executes_through_existing_runner(monkeypatch):
 # --- honest failures, never a preset ----------------------------------------
 
 def test_plan_rejects_unparseable_model_output(monkeypatch):
-    monkeypatch.setattr(gw, "otari_client", _FakeOtari("sorry, I cannot help"))
-    monkeypatch.setattr(gw, "groq_client", None)
+    monkeypatch.setattr(gw, "groq_client", _FakeGroq("sorry, I cannot help"))
+    monkeypatch.setattr(gw, "otari_client", None)
+    monkeypatch.setattr(gw, "_groq_model_cache", "llama-3.3-70b-versatile")
     with _isolated_budget():
         r = _plan()
     assert r.status_code == 422
@@ -138,8 +176,9 @@ def test_plan_rejects_unparseable_model_output(monkeypatch):
 
 def test_plan_rejects_invalid_graph(monkeypatch):
     bad = {"nodes": [{"id": "a", "type": "hack-the-planet", "prompt": "x"}]}
-    monkeypatch.setattr(gw, "otari_client", _FakeOtari(json.dumps(bad)))
-    monkeypatch.setattr(gw, "groq_client", None)
+    monkeypatch.setattr(gw, "groq_client", _FakeGroq(json.dumps(bad)))
+    monkeypatch.setattr(gw, "otari_client", None)
+    monkeypatch.setattr(gw, "_groq_model_cache", "llama-3.3-70b-versatile")
     with _isolated_budget():
         r = _plan()
     assert r.status_code == 422
@@ -151,8 +190,9 @@ def test_plan_rejects_cycle(monkeypatch):
         "nodes": [{"id": "a", "type": "chat", "prompt": "x"}, {"id": "b", "type": "chat", "prompt": "y"}],
         "edges": [{"source": "a", "target": "b"}, {"source": "b", "target": "a"}],
     }
-    monkeypatch.setattr(gw, "otari_client", _FakeOtari(json.dumps(cyclic)))
-    monkeypatch.setattr(gw, "groq_client", None)
+    monkeypatch.setattr(gw, "groq_client", _FakeGroq(json.dumps(cyclic)))
+    monkeypatch.setattr(gw, "otari_client", None)
+    monkeypatch.setattr(gw, "_groq_model_cache", "llama-3.3-70b-versatile")
     with _isolated_budget():
         r = _plan()
     assert r.status_code == 422
@@ -165,19 +205,20 @@ def test_plan_503_without_real_provider(monkeypatch):
     with _isolated_budget():
         r = _plan()
     assert r.status_code == 503
-    assert "demo tier" in r.json()["detail"]
+    assert "Groq" in r.json()["detail"]
 
 
 def test_plan_400_on_missing_or_oversized_task(monkeypatch):
-    monkeypatch.setattr(gw, "otari_client", _FakeOtari(json.dumps(VALID_PLAN)))
+    monkeypatch.setattr(gw, "groq_client", _FakeGroq(json.dumps(VALID_PLAN)))
     assert _plan(task="").status_code == 400
     assert _plan(task="x" * (planner.PLANNER_MAX_TASK_CHARS + 1)).status_code == 400
 
 
 def test_plan_rejects_too_many_nodes(monkeypatch):
     big = {"nodes": [{"id": f"n{i}", "type": "chat", "prompt": "x"} for i in range(planner.PLANNER_MAX_NODES + 1)]}
-    monkeypatch.setattr(gw, "otari_client", _FakeOtari(json.dumps(big)))
-    monkeypatch.setattr(gw, "groq_client", None)
+    monkeypatch.setattr(gw, "groq_client", _FakeGroq(json.dumps(big)))
+    monkeypatch.setattr(gw, "otari_client", None)
+    monkeypatch.setattr(gw, "_groq_model_cache", "llama-3.3-70b-versatile")
     with _isolated_budget():
         r = _plan()
     assert r.status_code == 422
@@ -186,8 +227,9 @@ def test_plan_rejects_too_many_nodes(monkeypatch):
 def test_unknown_model_fields_dropped_with_warning(monkeypatch):
     plan = json.loads(json.dumps(VALID_PLAN))
     plan["nodes"][0]["evil"] = "ignore-me"
-    monkeypatch.setattr(gw, "otari_client", _FakeOtari(json.dumps(plan)))
-    monkeypatch.setattr(gw, "groq_client", None)
+    monkeypatch.setattr(gw, "groq_client", _FakeGroq(json.dumps(plan)))
+    monkeypatch.setattr(gw, "otari_client", None)
+    monkeypatch.setattr(gw, "_groq_model_cache", "llama-3.3-70b-versatile")
     with _isolated_budget():
         body = _plan().json()
     assert "evil" not in body["graph"]["nodes"][0]["data"]
