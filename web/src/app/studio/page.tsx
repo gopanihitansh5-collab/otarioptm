@@ -644,7 +644,7 @@ function StudioInner() {
 
       <div className="relative flex min-h-0 flex-1">
         <div className="hidden md:contents">
-          <Palette addNode={addNode} />
+          <Palette addNode={addNode} codeExecAvailable={health?.code_exec ?? false} />
         </div>
 
         <main className="relative min-w-0 flex-1">
@@ -775,7 +775,7 @@ function StudioInner() {
           panelClassName="w-[min(248px,86vw)]"
         >
           <div className="flex min-h-0 flex-1 flex-col">
-            <Palette addNode={addNode} />
+            <Palette addNode={addNode} codeExecAvailable={health?.code_exec ?? false} />
           </div>
         </MobileDrawer>
 

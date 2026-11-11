@@ -1,60 +1,59 @@
+"use client";
+
+import { useState } from "react";
 import { NODE_LABELS, type NodeType } from "@/lib/types";
 import { FOCUS_RING } from "@/components/studio/ui";
 import { TYPE_DOT } from "@/components/nodes/theme";
 
 type PaletteProps = {
   addNode: (type: NodeType) => string;
+  codeExecAvailable: boolean;
 };
-
-const ITEMS: { type: NodeType; desc: string; dot: string; unavailable?: boolean }[] = [
-  { type: "chat", desc: "LLM chain step: prompt + system", dot: TYPE_DOT.chat },
-  { type: "web-search", desc: "Fetch live web context", dot: TYPE_DOT["web-search"] },
-  {
-    type: "code-exec",
-    desc: "Sandboxed code snippet. Temporarily unavailable: refuses every program until execution runs behind a genuine isolation boundary.",
-    dot: TYPE_DOT["code-exec"],
-    unavailable: true,
-  },
-  { type: "guardrails", desc: "Block banned terms", dot: TYPE_DOT.guardrails },
+const ITEMS: { type: NodeType; desc: string; group: string; icon: string }[] = [
+  { type: "chat", desc: "Prompt a model through automatic routing", group: "Intelligence", icon: "M" },
+  { type: "web-search", desc: "Bring live web context into your workflow", group: "Intelligence", icon: "S" },
+  { type: "code-exec", desc: "Run Python in an isolated microVM", group: "Control", icon: "</>" },
+  { type: "guardrails", desc: "Check content against banned terms", group: "Control", icon: "G" },
 ];
 
-const ADD_BTN = `flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-steel text-base leading-none text-silver transition-colors duration-150 hover:border-lime/40 hover:text-lime active:scale-[0.98] ${FOCUS_RING}`;
-
-export function Palette({ addNode }: PaletteProps) {
+export function Palette({ addNode, codeExecAvailable }: PaletteProps) {
+  const [query, setQuery] = useState("");
+  const filtered = ITEMS.filter(item => `${NODE_LABELS[item.type]} ${item.desc}`.toLowerCase().includes(query.toLowerCase()));
   return (
-    <aside className="flex w-[220px] shrink-0 flex-col border-r border-steel bg-elevated">
-      <div className="mono-label px-4 pb-2 pt-4">Nodes</div>
-      <div className="flex-1 space-y-2 overflow-y-auto p-2">
-        {ITEMS.map((item) => (
-          <div key={item.type} className="rounded-lg border border-steel-dim bg-obsidian p-2.5">
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 shrink-0 rounded-full ${item.dot}`} />
-              <span className="flex-1 truncate text-xs font-medium text-ice">
-                {NODE_LABELS[item.type]}
-              </span>
-              <button
-                type="button"
-                aria-label={`Add ${NODE_LABELS[item.type]}`}
-                onClick={() => addNode(item.type)}
-                disabled={item.unavailable}
-                title={item.unavailable ? "Temporarily unavailable" : undefined}
-                className={`${ADD_BTN} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-steel disabled:hover:text-silver`}
-              >
-                +
-              </button>
+    <aside className="flex w-[244px] shrink-0 flex-col border-r border-steel bg-elevated/90">
+      <header className="px-4 pb-3 pt-5">
+        <p className="mono-label">Build your flow</p>
+        <h2 className="mt-1 text-lg font-semibold tracking-tight text-ice">Node library</h2>
+        <label className="mt-4 block">
+          <span className="sr-only">Find a node</span>
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a node..." className={`h-10 w-full rounded-xl border border-steel-dim bg-obsidian px-3 text-xs text-ice placeholder:text-silver ${FOCUS_RING}`} />
+        </label>
+      </header>
+      <div className="flex-1 overflow-y-auto px-3 pb-4">
+        {["Intelligence", "Control"].map(group => {
+          const items = filtered.filter(item => item.group === group);
+          if (!items.length) return null;
+          return <section key={group} className="mb-5">
+            <h3 className="mb-2 flex justify-between px-1 font-mono text-[9px] uppercase tracking-[0.16em] text-silver"><span>{group}</span><span>{items.length}</span></h3>
+            <div className="space-y-2">
+              {items.map(item => {
+                const unavailable = item.type === "code-exec" && !codeExecAvailable;
+                return <button key={item.type} type="button" aria-label={`Add ${NODE_LABELS[item.type]}`} onClick={() => addNode(item.type)} disabled={unavailable} title={unavailable ? "Code execution is unavailable in this deployment" : undefined} className={`group w-full rounded-xl border border-steel-dim bg-obsidian/80 p-3 text-left transition-colors hover:border-lime/50 disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS_RING}`}>
+                  <span className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-steel-dim bg-elevated font-mono text-[10px] text-lime">{item.icon}</span>
+                    <span className="flex-1 text-xs font-medium text-ice">{NODE_LABELS[item.type]}</span>
+                    <span className={`h-1.5 w-1.5 rounded-full ${TYPE_DOT[item.type]}`} />
+                    <span className="text-silver group-hover:text-lime" aria-hidden>+</span>
+                  </span>
+                  <span className="mt-2 block text-[10px] leading-relaxed text-silver">{unavailable ? "Unavailable in this deployment" : item.desc}</span>
+                </button>;
+              })}
             </div>
-            {item.unavailable && (
-              <div className="mt-1.5 inline-block rounded border border-amber/50 px-1.5 py-0.5 font-mono text-[8.5px] tracking-widest text-amber">
-                TEMPORARILY UNAVAILABLE
-              </div>
-            )}
-            <div className="mt-1 text-[10px] leading-snug text-silver">{item.desc}</div>
-          </div>
-        ))}
+          </section>;
+        })}
+        {!filtered.length && <p className="px-1 text-xs text-silver">No nodes match your search.</p>}
       </div>
-      <footer className="border-t border-steel-dim p-3 font-mono text-[10px] leading-relaxed tracking-wide text-silver">
-        Ctrl+Z Undo · Ctrl+Y Redo · Delete Remove
-      </footer>
+      <footer className="border-t border-steel-dim p-4 font-mono text-[9px] leading-relaxed tracking-wide text-silver">Click a node to add it<br />Ctrl+Z Undo · Delete Remove</footer>
     </aside>
   );
 }

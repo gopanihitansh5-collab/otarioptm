@@ -10,8 +10,8 @@ const Items = [
   },
   {
     title: "Sandbox isolation",
-    body: "The code-exec node currently refuses every program: a confirmed escape in the previous in-process sandbox means it stays off until execution runs behind a genuine isolation boundary (separate container and user, no shared filesystem). Chat, web-search and guardrails nodes are unaffected.",
-    status: "TEMPORARILY UNAVAILABLE",
+    body: "Python programs run in isolated Vercel Sandbox microVMs with deny-all network egress, no inherited host secrets and a timeout. Creation fails closed when the sandbox service or its quota is unavailable.",
+    status: "ISOLATED EXECUTION",
   },
   {
     title: "Failure handling",
