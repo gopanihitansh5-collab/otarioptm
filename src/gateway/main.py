@@ -325,11 +325,12 @@ async def _groq_pick_model() -> str:
             ids = [m.get("id") for m in (resp.json().get("data") or []) if m.get("id")]
     except Exception:
         ids = []
+    chat_ids = [i for i in ids if not _NON_CHAT_ID.search(str(i))]
     priority = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
-    chosen = next((i for i in priority if i in ids), None)
+    chosen = next((i for i in priority if i in chat_ids), None)
     if chosen is None:
-        llamas = sorted(i for i in ids if "llama" in str(i))
-        chosen = llamas[0] if llamas else (str(ids[0]) if ids else "llama-3.3-70b-versatile")
+        llamas = sorted(i for i in chat_ids if "llama" in str(i))
+        chosen = llamas[0] if llamas else (str(chat_ids[0]) if chat_ids else "llama-3.3-70b-versatile")
     _groq_model_cache = str(chosen)
     return str(chosen)
 
@@ -845,16 +846,48 @@ FALLBACK_CATALOG = [
 ]
 
 
+# Model ids that must never serve a chat step: classifiers, guardrails,
+# embeddings, audio. Their ids are stable markers across providers.
+_NON_CHAT_ID = re.compile(
+    r"guard|safeguard|embed|moderation|whisper|tts|transcri|ocr|image",
+    re.IGNORECASE,
+)
+
+
+def _is_chat_model(model: Dict[str, Any]) -> bool:
+    """Keep only generative text-chat models in the routing catalog.
+
+    Otari's catalog carries a ``type`` field (``chat`` / ``embedding`` / ...);
+    our curated fallback entries have no type and are kept as-is. Guard and
+    classifier ids are excluded even when a provider labels them ``chat``
+    (they answer with scores, not text).
+    """
+    mtype = model.get("type")
+    if mtype is not None and str(mtype).lower() != "chat":
+        return False
+    mid = str(model.get("id") or model.get("name") or "")
+    return not _NON_CHAT_ID.search(mid)
+
+
 async def _model_catalog() -> List[Dict[str, Any]]:
     if otari_client:
         try:
             models = await otari_client.fetch_models()
+            # Otari answers {"object": "list", "data": [...]} - unwrap.
+            if isinstance(models, dict):
+                models = models.get("data") or []
             normalized: List[Dict[str, Any]] = []
-            for m in models[:24]:  # cap catalog size for routing
+            chat_seen = 0
+            for m in models:
                 if isinstance(m, str):
                     m = {"id": m}
                 if not isinstance(m, dict):
                     continue
+                if not _is_chat_model(m):
+                    continue
+                chat_seen += 1
+                if chat_seen > 24:  # cap catalog size for routing
+                    break
                 m.setdefault("latency", 999)
                 m.setdefault("health", 0.9)
                 m.setdefault("cost_per_token", 0.0)
