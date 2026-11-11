@@ -370,8 +370,10 @@ Known gaps / in flight (do not claim as done):
   mode is the honest default.
 - docker build / docker compose up remain unrun (no container runtime in the
   build environment).
-- The hackathon-2026-nov branch no longer exists on the remote; main is the
-  only branch and the current source of truth.
+- The hackathon-2026-nov branch no longer exists on the remote; main @
+  8dae360 is the base of record. Active work sits on short-lived feature
+  branches (integration, backend hardening, docs) merged back via the
+  integration lane.
 
 README architecture diagram is now a pre-rendered SVG (brand/architecture.svg,
 portrait, brand palette) so it renders on GitHub mobile where Mermaid code
