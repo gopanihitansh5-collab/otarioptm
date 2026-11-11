@@ -61,90 +61,13 @@ export function Reveal({
   );
 }
 
-export function CountUp({
-  value,
-  format,
-  className = "",
-}: {
+export function CountUp({ value, format, className = "" }: {
   value: number;
   format?: (n: number) => string;
   className?: string;
 }) {
-  const [display, setDisplay] = useState(0);
-  const [reduced] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  const ref = useRef<HTMLSpanElement | null>(null);
-  const visible = useRef(false);
-  const shown = useRef(0);
-  const frame = useRef<number | null>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const render = (target: number) => {
-      if (frame.current !== null) cancelAnimationFrame(frame.current);
-      if (reduced) {
-        shown.current = target;
-        setDisplay(target);
-        return;
-      }
-      const from = shown.current;
-      const t0 = performance.now();
-      const dur = 900;
-      const tick = (t: number) => {
-        const p = Math.min(1, Math.max(0, (t - t0) / dur));
-        const eased = 1 - Math.pow(1 - p, 3);
-        const next = from + (target - from) * eased;
-        shown.current = next;
-        setDisplay(next);
-        if (p < 1) {
-          frame.current = requestAnimationFrame(tick);
-        } else {
-          frame.current = null;
-        }
-      };
-      frame.current = requestAnimationFrame(tick);
-    };
-
-    const io = new IntersectionObserver((entries) => {
-      const inView = entries.some((e) => e.isIntersecting);
-      if (inView && !visible.current) render(value);
-      visible.current = inView;
-    });
-    io.observe(el);
-    if (visible.current) render(value);
-
-    // If the observer never fires (headless reader, print view, odd
-    // viewport), still land on the real value instead of a stale zero.
-    // Snap directly - never depend on rAF for the final displayed value.
-    const fallback = window.setTimeout(() => {
-      if (!visible.current) {
-        visible.current = true;
-        if (frame.current !== null) cancelAnimationFrame(frame.current);
-        shown.current = value;
-        setDisplay(value);
-      }
-    }, 1500);
-
-    return () => {
-      io.disconnect();
-      window.clearTimeout(fallback);
-      if (frame.current !== null) cancelAnimationFrame(frame.current);
-    };
-  }, [value, reduced]);
-
-  const current = reduced ? value : display;
-  return (
-    <span ref={ref} className={className}>
-      {format
-        ? format(current)
-        : current.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-    </span>
-  );
+  // Financial values are data, not animation frames. Never interpolate them.
+  return <span className={className}>{format ? format(value) : value.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>;
 }
 
 type BudgetSnapshot = {
