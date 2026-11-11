@@ -50,7 +50,9 @@ DEFAULT_CONFIG = {
         "rate_limit": {
             "enabled": True,
             "capacity": 30,        # burst size per IP on mutating endpoints
-            "refill_per_sec": 1.0,  # tokens restored per second
+            "refill_per_sec": 1.0,  # tokens restored per second per IP
+            "global_capacity": 120,        # burst size across ALL IPs per instance
+            "global_refill_per_sec": 5.0,  # tokens restored per second (global)
         },
     },
 }

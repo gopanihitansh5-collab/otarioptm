@@ -441,6 +441,55 @@ async def _demo_chat(messages: List[Dict[str, Any]], node_id: str) -> Dict[str, 
     }
 
 
+class EmptyCompletion(RuntimeError):
+    """A provider answered 200 but produced no completion text.
+
+    Seen live with reasoning models whose whole token budget went to hidden
+    reasoning (content == ""), and possible with tool-call-only responses,
+    which this gateway cannot render (it never sends tools). Treated as a
+    provider failure so the chain falls to the next tier instead of recording
+    an empty output as a successful answer.
+    """
+
+
+def _completion_text(result: Dict[str, Any]) -> str:
+    """Stripped assistant text of the first choice; "" when absent."""
+    try:
+        content = result["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        return ""
+    if content is None:
+        return ""
+    return str(content).strip()
+
+
+def _has_tool_calls(result: Dict[str, Any]) -> bool:
+    """True when the first choice carries tool calls instead of text."""
+    try:
+        message = result["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError):
+        return False
+    return isinstance(message, dict) and bool(message.get("tool_calls"))
+
+
+def _raise_if_empty(result: Dict[str, Any], provider: str) -> None:
+    """Reject a 200 response that carries no renderable answer."""
+    if _completion_text(result):
+        return
+    detail = f"{provider} returned no completion content"
+    if _has_tool_calls(result):
+        detail += " (tool calls only - tool execution is not supported by this gateway)"
+    raise EmptyCompletion(detail)
+
+
+def _reported_cost(result: Dict[str, Any]) -> float:
+    """Provider-reported USD spend of ONE attempt (0.0 when unreported)."""
+    try:
+        return max(0.0, float(result.get("cost") or result.get("actual_cost") or 0.0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
 async def execute_chat_step(
     node: Dict[str, Any],
     ctx_messages: List[Dict[str, Any]],
@@ -482,6 +531,10 @@ async def execute_chat_step(
     settled = False
     over_budget = False
     actual_cost = 0.0
+    # Spend reported by FAILED attempts (e.g. an empty completion that still
+    # billed). It is charged on top of the winning attempt so recorded spend
+    # stays truthful - a discarded response is never silently free.
+    billed_failed_attempts = 0.0
     result: Dict[str, Any] = {}
     try:
         try:
@@ -489,10 +542,12 @@ async def execute_chat_step(
             if otari_client is not None and chosen_id and chosen_id != "demo":
                 primary = "otari"
                 result = await _otari_chat(chosen_id, ctx_messages, max_tokens)
+                _raise_if_empty(result, "otari")
                 chain = ["otari"]
             elif groq_client is not None:
                 primary = "groq"
                 result = await _groq_chat(ctx_messages, max_tokens)
+                _raise_if_empty(result, "groq")
                 chain = ["groq"]
             else:
                 primary = "demo"
@@ -500,13 +555,25 @@ async def execute_chat_step(
                 chain = ["demo"]
         except Exception as exc:  # provider failure (incl. wallet-level HTTP errors) -> next tier
             failures.append(_safe_provider_error(primary or "provider", exc))
+            # A failed attempt that still reported spend keeps its cost: the
+            # provider billed it even though the answer is unusable.
+            attempt_cost = _reported_cost(result)
+            if attempt_cost == 0.0 and isinstance(exc, EmptyCompletion) and primary == "otari":
+                # A 200 with no content and no cost report (e.g. a reasoning
+                # model that spent its tokens on hidden reasoning) can still
+                # have billed: charge the shared estimate, never record a
+                # paid attempt as free.
+                attempt_cost = est
+            billed_failed_attempts += attempt_cost
             if primary == "otari":
                 if groq_client is not None:
                     try:
                         result = await _groq_chat(ctx_messages, max_tokens)
+                        _raise_if_empty(result, "groq")
                         chain = ["otari->groq"]
                     except Exception as _gexc:
                         failures.append(_safe_provider_error("groq", _gexc))
+                        billed_failed_attempts += _reported_cost(result)
                         result = await _demo_chat(ctx_messages, node_id)
                         chain = ["otari->groq->demo"]
                 else:
@@ -521,10 +588,11 @@ async def execute_chat_step(
         latency_ms = (time.time() - t0) * 1000
 
         usage = result.get("usage") or {}
-        reported = float(result.get("cost") or result.get("actual_cost") or 0.0)
+        reported = _reported_cost(result)
         # When the provider doesn't report spend, charge the shared estimate
         # so the cap can't be bypassed; demo/Groq tiers are explicitly free.
-        actual_cost = reported if reported > 0 else (est if chain[:1] == ["otari"] else 0.0)
+        # Failed paid attempts that reported spend are added on top.
+        actual_cost = (reported if reported > 0 else (est if chain[:1] == ["otari"] else 0.0)) + billed_failed_attempts
         actual_cost, over_budget = await _settle_reservation(rid, actual_cost)
         settled = True
     finally:
@@ -536,12 +604,12 @@ async def execute_chat_step(
     if fallback_note and chain and chain[-1] == "demo":
         fallback_note += ", falling back to demo"
 
-    text = ""
-    try:
-        text = result["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError):
-        # A 200 payload without a completion can still be an error body:
-        # only echo it when it clearly carries no error payload.
+    text = _completion_text(result)
+    if not text:
+        # Defensive: real-provider empties are rejected above, so this only
+        # fires for exotic payloads. A 200 payload without a completion can
+        # still be an error body: only echo it when it clearly carries no
+        # error payload.
         if isinstance(result, dict) and not result.get("error"):
             text = json.dumps(result)[:500]
         else:
@@ -1181,6 +1249,19 @@ class _TokenBucketLimiter:
 
 _limiter = _TokenBucketLimiter()
 
+# Global (all-IP) per-instance burst cap on mutating endpoints. The per-IP
+# bucket above is trivially rotated past with fresh source IPs; this second
+# bucket bounds the TOTAL mutating traffic one instance serves, which blunts
+# distributed abuse. A normal user hits the per-IP limit long before this
+# one. It is still per-instance: it slows abuse, it is NOT a durable
+# cross-instance spend bound.
+_rl_cfg = (budget.config.get("gateway") or {}).get("rate_limit") or {}
+_global_limiter = _TokenBucketLimiter(enabled=bool(_rl_cfg.get("enabled", True)))
+# _TokenBucketLimiter.__init__ reads the per-IP keys, so set the global ones
+# explicitly afterwards.
+_global_limiter.capacity = float(_rl_cfg.get("global_capacity", 120.0))
+_global_limiter.refill = float(_rl_cfg.get("global_refill_per_sec", 5.0))
+
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 
@@ -1211,6 +1292,8 @@ async def _rate_limit_middleware(request: Request, call_next: Any) -> Any:
     if _limiter.enabled and request.method in _MUTATING_METHODS and request.url.path.startswith("/api/v1/"):
         ip = _client_ip(request)
         allowed, retry_after = _limiter.check(ip)
+        if allowed:
+            allowed, retry_after = _global_limiter.check("global")
         if not allowed:
             return JSONResponse(
                 status_code=429,

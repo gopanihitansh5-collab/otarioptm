@@ -55,9 +55,14 @@ profiles:
 gateway:
   rate_limit:
     # Per-IP token bucket on mutating /api/v1/* endpoints
-    # (src/gateway/main.py:700-751). /api/v1/health is exempt. Exceeding the
-    # bucket returns HTTP 429 with a Retry-After header
-    # (src/gateway/main.py:745-750).
+    # (src/gateway/main.py, _TokenBucketLimiter/_rate_limit_middleware).
+    # /api/v1/health is exempt. Exceeding a bucket returns HTTP 429 with a
+    # Retry-After header. The global_* keys bound TOTAL mutating traffic per
+    # instance (per-IP buckets are trivially rotated past with fresh source
+    # IPs); both buckets are per-instance and are an abuse brake, not a
+    # durable cross-instance spend bound.
     enabled: true
     capacity: 30         # burst size per IP
-    refill_per_sec: 1.0  # tokens restored per second
+    refill_per_sec: 1.0  # tokens restored per second per IP
+    global_capacity: 120        # burst size across ALL IPs per instance
+    global_refill_per_sec: 5.0  # tokens restored per second (global)
