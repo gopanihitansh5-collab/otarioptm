@@ -77,9 +77,10 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
         {(failed || demo) && <p role="status" className="mb-5 rounded-xl border border-amber/40 bg-amber/10 p-3 text-sm text-amber">{failed ? "This run is incomplete or contains blocked/failed steps. " : ""}{demo ? "This run includes explicitly labeled demo output, not live model inference." : ""}</p>}
         {run.task && <p className="mb-5 whitespace-pre-wrap text-sm text-silver">{run.task}</p>}
         {run.computedJson && Object.entries(run.computedJson).map(([id, value]) => {
-          if (!value || typeof value !== "object" || !Array.isArray((value as { rows?: unknown }).rows)) return null;
-          const obj = value as { rows: unknown[]; currency?: unknown };
-          const rows = obj.rows.filter((r): r is Record<string, unknown> => !!r && typeof r === "object" && !Array.isArray(r));
+          if (!value || typeof value !== "object") return null;
+          const obj = value as { rows?: unknown[]; results?: unknown[]; currency?: unknown };
+          const rawRows = Array.isArray(obj.rows) ? obj.rows : Array.isArray(obj.results) ? obj.results : [];
+          const rows = rawRows.filter((r): r is Record<string, unknown> => !!r && typeof r === "object" && !Array.isArray(r));
           if (!rows.length) return null;
           const columns = ["model", "input_rate", "output_rate", "volume", "monthly_cost"].filter(k => rows.some(r => k in r));
           if (!columns.length) return null;
