@@ -8,11 +8,11 @@
 
 A visual AI workflow engine with cost-aware model routing and hard budget enforcement,
 built on [Otari](https://github.com/mozilla-ai/otari) (Mozilla AI) for the DoraHacks
-Devs Wilding hackathon. Every step of every run is routed, priced and accounted for
-before it is spent.
+Devs Wilding hackathon. Model steps are routed with visible provider provenance and budget reservations.
+Configured prices are estimates, not an independent provider invoice.
 
 [![CI](https://github.com/gopanihitansh5-collab/otarioptm/actions/workflows/ci.yml/badge.svg)](https://github.com/gopanihitansh5-collab/otarioptm/actions/workflows/ci.yml)
-![tests](https://img.shields.io/badge/tests-87%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-206%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.12%2B-3776AB)
 ![next](https://img.shields.io/badge/Next.js-16-black)
 ![license](https://img.shields.io/badge/license-Apache%202.0-blue)
@@ -21,7 +21,7 @@ before it is spent.
 
 </div>
 
-## 📜 What a run looks like
+## 📜 Historical local demo capture
 
 This is a real capture from this repository, gateway running locally. The hosted Otari
 gateway answered `424` (no hosted provider configured upstream on the account), so the
@@ -63,6 +63,52 @@ Set `OTARI_API_KEY` or `GROQ_API_KEY` and the same graph executes on live models
 real usage-based costs; nothing else changes. The fallback chain is visible on every
 step (`chain`), the reason the router picked a candidate is on every step (`routing`),
 and the money is on every step (`cost`).
+
+## ✅ Verified live: Otari answering on production
+
+Captured 2026-11-11 against the production deployment (https://otarioptm.vercel.app),
+default routing (no model pinned). The request, the response and the gateway's own
+activity record:
+
+```text
+$ curl -s -X POST https://otarioptm.vercel.app/api/v1/chat/completions \
+    -H "Content-Type: application/json" \
+    -d '{"messages":[{"role":"user","content":"Reply with exactly: otari-default-route-probe"}],
+         "max_tokens":16}'
+{"model":"alibaba/qwen3.8-flash",
+ "choices":[{"message":{"role":"assistant","content":"otari-default-route-probe"},
+             "finish_reason":"stop"}],
+ "usage":{"total_tokens":108,"cost":0.0}}
+
+$ curl -s https://otarioptm.vercel.app/api/v1/activity
+{"events":[{"event":"node.completed","nodeId":"adhoc",
+  "model":"alibaba/qwen3.8-flash","chain":["otari"],"tokens":108,
+  "cost":0.0,"costSource":"free","latencyMs":3018,
+  "routing":"preferred fast otari model (alibaba/qwen3.8-flash)",
+  "ts":1794403499.116054}], ...}
+```
+
+`chain: ["otari"]` is the gateway's own per-step provenance: this request was answered
+by Otari alone, with no Groq fallback. Repeated probes the same day (8 captured events)
+all show the same Otari-only chain at ~2.3-3.0s.
+
+What this does **not** claim: not every run stays on Otari (a slow or failing Otari
+leg still falls back to Groq, labeled in `chain`), and `cost: 0.0` is the catalog
+price Otari reports - the wallet's actual charge is tracked separately
+(`costSource: "catalog-zero"` in current builds means exactly that).
+
+## Task-to-workflow studio
+
+Use **Plan a task** to describe an outcome. Three separate Groq-only stages decompose
+it into a validated graph, assign catalog models to chat nodes and improve their
+prompts using shared task context. Invalid output is rejected or reported as a
+stage warning, never replaced by a preset. Free-tier capacity is not unlimited.
+
+Inspect the generated prompts, queries, Python and connections, then apply the
+plan to the canvas. Applying is not execution. **Run Workflow** starts execution;
+real SSE node-start/node-complete events drive node status and incoming-edge motion.
+**Results** shows terminal output and the full trace, with a Markdown download.
+Exa search has its own balance and pricing outside the app model budget.
 
 ## 🚀 Quickstart
 
@@ -287,7 +333,7 @@ src/services/budget.py    BudgetManager: reserve, settle, release, cap enforceme
 src/services/otari_client.py  Otari hosted gateway client
 src/services/search.py    web search client (Exa + fallback)
 config/config.yml         live config (budget cap, rate limit) + config/example.yml
-tests/                    pytest suite: API, budget, router, gateway features (87 tests)
+tests/                    pytest suite: API, budget, router, gateway features (206 tests)
 web/src/app/              landing, /studio, /privacy, /terms, OG image, icon
 web/src/components/       landing sections, React Flow canvas, nodes, studio panels
 web/src/lib/              api client, workflow validation, snapshots, templates
@@ -328,15 +374,19 @@ The repository ships its own operating kit under `.opencode/`: eight specialist 
   local text labeled `demo` at $0.00. It proves the engine path, not model quality.
 - **The routing line names the chosen candidate.** When the chain falls back, the
   `chain` field discloses the provider that actually served the request.
-- **Code Exec is MVP-grade.** The sandbox is in-process with AST validation, a blocked
-  import list and a 5s timeout. It is not a security boundary.
-- **Budget state is single-process.** The reserve and settle lock holds within one
-  gateway process; horizontal scaling needs a shared store.
+- **Code Exec depends on its backend.** Production uses Vercel Sandbox microVMs with
+  network egress denied and a bounded execution timeout. Hobby quota or resource
+  failures stop execution; there is no deployed in-process fallback. Local development
+  can use the older MVP executor and must not be treated as the same boundary.
+- **Budget bounds are conditional.** Production uses a shared Redis ledger. Reservations
+  depend on configured prices, prompt/output bounds and provider reporting; hidden
+  usage or catalog-zero wallet charges are not an unconditional spending guarantee.
+  The app model budget is separate from Otari wallets and Exa credits.
 - **Latency figures are catalog values.** The probe stamps health; per-model latency
   comes from the catalog, not measured percentiles.
 - **WebSockets may not connect on Vercel.** Vercel's Python runtime does not upgrade
   WebSocket connections, so on a Vercel deploy the live activity socket may fall back
-  to the studio's honest offline card. The REST API and SSE still work.
+  to snapshot polling, labeled POLLING. The REST API and SSE still work.
 - **No auth or multi-tenancy.** One project, one budget cap, per-IP rate limiting only.
 
 Built for the DoraHacks Devs Wilding Online! hackathon (Mozilla Otari).

@@ -1,5 +1,7 @@
 "use client";
 
+import { costLabel } from "@/lib/costLabel";
+
 import { Handle, Position } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import {
@@ -95,7 +97,7 @@ export function NodeChat(props: NodeProps) {
             </div>
           )}
           <div className="font-mono text-silver">
-            {step.tokens ?? 0} tok · ${(step.cost ?? 0).toFixed(4)} · {step.latencyMs ?? 0} ms
+            {step.tokens ?? 0} tok · {costLabel(step)} · {step.latencyMs ?? 0} ms
           </div>
           {step.output && (
             <div className="text-ice">

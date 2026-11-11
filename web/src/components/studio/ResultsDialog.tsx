@@ -1,5 +1,6 @@
 "use client";
 
+import { costLabel } from "@/lib/costLabel";
 import { useRef } from "react";
 import type { PlanResponse } from "@/lib/api";
 import type { StepResult, WorkflowEdge } from "@/lib/types";
@@ -24,7 +25,7 @@ function reportMarkdown(run: RunDeliverable): string {
   if (run.planner) sections.push(`## Planning provenance\n\nProvider: ${run.planner.provider} | Route: ${run.planner.chain.join(" -> ")} | Recorded cost: $${run.planner.cost?.toFixed(6) ?? "not reported"} (${run.planner.costSource ?? "not reported"})`);
   if (run.stages) sections.push(`## Planning stages\n\n${JSON.stringify(run.stages, null, 2)}`);
   for (const s of run.steps) {
-    sections.push(`## ${s.nodeId} (${s.type ?? "step"})`, `Provider/model: ${s.model ?? "not reported"}\n\nRoute: ${s.chain?.join(" -> ") || "not reported"}\n\nRecorded cost: ${s.cost === undefined ? "not reported" : `$${s.cost.toFixed(6)}`} (${s.costSource ?? "source not reported"})\n\nTokens: ${s.tokens ?? "not reported"} | Latency: ${s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}`);
+    sections.push(`## ${s.nodeId} (${s.type ?? "step"})`, `Provider/model: ${s.model ?? "not reported"}\n\nRoute: ${s.chain?.join(" -> ") || "not reported"}\n\nRecorded cost: ${costLabel(s)}\n\nTokens: ${s.tokens ?? "not reported"} | Latency: ${s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}`);
     if (s.demo) sections.push("DEMO OUTPUT - not live model inference.");
     if (s.error) sections.push(`Error: ${s.error}`);
     if (s.blocked) sections.push("This step was blocked.");
@@ -71,7 +72,7 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
         <h3 className="mb-3 mt-7 text-sm font-semibold text-ice">Execution trace</h3>
         <div className="space-y-2">{run.steps.map(s => <details key={s.nodeId} className="rounded-xl border border-steel-dim bg-obsidian p-3">
           <summary className="cursor-pointer text-xs text-ice"><span className="font-medium">{s.nodeId}</span> · {s.chain?.join(" → ") || s.model || s.type || "step"} · {s.error || s.blocked ? "failed / blocked" : s.demo ? "demo" : "response received"}</summary>
-          <p className="mt-3 font-mono text-[10px] leading-5 text-silver">Model: {s.model || "not reported"} · Cost: {s.cost === undefined ? "not reported" : `$${s.cost.toFixed(6)}`} ({s.costSource || "source not reported"}) · Tokens: {s.tokens ?? "not reported"} · Latency: {s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}</p>
+          <p className="mt-3 font-mono text-[10px] leading-5 text-silver">Model: {s.model || "not reported"} · Cost: {costLabel(s)} · Tokens: {s.tokens ?? "not reported"} · Latency: {s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}</p>
           {s.note && <p className="mt-2 text-xs text-amber">{s.note}</p>}{s.error && <p className="mt-2 text-xs text-fail">{s.error}</p>}
           <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-silver">{s.output || "No output returned."}</pre>
         </details>)}</div>

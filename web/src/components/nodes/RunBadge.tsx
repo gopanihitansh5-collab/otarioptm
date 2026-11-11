@@ -41,6 +41,7 @@ export function RunBadge({ status, step }: RunBadgeProps) {
 
   return (
     <span
+      title={step?.costSource === "catalog-zero" ? "Catalog $0; actual wallet charge unverified" : undefined}
       ref={badgeRef}
       style={{ opacity: 0 }}
       className={`absolute -top-2.5 right-2 rounded border px-1 py-0.5 font-mono text-[9px] tracking-widest transition-opacity duration-200 ${
@@ -51,7 +52,7 @@ export function RunBadge({ status, step }: RunBadgeProps) {
             : "border-steel bg-obsidian text-lime"
       }`}
     >
-      {blocked ? "BLOCKED" : failed ? "FAILED" : `$${cost.toFixed(4)}${demo ? " · DEMO" : ""}`}
+      {blocked ? "BLOCKED" : failed ? "FAILED" : `${step?.costSource === "catalog-zero" ? "CATALOG $0*" : `$${cost.toFixed(4)}`}${demo ? " · DEMO" : ""}`}
     </span>
   );
 }

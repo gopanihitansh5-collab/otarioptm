@@ -1,3 +1,4 @@
+import { costLabel } from "@/lib/costLabel";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { BudgetMeter } from "@/components/BudgetMeter";
 import { CLOSE_BTN, DANGER_BTN, FOCUS_RING } from "@/components/studio/ui";
@@ -178,9 +179,9 @@ function Inspector({
               {step.chain.join(" -> ")}
             </div>
           )}
-          <div className="mt-1.5 flex gap-3 font-mono text-ice">
+          <div className="mt-1.5 flex flex-wrap gap-3 font-mono text-ice">
             <span>{step.tokens ?? 0} tok</span>
-            <span>${(step.cost ?? 0).toFixed(4)}</span>
+            <span>{costLabel(step)}</span>
             <span>{step.latencyMs ?? 0} ms</span>
           </div>
           {step.violations && step.violations.length > 0 && (

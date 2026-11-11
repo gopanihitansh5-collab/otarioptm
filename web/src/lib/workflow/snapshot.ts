@@ -96,6 +96,9 @@ function sanitizeStep(raw: unknown): StepResult | null {
   if (typeof raw.tokens === "number") step.tokens = raw.tokens;
   if (typeof raw.cost === "number") step.cost = raw.cost;
   if (typeof raw.latencyMs === "number") step.latencyMs = raw.latencyMs;
+  if (typeof raw.costSource === "string") step.costSource = raw.costSource;
+  if (typeof raw.note === "string") step.note = raw.note;
+  if (typeof raw.realInference === "boolean") step.realInference = raw.realInference;
   if (typeof raw.routing === "string") step.routing = raw.routing;
   if (typeof raw.demo === "boolean") step.demo = raw.demo;
   if (typeof raw.blocked === "boolean") step.blocked = raw.blocked;
