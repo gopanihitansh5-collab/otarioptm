@@ -1,53 +1,92 @@
-# Demo Script (Presenter Talk Track)
+# Demo Script (Presenter Talk Track, own voice)
 
-~10 minutes. Every claim below matches verified behavior (see
-docs/product-capabilities.md). Bracketed notes are for the presenter, never
-spoken.
+3-5 minutes at a natural pace (~600 spoken words). Every spoken claim matches
+verified behavior in the current deployment (see
+docs/QUALITY-AUDIT-2026-11-11.md). [Bracketed notes are stage directions -
+never read aloud.] Read it in your own voice; record your real screen.
 
-## 1. Landing (2 min)
+## 1. Landing (0:00-0:30)
 
-"This is OtariOptm - an AI workflow engine that keeps model spend under
-control. The page walks the story: the cost problem teams hit, the routing
-and budget intelligence, an interactive taste, and where the product is
-credible today. Everything marked demo or illustrative is labeled; there
-are no vanity metrics on this page."
+"This is OtariOptm - a control plane for AI workflow spend. It routes each
+step of a workflow to a model by cost, latency and health, reserves budget
+before anything runs, and shows you exactly what every run cost. Everything
+on this page that is illustrative or demo is labeled as such - there are no
+vanity metrics here."
 
-## 2. Studio: first workflow (3 min)
+## 2. The problem (0:30-0:50)
 
-"Here's the studio. On a first visit it loads a starter workflow for you -
-research a topic with web search, then summarize. I'll just hit Run."
-[Run. Point at activity feed.] "You can see each node start and finish,
-live. On this deployment the feed polls the activity API - the health
-endpoint advertises the transport, and the UI adapts; locally it streams
-over WebSocket."
-[Point at the answer.] "This answer is labeled demo mode. The deployed
-gateway runs with zero provider keys, so every model call resolves to the
-deterministic demo tier - free and reproducible. Point it at Otari or Groq
-keys and the same flow routes to real providers through the fallback
-chain."
+"Teams picking models by hand are guessing off a pricing page every day.
+OtariOptm scores candidate models per request and commits to one router, so
+the cheapest healthy option wins each step - and you can see why."
 
-## 3. Templates (2 min)
+## 3. Studio tour (0:50-1:30)
 
-"Four starter workflows ship with the product: research and summarize, a
-docs pipeline, a code sandbox workflow, and a multi-source digest."
-[Load and run a second template.] "Same execution engine, different graph -
-topological execution, guardrails on inputs and outputs, and a sandboxed
-code node."
+[Open Studio; starter workflow "Research then summarize" is already loaded.]
 
-## 4. Budget enforcement (2 min)
+"Here's the studio. On a first visit it loads a starter workflow: search the
+web for context, then summarize it. Each node is inspectable - prompt, system
+message, routing info. Up here is the budget meter: a five-dollar cap, and
+what's left of it. The palette offers model chat, web search, guardrails -
+and code execution, which is temporarily unavailable. More on that in a
+moment, it's part of the story."
 
-"Budgets are enforced, not just displayed. Every node reserves budget and
-settles exactly-once when it finishes. Here's the overspend demo control."
-[TRY OVERSPEND DEMO, run.] "The API returns 402 budget-exceeded and the
-workflow stops. That's the enforcement a finance team actually wants.
-Per-user budgets are on the roadmap - today enforcement is project-level."
+## 4. A run, honestly labeled (1:30-2:15)
 
-## 5. Evidence and API (1 min)
+[Click Run Workflow.]
 
-"Everything you just saw is exportable." [Download CSV.] "Run history as
-CSV. And the gateway speaks an OpenAI-compatible chat-completions shape,
+[If the run used the demo tier - no provider keys configured:]
+"Watch the activity feed: each node starts and completes, live. This answer
+is labeled DEMO, because this environment has no provider keys configured -
+every model call resolves to a deterministic demo tier that is free and
+reproducible. The badges say so on every node. Point the same gateway at
+Otari or Groq keys and this exact flow routes to real providers through the
+same fallback chain."
+
+[If you chose to run live on the production deployment with your own keys:]
+"Watch the activity feed: each node starts and completes, live. This run
+went to a real provider, and every node shows its provider, tokens and cost
+- with a label saying whether that cost was reported by the provider or
+estimated. An estimate is never presented as a real charge."
+
+## 5. A security decision, not a bug (2:15-2:45)
+
+[Show the Code Exec palette card and/or run a workflow with a code node.]
+
+"One honest limitation. Code execution is temporarily unavailable: while
+hardening the sandbox we found the isolation boundary wasn't strong enough,
+so the node now refuses every program - fail closed - until execution runs
+behind a genuine isolation boundary. We'd rather ship a truthful refusal
+than a weak sandbox."
+
+## 6. Budget enforcement (2:45-3:30)
+
+[Click TRY OVERSPEND DEMO, then Run.]
+
+"Budgets are enforced before spend, not just displayed. This control is a
+client-side demonstration of the pre-spend block - it sets a tiny local cap
+and leaves the real gateway cap untouched. Watch: the run is blocked before
+anything executes - nothing ran, nothing was spent. On the server side the
+gateway does the same thing for real: it reserves budget before each step,
+settles exactly once, and refuses with HTTP 402 when the cap is exhausted.
+That server-side path is covered by the automated test suite - 130 tests
+green today. Today's ledger is in-memory on the serverless deployment, so
+it resets between instances; durable, per-user budgets are documented next
+steps."
+
+## 7. Evidence (3:30-4:00)
+
+[Click Export CSV.]
+
+"Every run is exportable: the activity log downloads as CSV, including a
+cost-source column that says provider-reported, estimated, or demo for each
+entry. The gateway also speaks an OpenAI-compatible chat-completions shape,
 so existing tooling can target it directly."
-[Close.] "What's real: workflow execution, routing with labeled fallback,
-budget enforcement, activity observability, export. What's planned:
-authentication, per-user budgets, durable history. The gap analysis in the
-repo says exactly which is which."
+
+## 8. Close (4:00-4:30)
+
+"What's real today: multi-node workflow execution, cost-latency-health
+routing with a labeled fallback chain, pre-spend budget enforcement, live
+activity observability, and export. What's clearly marked as not done: code
+execution behind a real isolation boundary, authentication, durable history.
+The quality audit in the repo lists every one of these as pass, partial, or
+open - in writing. That's OtariOptm: spend control you can actually verify."
