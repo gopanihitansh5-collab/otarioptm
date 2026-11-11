@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NODE_LABELS, type NodeType, type WorkflowNodeData } from "@/lib/types";
+import { useAutosave } from "./useAutosave";
+import type { AutosaveStatus } from "./useAutosave";
 
 export type { WorkflowNode, WorkflowEdge } from "@/lib/types";
 import type { WorkflowNode, WorkflowEdge } from "@/lib/types";
@@ -60,6 +62,8 @@ export function useWorkflowState(options?: { persist?: boolean }): {
   updateNodeData: (id: string, data: Partial<WorkflowNodeData>) => void;
   clearAll: () => void;
   setGraph: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
+  saveStatus: AutosaveStatus;
+  saveNow: () => void;
 } {
   const persist = options?.persist !== false;
   // Start empty so SSR and first client render match; hydrate from
@@ -67,35 +71,29 @@ export function useWorkflowState(options?: { persist?: boolean }): {
   // stale SSR attributes such as a wrongly-disabled Run button).
   const [nodes, setNodes] = useState<WorkflowNode[]>([]);
   const [edges, setEdges] = useState<WorkflowEdge[]>([]);
-  const hydratedRef = useRef(false);
+  const [hydrated, setHydrated] = useState(false);
   const counterRef = useRef(0);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      hydratedRef.current = true;
       const snapshot = loadSnapshot(persist);
       if (snapshot.nodes.length > 0 || snapshot.edges.length > 0) {
         setNodes(snapshot.nodes);
         setEdges(snapshot.edges);
       }
+      setHydrated(true);
     }, 0);
     return () => window.clearTimeout(t);
   }, [persist]);
 
   const serialized = JSON.stringify({ nodes, edges });
 
-  useEffect(() => {
-    if (!persist || typeof window === "undefined" || !hydratedRef.current)
-      return;
-    const timer = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, serialized);
-      } catch {
-        /* quota exceeded ignored */
-      }
-    }, SAVE_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [serialized, persist]);
+  const { status: saveStatus, saveNow } = useAutosave(
+    STORAGE_KEY,
+    serialized,
+    persist && hydrated,
+    { debounceMs: SAVE_DEBOUNCE_MS },
+  );
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes((prev) => {
@@ -207,5 +205,7 @@ export function useWorkflowState(options?: { persist?: boolean }): {
     updateNodeData,
     clearAll,
     setGraph,
+    saveStatus,
+    saveNow,
   };
 }

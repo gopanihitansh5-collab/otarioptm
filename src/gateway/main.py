@@ -15,10 +15,11 @@ import asyncio
 import csv
 import io
 import json
+import math
 import os
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 
@@ -27,25 +28,11 @@ load_dotenv()
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from src.services.budget import BudgetManager
 from src.services.otari_client import OTARIClient
 from src.services.router import _model_cost, select_model
-
-app = FastAPI(title="OtariOptm Gateway", version="0.2.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "https://*.vercel.app",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 budget = BudgetManager()
 otari_client: Optional[OTARIClient] = None
@@ -84,7 +71,6 @@ class ActivityHub:
 hub = ActivityHub()
 
 
-@app.on_event("startup")
 async def startup() -> None:
     global otari_client, groq_client
     api_key = os.environ.get("OTARI_API_KEY")
@@ -103,12 +89,13 @@ async def startup() -> None:
         print("OtariOptm: Groq fallback enabled")
 
 
-@app.on_event("shutdown")
 async def shutdown() -> None:
     if otari_client:
         await otari_client.close()
     if groq_client:
         await groq_client.aclose()
+    if _probe_task is not None:
+        _probe_task.cancel()
 
 
 async def _log_activity(event: Dict[str, Any]) -> None:
@@ -458,7 +445,6 @@ async def _send_budget_alert(node_id: str) -> None:
         pass  # alerts must never break workflow execution
 
 
-@app.get("/api/v1/health")
 async def health() -> Dict[str, Any]:
     snap = await budget.snapshot()
     return {
@@ -469,7 +455,6 @@ async def health() -> Dict[str, Any]:
     }
 
 
-@app.get("/api/v1/budget")
 async def budget_state() -> Dict[str, Any]:
     return await budget.snapshot()
 
@@ -482,7 +467,7 @@ FALLBACK_CATALOG = [
 ]
 
 
-async def _models() -> List[Dict[str, Any]]:
+async def _model_catalog() -> List[Dict[str, Any]]:
     if otari_client:
         try:
             models = await otari_client.fetch_models()
@@ -517,12 +502,10 @@ def _dedupe_ids(models: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return out
 
 
-@app.get("/api/v1/models")
 async def get_models() -> List[Dict[str, Any]]:
     return await _models()
 
 
-@app.post("/api/v1/chat/completions")
 async def chat_completions(request: Request) -> Dict[str, Any]:
     body = await request.json()
     model = body.get("model", "")
@@ -550,7 +533,6 @@ async def chat_completions(request: Request) -> Dict[str, Any]:
     }
 
 
-@app.post("/api/v1/workflow/run")
 async def workflow_run(request: Request) -> Dict[str, Any]:
     """Compile {nodes, edges} into topological steps and execute them."""
     body = await request.json()
@@ -669,12 +651,10 @@ def _trim(text: str, limit: int = 2000) -> str:
     return text if len(text) <= limit else text[:limit] + "..."
 
 
-@app.get("/api/v1/activity")
 async def activity_snapshot() -> Dict[str, Any]:
     return {"events": ACTIVITY_LOG[-200:], "budget": await budget.snapshot()}
 
 
-@app.websocket("/api/v1/activity")
 async def activity_ws(websocket: WebSocket) -> None:
     """Stream budget snapshots + node events to the dashboard."""
     await hub.connect(websocket)
@@ -691,7 +671,6 @@ async def activity_ws(websocket: WebSocket) -> None:
         hub.disconnect(websocket)
 
 
-@app.get("/api/v1/export")
 async def export_csv() -> Response:
     buf = io.StringIO()
     writer = csv.writer(buf)
@@ -712,3 +691,341 @@ async def export_csv() -> Response:
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=otarioptm-activity.csv"},
     )
+
+
+# ---------------------------------------------------------------------------
+# Per-IP token-bucket rate limiting (mutating endpoints; /health exempt).
+# ---------------------------------------------------------------------------
+
+class _TokenBucketLimiter:
+    """In-memory token bucket keyed by client IP.
+
+    Reads defaults from ``gateway.rate_limit`` in config/config.yml
+    (falling back to built-in defaults) and stays O(1) per request with a
+    bounded IP table so a flood of spoofed IPs cannot grow memory forever.
+    """
+
+    MAX_IPS = 10_000
+
+    def __init__(self, capacity: float = 30.0, refill_per_sec: float = 1.0, enabled: bool = True) -> None:
+        gw = budget.config.get("gateway") or {}
+        rl = gw.get("rate_limit") or {}
+        self.enabled = bool(rl.get("enabled", enabled))
+        self.capacity = float(rl.get("capacity", capacity))
+        self.refill = float(rl.get("refill_per_sec", refill_per_sec))
+        self._buckets: Dict[str, Tuple[float, float]] = {}  # ip -> (tokens, last_ts)
+
+    def check(self, ip: str) -> Tuple[bool, int]:
+        """Consume one token for ``ip``; return (allowed, retry_after_seconds)."""
+        now = time.time()
+        tokens, last = self._buckets.get(ip, (self.capacity, now))
+        tokens = min(self.capacity, tokens + (now - last) * self.refill)
+        if tokens >= 1.0:
+            tokens -= 1.0
+            allowed, retry_after = True, 0
+        else:
+            allowed = False
+            retry_after = max(1, math.ceil((1.0 - tokens) / self.refill)) if self.refill > 0 else 60
+        if ip not in self._buckets and len(self._buckets) >= self.MAX_IPS:
+            for stale_ip in list(self._buckets)[: len(self._buckets) - self.MAX_IPS + 1]:
+                del self._buckets[stale_ip]
+        self._buckets[ip] = (tokens, now)
+        return allowed, retry_after
+
+
+_limiter = _TokenBucketLimiter()
+
+_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+async def _rate_limit_middleware(request: Request, call_next: Any) -> Any:
+    if _limiter.enabled and request.method in _MUTATING_METHODS and request.url.path.startswith("/api/v1/"):
+        ip = request.client.host if request.client else "unknown"
+        allowed, retry_after = _limiter.check(ip)
+        if not allowed:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded - slow down and retry"},
+                headers={"Retry-After": str(retry_after)},
+            )
+    return await call_next(request)
+
+
+# ---------------------------------------------------------------------------
+# Background model-health probe (60s TTL cache feeding the router).
+# ---------------------------------------------------------------------------
+
+HEALTH_PROBE_TTL = 60.0
+_probe_cache: Dict[str, Any] = {"ts": 0.0, "values": {}}
+_probe_task: Optional[asyncio.Task] = None
+_bg_tasks: set = set()
+
+
+def _synthetic_health(model_id: str) -> float:
+    """Deterministic pseudo-health in [0.5, 1.0] derived from the model id."""
+    seed = sum(ord(c) for c in model_id)
+    wiggle = ((seed % 7) - 3) / 100.0  # -0.03..+0.03
+    return round(max(0.5, min(1.0, 1.0 + wiggle)), 4)
+
+
+async def _probe_model_health(models: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Refresh the model-health cache when older than the TTL.
+
+    Demo mode gets deterministic synthetic values, clearly labeled
+    ``synthetic-demo``; with live providers the catalog-reported health is
+    labeled ``catalog`` until a real probe tier exists. The router consumes
+    the stamped values via ``_models()``.
+    """
+    now = time.time()
+    if now - _probe_cache["ts"] < HEALTH_PROBE_TTL and _probe_cache["values"]:
+        return _probe_cache
+    live = otari_client is not None or groq_client is not None
+    values: Dict[str, Any] = {}
+    for m in models:
+        mid = str(m.get("id") or m.get("name") or "?")
+        if live:
+            values[mid] = {"value": round(float(m.get("health", 0.9) or 0.0), 4), "source": "catalog", "ts": now}
+        else:
+            values[mid] = {"value": _synthetic_health(mid), "source": "synthetic-demo", "ts": now}
+    _probe_cache["ts"] = now
+    _probe_cache["values"] = values
+    return _probe_cache
+
+
+async def _health_probe_loop() -> None:
+    """Background refresh so the cache is warm even between requests."""
+    while True:
+        try:
+            await _probe_model_health([dict(m) for m in FALLBACK_CATALOG])
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            pass  # a probe failure must never break the gateway
+        await asyncio.sleep(HEALTH_PROBE_TTL)
+
+
+async def _models() -> List[Dict[str, Any]]:
+    catalog = await _model_catalog()
+    probe = await _probe_model_health(catalog)
+    out: List[Dict[str, Any]] = []
+    for m in catalog:
+        mm = dict(m)
+        stamped = probe["values"].get(str(mm.get("id") or mm.get("name") or "?"))
+        if stamped:
+            mm["health"] = stamped["value"]
+            mm["health_probe"] = {"value": stamped["value"], "source": stamped["source"], "ts": round(stamped["ts"], 3)}
+        out.append(mm)
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Starter workflow templates (gallery; each graph is runnable as-is via
+# POST /api/v1/workflow/run, including zero-key demo mode).
+# ---------------------------------------------------------------------------
+
+def _template(tid: str, name: str, description: str, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]) -> Dict[str, Any]:
+    return {
+        "id": tid,
+        "name": name,
+        "description": description,
+        "nodeCount": len(nodes),
+        "graph": {"nodes": nodes, "edges": edges},
+    }
+
+
+WORKFLOW_TEMPLATES: List[Dict[str, Any]] = [
+    _template(
+        "research-then-summarize",
+        "Research then summarize",
+        "Web search feeds a chat step that condenses the findings into a short brief.",
+        [
+            {"id": "search-1", "type": "web-search", "data": {"query": "Mozilla Otari gateway"}, "position": {"x": 0, "y": 0}},
+            {"id": "summarize-1", "type": "chat", "data": {"system": "You are a concise research assistant.", "prompt": "Summarize the key points from this research:\n\n{{search-1}}"}, "position": {"x": 240, "y": 0}},
+        ],
+        [{"id": "e1", "source": "search-1", "target": "summarize-1"}],
+    ),
+    _template(
+        "guarded-chat",
+        "Guarded chat",
+        "A chat step whose output is screened by guardrails before it can continue downstream.",
+        [
+            {"id": "chat-1", "type": "chat", "data": {"system": "You are a helpful assistant.", "prompt": "Tell me about your weekend plans."}, "position": {"x": 0, "y": 0}},
+            {"id": "guard-1", "type": "guardrails", "data": {"banned": [], "stop_on_block": True}, "position": {"x": 240, "y": 0}},
+        ],
+        [{"id": "e1", "source": "chat-1", "target": "guard-1"}],
+    ),
+    _template(
+        "code-review",
+        "Code review",
+        "A sandboxed static check runs first, then a chat step reviews the snippet with that context.",
+        [
+            {"id": "prepare-1", "type": "code-exec", "data": {"code": "sample = \"def add(a, b):\\n    return a + b\"\nprint(\"functions:\", sample.count(\"def\"))\nprint(\"lines:\", len(sample.splitlines()))"}, "position": {"x": 0, "y": 0}},
+            {"id": "review-1", "type": "chat", "data": {"system": "You are a senior code reviewer.", "prompt": "Review this Python snippet for bugs and style:\n\ndef add(a, b):\n    return a + b\n\nStatic check output:\n{{prepare-1}}"}, "position": {"x": 240, "y": 0}},
+        ],
+        [{"id": "e1", "source": "prepare-1", "target": "review-1"}],
+    ),
+    _template(
+        "web-fact-check",
+        "Web fact check",
+        "Search results are fact-checked by a chat step, then screened by guardrails.",
+        [
+            {"id": "search-1", "type": "web-search", "data": {"query": "OtariOptm cost-aware model routing"}, "position": {"x": 0, "y": 0}},
+            {"id": "check-1", "type": "chat", "data": {"system": "You are a careful fact-checker.", "prompt": "Fact-check the claims in these search results and flag anything unverified:\n\n{{search-1}}"}, "position": {"x": 240, "y": 0}},
+            {"id": "guard-1", "type": "guardrails", "data": {"banned": [], "stop_on_block": False}, "position": {"x": 480, "y": 0}},
+        ],
+        [{"id": "e1", "source": "search-1", "target": "check-1"}, {"id": "e2", "source": "check-1", "target": "guard-1"}],
+    ),
+]
+
+
+def _templates_by_id() -> Dict[str, Dict[str, Any]]:
+    return {t["id"]: t for t in WORKFLOW_TEMPLATES}
+
+
+async def list_templates() -> List[Dict[str, Any]]:
+    return WORKFLOW_TEMPLATES
+
+
+async def get_template(template_id: str) -> Dict[str, Any]:
+    tpl = _templates_by_id().get(template_id)
+    if tpl is None:
+        raise HTTPException(status_code=404, detail=f"Unknown template '{template_id}'")
+    return tpl
+
+
+# ---------------------------------------------------------------------------
+# SSE chat stream: event: delta chunks, 15s heartbeat comments, event: done,
+# event: error. Budget is recorded through the same execute_chat_step path as
+# the non-streaming endpoint; client disconnects cancel the stream and leave a
+# node.completed trail in the activity log.
+# ---------------------------------------------------------------------------
+
+_SSE_HEARTBEAT_SECONDS = 15.0
+_SSE_CHUNK_CHARS = 24
+
+
+async def chat_completions_stream(request: Request) -> Response:
+    body = await request.json()
+    messages = body.get("messages") or []
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages are required")
+    model = str(body.get("model", "") or "")
+    max_tokens = int(body.get("max_tokens", 4000))
+
+    models = await _models()
+    if model:
+        chosen = next((m for m in models if (m.get("id") or m.get("name")) == model), None)
+        if chosen:
+            models = [chosen]
+
+    async def _sse() -> Any:
+        queue: asyncio.Queue = asyncio.Queue()
+        stream_state: Dict[str, Any] = {}
+
+        async def _produce() -> None:
+            try:
+                result = await execute_chat_step({"id": "adhoc-stream"}, messages, models, max_tokens)
+                stream_state["result"] = result
+                text = str(result.get("output") or "")
+                for i in range(0, len(text), _SSE_CHUNK_CHARS):
+                    await queue.put(("delta", text[i:i + _SSE_CHUNK_CHARS]))
+                await queue.put(("done", ""))
+            except HTTPException as exc:
+                await queue.put(("error", str(exc.detail)))
+            except Exception:
+                await queue.put(("error", "stream failed"))  # never echo raw provider errors
+
+        producer = asyncio.create_task(_produce())
+        _bg_tasks.add(producer)
+        producer.add_done_callback(_bg_tasks.discard)
+
+        disconnected = False
+        try:
+            while True:
+                try:
+                    kind, payload = await asyncio.wait_for(queue.get(), timeout=_SSE_HEARTBEAT_SECONDS)
+                except asyncio.TimeoutError:
+                    yield ": heartbeat\n\n"  # keep intermediaries from closing an idle stream
+                    continue
+                if kind == "delta":
+                    yield f"event: delta\ndata: {json.dumps({'delta': payload})}\n\n"
+                elif kind == "done":
+                    result = stream_state.get("result") or {}
+                    await _log_activity({
+                        "event": "stream.completed",
+                        "nodeId": "adhoc-stream",
+                        "model": result.get("model"),
+                        "cost": result.get("cost", 0.0),
+                    })
+                    yield (
+                        "event: done\ndata: "
+                        + json.dumps({
+                            "model": result.get("model"),
+                            "tokens": result.get("tokens", 0),
+                            "cost": result.get("cost", 0.0),
+                        })
+                        + "\n\n"
+                    )
+                    break
+                else:  # error
+                    yield f"event: error\ndata: {json.dumps({'error': payload})}\n\n"
+                    break
+        except (asyncio.CancelledError, GeneratorExit):
+            disconnected = True
+            raise
+        finally:
+            if disconnected:
+                # Consumer is gone; the producer still finishes so budget stays
+                # accounted for (reserve/record are never dropped mid-flight).
+                try:
+                    await _log_activity({"event": "stream.disconnected", "nodeId": "adhoc-stream"})
+                except Exception:
+                    pass
+
+    return StreamingResponse(
+        _sse(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# App factory: the single seam for tests, embeddings, and alternate deployments.
+# ---------------------------------------------------------------------------
+
+def create_app() -> FastAPI:
+    """Build a fully-wired gateway app. Module-level singletons (budget, hub,
+    activity log) are shared across instances, matching the historical
+    module-level ``app`` behavior."""
+    application = FastAPI(title="OtariOptm Gateway", version="0.2.0")
+    # Rate limiting first so it sits inside CORS (429s still get CORS headers).
+    application.middleware("http")(_rate_limit_middleware)
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "https://*.vercel.app",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    application.on_event("startup")(startup)
+    application.on_event("shutdown")(shutdown)
+
+    application.add_api_route("/api/v1/health", health, methods=["GET"])
+    application.add_api_route("/api/v1/budget", budget_state, methods=["GET"])
+    application.add_api_route("/api/v1/models", get_models, methods=["GET"])
+    application.add_api_route("/api/v1/chat/completions", chat_completions, methods=["POST"])
+    application.add_api_route("/api/v1/chat/completions/stream", chat_completions_stream, methods=["POST"])
+    application.add_api_route("/api/v1/workflow/run", workflow_run, methods=["POST"])
+    application.add_api_route("/api/v1/templates", list_templates, methods=["GET"])
+    application.add_api_route("/api/v1/templates/{template_id}", get_template, methods=["GET"])
+    application.add_api_route("/api/v1/export", export_csv, methods=["GET"])
+    application.add_api_route("/api/v1/activity", activity_snapshot, methods=["GET"])
+    application.add_api_websocket_route("/api/v1/activity", activity_ws)
+    return application
+
+
+app = create_app()

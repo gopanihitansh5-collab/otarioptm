@@ -5,34 +5,109 @@ on:
     branches: [main]
   pull_request:
 
+# Stale runs for the same ref get cancelled; only the latest commit's CI burns minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  gateway:
+  backend:
+    name: Backend (FastAPI gateway)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
       - name: Install dependencies
-        run: pip install -r requirements.txt -r requirements-dev.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      # House policy: tests are never silenced. Output is teed to a log so a failed
+      # run leaves a post-mortem trail (never started / died mid-run / real failure
+      # are distinguished in the next step).
       - name: Run gateway tests
-        run: python -m pytest tests/ -q
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest tests -q 2>&1 | tee pytest.log
+
+      - name: Post-mortem (why did pytest fail?)
+        if: failure()
+        shell: bash
+        run: |
+          if [ ! -f pytest.log ]; then
+            echo "::error::pytest never ran - pytest.log missing; checkout or pip install likely failed."
+          elif ! grep -qE '={3,}.*in [0-9]+(\.[0-9]+)?s.*={3,}' pytest.log; then
+            echo "::error::pytest died mid-run - no summary line in pytest.log; see the uploaded log artifact."
+          else
+            echo "::error::pytest finished with failures - last 40 lines below, full log in artifact."
+            tail -n 40 pytest.log
+          fi
+
+      - name: Upload pytest log (failure artifact)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: pytest.log
+          if-no-files-found: ignore
 
   web:
+    name: Web (Next.js)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: web/package-lock.json
+
       - name: Install dependencies
         run: npm ci --no-fund --no-audit
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
       - name: Lint
         run: npm run lint
+
       - name: Build
         run: npm run build
+
+  summary:
+    name: CI summary
+    needs: [backend, web]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report
+        shell: bash
+        run: |
+          backend="${{ needs.backend.result }}"
+          web="${{ needs.web.result }}"
+          {
+            echo "## CI summary"
+            echo ""
+            echo "| job | result |"
+            echo "| --- | --- |"
+            echo "| backend (FastAPI gateway) | ${backend} |"
+            echo "| web (Next.js) | ${web} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$backend" != "success" ] || [ "$web" != "success" ]; then
+            echo "::error::CI FAILED - backend=${backend} web=${web}. Open the failed job above for logs."
+            exit 1
+          fi
+          echo "All checks passed."

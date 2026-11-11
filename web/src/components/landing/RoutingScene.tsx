@@ -8,13 +8,16 @@
 
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * Signature hero centerpiece: the OtariOptm routing engine as a wireframe
  * sphere, provider nodes orbiting it, and a light pulse that travels the
  * selected route once per loop. Rendered only when WebGL is available and
- * the user allows motion; the hero keeps its SVG loop as fallback.
+ * the user allows motion; the hero keeps its SVG loop as fallback. The
+ * frameloop pauses whenever the hero leaves the viewport (adopted from the
+ * harvested WebGL perf patterns), and the DPR is capped so hi-dpi screens
+ * do not pay for full-resolution pixels the panel never shows.
  */
 
 const LIME = "#C6F36B";
@@ -258,14 +261,33 @@ function Engine() {
 }
 
 export default function RoutingScene() {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [inView, setInView] = useState(false);
+
+  // Pause the render loop while the hero panel is offscreen; reduced-motion
+  // users never reach this component because Hero gates it upstream.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => setInView(entries.some((e) => e.isIntersecting)),
+      { rootMargin: "80px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <Canvas
-      dpr={[1, 1.75]}
-      camera={{ position: [0, 0.4, 6.4], fov: 40 }}
-      gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
-      aria-hidden
-    >
-      <Engine />
-    </Canvas>
+    <div ref={wrapRef} className="h-full w-full">
+      <Canvas
+        dpr={[1, 1.5]}
+        frameloop={inView ? "always" : "never"}
+        camera={{ position: [0, 0.4, 6.4], fov: 40 }}
+        gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
+        aria-hidden
+      >
+        <Engine />
+      </Canvas>
+    </div>
   );
 }

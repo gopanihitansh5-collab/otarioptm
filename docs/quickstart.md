@@ -1,6 +1,6 @@
 # OtariOptm Quickstart
 
-Ten-minute launch guide. No API keys required — the gateway falls back to a zero-cost demo mode.
+Ten-minute launch guide. No API keys required: the gateway falls back to a zero-cost demo mode.
 
 ## 1. Backend (port 8000)
 
@@ -33,12 +33,12 @@ The frontend talks to `http://localhost:8000` by default (override with `NEXT_PU
 ## 3. First workflow (5 minutes)
 
 1. Open `/studio`.
-2. Drag a **Model Chat** node onto the canvas — the default prompt works as-is.
-3. Drag a **Web Search** node — optional query template; downstream outputs can be injected as `{{nodeId}}` placeholders.
-4. Drag a **Code Exec** node — default script is `print("hello")` style Python.
-5. Drag a **Guardrails** node — it can abort the run on rule violations.
+2. Drag a **Model Chat** node onto the canvas: the default prompt works as-is.
+3. Drag a **Web Search** node: optional query template; downstream outputs can be injected as `{{nodeId}}` placeholders.
+4. Drag a **Code Exec** node: default script is `print("hello")` style Python.
+5. Drag a **Guardrails** node: it can abort the run on rule violations.
 6. Connect them (Chat → Search → Code Exec, guardrails where you want an abort checkpoint).
-7. Hit **Run Workflow** — the graph executes in topological order and POSTs `{nodes, edges}` to the backend.
+7. Hit **Run Workflow**: the graph executes in topological order and POSTs `{nodes, edges}` to the backend.
 8. Watch the sidebar: the **budget meter** updates live from WebSocket snapshots and the **activity feed** shows per-node events.
 9. Click **Export CSV** to download the full activity log with a TOTAL row.
 
@@ -49,6 +49,6 @@ Your graph is saved to localStorage (key `otarioptm.workflow.v1`) automatically.
 | Symptom | Cause | Fix |
 |---|---|---|
 | HTTP 402 on run | Budget cap reached | Raise `budget.project_cap` in `config/config.yml` (or use `config/example.yml` as a template; default cap is $5.00) |
-| Outputs labeled `demo`, cost $0.00 | No API keys configured — this is expected demo mode | Set `OTARI_API_KEY` and/or `GROQ_API_KEY` in `.env` and restart the backend |
+| Outputs labeled `demo`, cost $0.00 | No API keys configured: this is expected demo mode | Set `OTARI_API_KEY` and/or `GROQ_API_KEY` in `.env` and restart the backend |
 | `ECONNREFUSED` in the studio | Backend not started | Start `python run_server.py` first |
 | Activity feed stops updating | WebSocket dropped | The client reconnects automatically; refresh the page if it stays stalled |

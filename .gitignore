@@ -7,3 +7,5 @@ dist/
 .venv/
 *.csv
 .DS_Store
+
+.bunshin/

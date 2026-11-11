@@ -90,13 +90,13 @@ export default function Architecture() {
           <div className="flex items-center gap-3">
             {tracing && (
               <span className="rounded-md border border-[#C6F36B]/40 px-2.5 py-1.5 font-mono text-[10px] tracking-widest text-[#C6F36B]">
-                {staticAll ? "TRACED — STATIC" : `TRACING — STEP ${step + 1}/${LAYERS.length}`}
+                {staticAll ? "TRACED: STATIC" : `TRACING: STEP ${step + 1}/${LAYERS.length}`}
               </span>
             )}
             <button
               type="button"
               onClick={toggle}
-              className={`inline-flex h-10 items-center gap-2 rounded-lg border px-4 font-mono text-[11px] tracking-widest transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50 ${
+              className={`inline-flex h-11 items-center gap-2 rounded-lg border px-4 font-mono text-[11px] tracking-widest transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50 ${
                 tracing
                   ? "border-[#C6F36B] text-[#C6F36B]"
                   : "border-[#293239] text-[#929DA5] hover:border-[#C6F36B]/40 hover:text-[#C6F36B]"

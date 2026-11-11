@@ -1,115 +1,112 @@
-# OtariOptm status note (2026-11-10)
+# OtariOptm status note (2026-11-11)
 
 Hackathon: Mozilla Otari / DoraHacks "Devs Wilding Online!". Submission deadline
-Nov 11 11:59 PM (UTC+5:30). Demo video + feedback recording + DoraHacks form are
-human TODOs.
+Nov 11, 2026, 22:29 IST. All remaining submission items are
+human actions (see blockers below).
 
-## What exists
+## Current state
 
-Backend (FastAPI, port 8000 via `python run_server.py`):
-- Workflow engine: topological execution of chat / web-search / code-exec /
-  guardrails nodes, `{{nodeId}}` template substitution, activity hub, CSV export
-  with totals row.
-- Budget manager: atomic reserve/record under asyncio lock, default $5.00 cap
-  (`config/config.yml budget.project_cap`), HTTP 402 pre-spend block, Resend
-  alert email on cap (`_send_budget_alert`).
-- Router: score = 0.45*cost_norm + 0.35*latency_norm - 0.20*health; demo tier
-  excluded when real providers exist; fallback chain Otari -> Groq -> local demo;
-  Groq model picked dynamically via `/models`, max_tokens cap-retry on 400;
-  `fallback_note` diagnostics surfaced in step results and activity feed.
-- Exa integration (`src/services/search.py`): /search with query + objective +
-  highlights; DuckDuckGo fallback; real costDollars recorded into budget
-  (verified live: $0.007 for one search run).
-- Endpoints: GET /api/v1/health, /budget, /models, /activity; POST
-  /chat/completions, /workflow/run; GET /api/v1/export; WS /api/v1/activity.
-- Secrets in `.env` (gitignored, verified): OTARI_API_KEY, EXA_API_KEY,
-  RESEND_API_KEY, GROQ_API_KEY, BUDGET_ALERT_EMAIL. Never printed or committed.
-
-Web (Next.js 16.4.5, React 19.3, Tailwind 4.3.5, @xyflow/react 12.12.1, port
-3000 via `npm run start` or `npm run dev`; scripts use `--webpack` because the
-vendored @next SWC binary is corrupt in this environment; @tailwindcss/postcss
-is a vendored registry tarball in node_modules):
-- /studio: React Flow editor, custom nodes, undo/redo, keyboard shortcuts,
-  localStorage persistence (otarioptm.workflow.v1), live WS activity sidebar,
-  budget meter, CSV export.
-- Landing page rebuilt 2026-11-10 to the design brief: AnnouncementBar, Nav
-  (mobile menu), split Hero (pointer parallax, live gateway status via
-  /api/v1/budget), Problem/Solution diagrams, pinned 5-step product demo,
-  Intelligent Routing (stages + policy simulator + fallback chain), Budget
-  Governance, Observability (live data, honest offline card), Architecture,
-  DX (4 code tabs), Trust (honest MVP sandbox), Use Cases, Pricing ($0 beta),
-  FAQ (8 answers), CTA, Footer. CSS-native motion only, no new dependencies;
-  Inter + IBM Plex Mono via next/font; reduced-motion handled everywhere.
-- `MASTER.md` at repo root is the design-system source of truth.
-
-## Verification state
-
-- `npm run build` exit 0; landing and studio prerendered.
-- Landing 200 (81KB), studio 200, backend health 200, budget snapshot shows
-  spent $0.007 / remaining $4.993.
-- Design audit (genjutsu design-audit, tells group): 18 checked, 0 problems;
-  6 tells confronted and allowed by the thesis (documented in session).
-  One leftover U+2014 flagged in a build output vs served-page discrepancy:
-  grep landing copy for em-dashes next session.
-
-## GitHub
-
-- Repo live: https://github.com/gopanihitansh5-collab/otarioptm (public),
-  single branch `hackathon-2026-nov`, default branch, 5 commits through
-  ee3d8ff (complete MVP). Remote in .git points to this repo.
+GitHub:
+- Repo live and public: https://github.com/gopanihitansh5-collab/otarioptm
+- Branch renamed to `main` on 2026-11-11 and flipped to the repo default;
+  keep pushing there. History: single branch from `hackathon-2026-nov`,
+  5 commits through ee3d8ff (complete MVP) plus the 2026-11-10 redesign
+  commit and later work; CI green on every push.
 - Tokens (classic ghp_, full scope): `C:\Users\rcgop\Desktop\work\gopanigithub.txt`
   (user gopanihitansh5-collab) and `C:\Users\rcgop\Desktop\work\mypersonalgithub.txt`
   (user Professional50coder). Used one-shot, never stored. Suggest regenerating
   narrower tokens.
-- The 2026-11-10 redesign (design system, landing rebuild, studio token
-  alignment) is committed and pushed to `hackathon-2026-nov` on 2026-11-10.
 
-## How to run
+Landed (earlier sessions, verified):
+- Backend (FastAPI, port 8000 via `python run_server.py`): workflow engine
+  (topological chat / web-search / code-exec / guardrails execution,
+  `{{nodeId}}` substitution, activity hub, CSV export with totals row);
+  budget manager (atomic reserve/record under asyncio lock, default $5.00
+  cap from `config/config.yml budget.project_cap`, HTTP 402 pre-spend block,
+  Resend alert email on cap); router (score = 0.45*cost_norm +
+  0.35*latency_norm - 0.20*health, per-step weights, demo tier excluded when
+  real providers exist, fallback chain Otari -> Groq -> local demo, dynamic
+  Groq catalogue via /models, max_tokens cap-retry, `fallback_note`
+  diagnostics); Exa integration with DuckDuckGo fallback and real cost
+  recording (verified live: $0.007 for one search run).
+- Endpoints: GET /api/v1/health, /budget, /models, /activity; POST
+  /chat/completions, /workflow/run; GET /api/v1/export; WS /api/v1/activity.
+- Secrets in `.env` (gitignored, verified): OTARI_API_KEY, EXA_API_KEY,
+  RESEND_API_KEY, GROQ_API_KEY, BUDGET_ALERT_EMAIL. Never printed or committed.
+- Web (Next.js 16.4.5, React 19.3, Tailwind 4.3.5, @xyflow/react 12.12.1,
+  port 3000): /studio React Flow editor (custom nodes, undo/redo, keyboard
+  shortcuts, localStorage persistence `otarioptm.workflow.v1`, live WS
+  activity sidebar, budget meter, CSV export, 560x300 node grid placement,
+  hydration-safe persistence, refit-on-change fitView); landing page rebuilt
+  to the design brief (14 sections, R3F routing-sphere hero, honest
+  DEMO TIER / LIVE badges, reduced-motion fallbacks); /privacy and /terms
+  drafts. `MASTER.md` at repo root is the design-system source of truth.
+- Tests and CI: 18 pytest tests in `tests/` (budget, router, demo-tier API),
+  all passing; GitHub Actions CI (gateway pytest + web lint/build) green;
+  `npm run lint` 0 problems; `npm run build` exit 0.
+- Docker: Dockerfile + docker-compose.yml for the gateway, `web/Dockerfile`
+  for the frontend. Statically validated plus a clean-room proxy run
+  (fresh venv boots the gateway in demo mode; fresh `npm ci` + build
+  passes); no container runtime exists in this environment, so images were
+  not actually built here.
+- LICENSE: Apache 2.0 file added; README declares it.
 
-- Backend: `python run_server.py` in repo root (needs .env).
-- Web: `npm run start` in `web/` (production, uses last build) or
-  `npm run dev -- --webpack`? (dev script already has --webpack).
-- End-to-end test: POST two-node workflow (web-search + chat with {{s1}}) to
-  http://127.0.0.1:8000/api/v1/workflow/run; expect chain otari->groq (or
-  otari->groq->demo with fallbackNote explaining why), Exa cost recorded.
+New API surface in flight (parallel builds, this session documents their
+contracts, not the code): POST /api/v1/chat/completions/stream (SSE token
+streaming), GET /api/v1/templates and /api/v1/templates/{id} (starter
+workflow gallery), per-IP rate limiting (HTTP 429), background model-health
+probes on the backend; templates gallery, run history, and JSON export/
+import in the studio. Contracts are written up in `docs/api.md`; final
+reconciliation of docs against the merged code happens at PROVE.
 
-## What to build next (priority order for the submission)
+## Submission blockers (owner: human, all of them)
 
-1. Demo-day polish on the studio: node palette icons matching landing tokens,
-   run-status glow states on edges, empty-canvas onboarding hint.
-2. Landing <-> studio deep links: "Open this workflow in Studio" from the
-   product-demo section (seed a localStorage workflow on click).
-3. Multi-user budget identities: extend budget manager from one project cap to
-   per-user/per-project reservations (config keyed), show them in /budget and
-   the meter. High demo value for the "governance" story.
-4. Streaming responses: token streaming over the WS activity feed for chat
-   nodes (perceived performance win, easy live-demo moment).
-5. Models page or /models visual on landing fed by the real gateway catalogue
-   (replaces the illustrative simulator values with live data when the gateway
-   is up).
-6. Graceful Otari 402 narrative: surface "provider not onboarded - running on
-   fallback" as a first-class badge in the studio top bar before the demo
-   video.
-7. Persistence beyond localStorage: optional server-side workflow save/load
-   (small SQLite table keyed by workflow id) - low cost, kills the "browser
-   only" caveat in Trust.
-8. README quickstart embed: mirror the DX tabs (curl, quickstart, docker) into
-   README.md so judges see the same DX without opening the site.
-9. Nice-to-have: OG image, favicon in brand palette, Lighthouse pass on the
-   landing, one more em-dash sweep.
+- [ ] Demo video, rubric 3-5 min (script in docs/submission.md, target
+      4:00, includes the templates gallery beat); record, upload to
+      YouTube/Loom, paste link into the form.
+- [ ] Feedback recording (talking-head or narrated screen capture).
+- [ ] Open 1-2 issues/PRs on https://github.com/mozilla-ai/otari (drafts
+      ready in docs/submission.md; review, then post yourself).
+- [ ] Submit the DoraHacks form before Nov 11, 22:29 IST (paste-ready
+      template in docs/submission.md).
+
+## Docs session (2026-11-11)
+
+- README.md: quickstart embed so judges see the DX without opening docs:
+  curl block (health check + two-node demo workflow run) and the
+  `docker compose up --build` one-liner, plus a Demo-mode callout (full
+  stack runs with zero API keys). Closes the README-embed item from the
+  earlier roadmap and known-limit #7.
+- Em-dash sweep: zero U+2014 in README.md and docs/** (MASTER.md forbids
+  them in copy); replaced with commas/colons/periods. En-dashes in ranges
+  (3-5) are unaffected.
+- docs/api.md: SSE streaming, templates gallery, and per-IP rate-limit
+  (429) semantics documented with request/response examples, marked as
+  part of the API surface with reconciliation at PROVE.
+- docs/submission.md: demo video script retimed to 4:00 with a templates
+  gallery beat; DoraHacks form template made paste-ready and consistent
+  with the new API surface.
+- Truth rule held: no invented numbers; illustrative template payload in
+  api.md is labeled as illustrative of the shape.
 
 ## Known limits
 
-- Em-dash grep on landing copy (audit discrepancy).
-- Redesign commit pushed 2026-11-10; branch renamed to `main` on 2026-11-11 — keep pushing there.
 - Otari 402 on the hosted gateway reads "No credential is configured for
-  provider 'openai'" - fine for the demo narrative (fallback chain shines),
-  but worth re-checking before recording the demo video.
-- Registry stubs in this environment: @next/swc-win32-x64-msvc binary corrupt
-  (webpack only), @tailwindcss/postcss vendored manually.
-- Optional future: Framer Motion / R3F if wanted (not installed, by design).
+  provider 'openai'": fine for the demo narrative (fallback chain shines),
+  re-check before recording the demo video.
+- Budget state is in-process; it resets on gateway restart (documented
+  MVP limitation).
+- Code exec sandbox is not a security boundary (documented MVP-grade).
+- Registry stubs in this environment: @next/swc-win32-x64-msvc binary
+  corrupt (webpack only), @tailwindcss/postcss vendored manually.
+- Streaming / templates / rate limiting / health probes / studio gallery +
+  history + JSON import are documented as contracts; the merged code is
+  reconciled at PROVE.
+- Optional future: Framer Motion if ever wanted (not installed, by design).
 
-## 2026-11-10 evening pass (pre-submission completion)
+## Earlier sessions (history)
+
+### 2026-11-10 evening pass (pre-submission completion)
 
 - Regenerated `web/package-lock.json`: the committed lockfile carried a
   corrupt nested entry (`eslint-plugin-react-hooks/node_modules/zod` with no
@@ -122,29 +119,23 @@ is a vendored registry tarball in node_modules):
   only: no Docker daemon in this environment, so images were not built here.
 - Added `docs/api.md` endpoint reference, verified against
   `src/gateway/main.py`; README quickstart made cross-platform, Docker
-  section added; Apache 2.0 `LICENSE` file added (README already declared
-  it); `.env.example` Resend/BUDGET_ALERT_EMAIL comments corrected to match
-  the wired alert path.
+  section added; Apache 2.0 `LICENSE` file added; `.env.example`
+  Resend/BUDGET_ALERT_EMAIL comments corrected to match the wired alert path.
 - Landing page audited against the design brief checklist: all 14 sections
   present; desktop 1440px and mobile 390px screenshots inspected. Deliberate
-  deviations: studio keeps its indigo node-identity accents instead of the
-  landing's lime system. (The nav deviations noted here earlier - flat
-  links, no Sign-in - were closed in session 2 below.)
+  deviation: studio keeps its indigo node-identity accents instead of the
+  landing's lime system.
 - End-to-end re-verified: backend health/budget/models, demo-mode workflow
   run with `{{nodeId}}` substitution, landing 200, studio 200.
 - Studio UX fix: newly added nodes cascaded at 30px offsets and stacked under
   each other; they now place on a 560x300 grid so every added node is visible.
   Verified in a real browser run (positions 80/640 grid, run completes,
   activity feed + budget meter live).
-- Lint cleanup: all 16 errors and 2 warnings resolved (reduced-motion and
-  localStorage initialization reworked (see session 2 for the final
-  approach), architecture
-  trace state moved into the click handler, xyflow types replace `any`,
-  internal nav uses next/link). `npm run lint` now reports 0 problems and
-  the production build passes; landing and studio re-verified in a real
-  browser after the refactor.
+- Lint cleanup: all 16 errors and 2 warnings resolved. `npm run lint` reports
+  0 problems and the production build passes; landing and studio re-verified
+  in a real browser after the refactor.
 
-## Session 2 (2026-11-10, evening)
+### Session 2 (2026-11-10, evening)
 
 - Studio fit-view: the one-time `fitView` over-zoomed to 2.5x after the
   first node add, pushing nodes offscreen. Now refits on node-count change
@@ -184,6 +175,6 @@ is a vendored registry tarball in node_modules):
   regenerated lockfile (388 packages) + `npm run build` passes. This
   exercises each Dockerfile's build steps short of the daemon.
 
-Still outstanding: live-provider verification (awaiting key scope
-approval), actual `docker build`/`docker compose up` (no Docker runtime
-available in the build environment).
+Still outstanding from those sessions: live-provider verification (awaiting
+key scope approval), actual `docker build`/`docker compose up` (no Docker
+runtime available in the build environment).

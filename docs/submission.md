@@ -1,7 +1,7 @@
 # OtariOptm Submission Checklist
 
 Hackathon: DoraHacks "Devs Wilding Online!" (Mozilla Otari). Deadline:
-**Nov 11, 2026, 11:59 PM (UTC+5:30)**.
+**Nov 11, 2026, 22:29 IST**. Submit well before the cutoff.
 
 ## Required Items (Hackathon Rules)
 
@@ -13,7 +13,7 @@ Hackathon: DoraHacks "Devs Wilding Online!" (Mozilla Otari). Deadline:
 | **Public GitHub repo** | ✅ | https://github.com/gopanihitansh5-collab/otarioptm (branch: `main`) |
 | **First commit using Otari** | ✅ | [`745cc90`](https://github.com/gopanihitansh5-collab/otarioptm/commit/745cc90cacd7b466d236aae27e8d43edd5ec2124) - OTARI client, budget service, router, FastAPI gateway |
 | **Otari features used (7+)** | ✅ | see checklist below |
-| **Demo video (3-5 min)** | ☐ | record with the script below, host on YouTube/Loom |
+| **Demo video (3-5 min)** | ☐ | record with the script below (target 4:00), host on YouTube/Loom |
 | **Feedback recording** | ☐ | talking-head or narrated screen recording |
 | **PRs/issues on mozilla-ai/otari** | ☐ | 1-2 bug reports or feature requests |
 | **DoraHacks form submitted** | ☐ | paste from the template below |
@@ -33,6 +33,10 @@ Hackathon: DoraHacks "Devs Wilding Online!" (Mozilla Otari). Deadline:
       CSV export with totals row
 - [x] **Fallback/reselection** - Otari -> Groq -> local demo chain with
       per-provider diagnostic notes
+
+Landing with the final build (documented in `docs/api.md`): SSE streaming
+(`POST /api/v1/chat/completions/stream`), templates gallery
+(`GET /api/v1/templates` + `/{id}`), per-IP rate limiting (HTTP 429).
 
 ## Submission Template
 
@@ -61,25 +65,28 @@ activity tracking, fallback/reselection
 2. pip install -r requirements.txt && python run_server.py   # gateway on :8000
 3. cd web && npm install && npm run build && npm run start   # web on :3000
    (or: docker compose up --build)
-4. Open http://localhost:3000/studio, add nodes, Run Workflow
-   API keys optional: with none set, the gateway runs the zero-cost demo tier.
+4. Open http://localhost:3000/studio, load a starter from the templates
+   gallery (or add nodes from scratch), Run Workflow
+   API keys optional: with none set, the gateway runs the zero-cost demo
+   tier (responses labeled demo).
 ```
 
-## Demo Video Script (3-5 min)
+## Demo Video Script (target 4:00, rubric window 3-5 min)
 
 1. **0:00-0:30 - Problem.** "AI workloads leak money: every request someone
    guesses a model, and nothing stops spend before the invoice." Show the
    landing page hero and the problem section.
-2. **0:30-1:30 - Build.** Open `/studio`. Add a Web Search node, a Model
-   Chat node, a Guardrails node; wire them; type a prompt that uses
-   `{{nodeId}}` to pull the search result into the chat step.
-3. **1:30-2:30 - Run + routing.** Press Run Workflow. Point at the activity
+2. **0:30-1:20 - Build.** Open `/studio`. Load a starter from the templates
+   gallery (search feeding a routed chat step), then adapt it live: add a
+   Guardrails node, wire it, and show `{{nodeId}}` pulling the search result
+   into the chat prompt.
+3. **1:20-2:15 - Run + routing.** Press Run Workflow. Point at the activity
    feed: model chosen per step, the routing score line, and the fallback
    note when a provider is down.
-4. **2:30-3:30 - Budget.** Show the budget meter before/after the run, then
+4. **2:15-3:10 - Budget.** Show the budget meter before/after the run, then
    `GET /api/v1/budget`. Mention the atomic reserve -> record flow and the
    HTTP 402 pre-spend block (config: `budget.project_cap`).
-5. **3:30-4:30 - Export + close.** Click Export CSV, show the totals row.
+5. **3:10-4:00 - Export + close.** Click Export CSV, show the totals row.
    Close on the landing observability section reading the same live
    gateway. "Every token accounted for, before it is spent."
 
@@ -88,7 +95,7 @@ activity tracking, fallback/reselection
 - [ ] Record demo video per script above, upload, paste link into the form
 - [ ] Record feedback recording
 - [ ] Open 1-2 issues/PRs on https://github.com/mozilla-ai/otari (drafts below)
-- [ ] Submit the DoraHacks form before Nov 11, 11:59 PM IST
+- [ ] Submit the DoraHacks form before Nov 11, 22:29 IST
 
 ## Draft Issues for mozilla-ai/otari (review, then post yourself)
 

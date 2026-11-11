@@ -26,6 +26,13 @@ DEFAULT_CONFIG = {
         "web-search": True,
         "guardrails": True,
     },
+    "gateway": {
+        "rate_limit": {
+            "enabled": True,
+            "capacity": 30,        # burst size per IP on mutating endpoints
+            "refill_per_sec": 1.0,  # tokens restored per second
+        },
+    },
 }
 
 

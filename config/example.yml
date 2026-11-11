@@ -20,3 +20,9 @@ profiles:
   code-exec: true
   web-search: true
   guardrails: true
+
+gateway:
+  rate_limit:
+    enabled: true
+    capacity: 30         # burst size per IP on mutating endpoints (429 + Retry-After)
+    refill_per_sec: 1.0  # tokens restored per second

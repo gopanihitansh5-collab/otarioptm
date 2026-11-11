@@ -39,7 +39,7 @@
 - [ ] First commit using Otari.ai visible in git history
 - [ ] Demo video (3-5 min): Walkthrough of building & running a workflow
 - [ ] Feedback screen recording: Talking-head or narration format
-- [ ] Otari features used (7+ required): see `docs/features.md` — routing, budget, code exec, web search, guardrails, activity tracking, fallback/reselection
+- [ ] Otari features used (7+ required): see `docs/features.md`: routing, budget, code exec, web search, guardrails, activity tracking, fallback/reselection
 - [ ] 1-2 PRs or issues on `mozilla-ai/otari` repo
 - [ ] Project uses Otari.ai (hosted gateway when `OTARI_API_KEY` is set)
 
@@ -54,7 +54,7 @@
 - [ ] PRs/issues on Otari repo
 
 ### DoraHacks Deadline
-- [ ] Nov 11th, 11:59 PM (UTC+5.5)
+- [ ] Nov 11th, 22:29 IST
 - [ ] Submit before deadline expires
 
 ## Otari API Integration
@@ -72,7 +72,7 @@
 
 ## Technical Checklist
 
-### Backend (FastAPI) — verified in code
+### Backend (FastAPI): verified in code
 - [x] FastAPI app with `/api/v1` prefix, CORS for localhost:3000
 - [x] Budget reservation and enforcement (`src/services/budget.py`)
 - [x] Workflow compiler (topological node execution in `src/gateway/main.py`)
@@ -81,7 +81,7 @@
 - [x] Otari client (`src/services/otari_client.py`)
 - [x] CSV export with TOTAL row (`GET /api/v1/export`)
 
-### Frontend (Next.js) — verified in code
+### Frontend (Next.js): verified in code
 - [x] Next.js 16 App Router, React 19, Tailwind v4
 - [x] React Flow canvas with 4 node types (`web/src/components/nodes/`)
 - [x] Live activity WebSocket updates (`web/src/hooks/useBudget.ts`, `ActivityFeed.tsx`)

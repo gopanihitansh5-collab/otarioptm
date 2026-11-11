@@ -16,6 +16,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://github.com/gopanihitansh5-collab/otarioptm"),
   title: "OtariOptm - Intelligent AI Orchestration",
   description:
     "Route every AI workload to the right model. Control spending, monitor every execution, one unified gateway built on the Otari hosted gateway.",
@@ -32,6 +33,13 @@ export const metadata: Metadata = {
     description:
       "Every AI request deserves a smarter route. Less cost, more intelligence, full budget control.",
     type: "website",
+    siteName: "OtariOptm",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OtariOptm - Intelligent AI Orchestration",
+    description:
+      "Visual AI workflows with cost-aware routing and hard budget enforcement.",
   },
 };
 

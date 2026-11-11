@@ -7,6 +7,7 @@ export function useKeyboardShortcuts(handlers: {
   redo: () => void;
   onDelete?: () => void;
   save?: () => void;
+  onHelp?: () => void;
 }): void {
   const handlersRef = useRef(handlers);
 
@@ -32,6 +33,21 @@ export function useKeyboardShortcuts(handlers: {
       if (mod && (event.key === "s" || event.key === "S")) {
         event.preventDefault();
         h.save?.();
+        return;
+      }
+      if (!mod && !event.altKey && event.key === "?") {
+        const target = event.target as HTMLElement | null;
+        const tag = target?.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target?.isContentEditable
+        ) {
+          return;
+        }
+        event.preventDefault();
+        h.onHelp?.();
         return;
       }
       const target = event.target as HTMLElement | null;

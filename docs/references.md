@@ -77,7 +77,7 @@
 - [ ] Hackathon submission requirements: `https://dorahacks.io`
 - [ ] Mozilla OSAI Discord: `discord.gg/osai`
 - [ ] Tag @Marcus for questions
-- [ ] Deadline: Nov 11th, 11:59 PM (UTC+5.5)
+- [ ] Deadline: Nov 11th, 22:29 IST
 - [ ] Prize pool: 1,200 USD
 - [ ] Submission format requirements
 
@@ -205,7 +205,7 @@
 - [ ] Feedback recording format
 - [ ] GitHub link requirements
 - [ ] PR/issue on OTARI repo requirements
-- [ ] Deadline: Nov 11th, 11:59 PM UTC+5.5
+- [ ] Deadline: Nov 11th, 22:29 IST
 - [ ] Prize pool: 1,200 USD ($1000 1st, $200 2nd, $100 3rd)
 - [ ] Required items: GitHub link, demo video, feedback, Otari features used
 
@@ -282,7 +282,7 @@
 
 #### Hackathon Timeline (UTC+5.5)
 - [ ] Hackathon start: Oct 28, 21:30
-- [ ] Submission deadline: Nov 11, 11:59 PM
+- [ ] Submission deadline: Nov 11, 22:29 IST
 - [ ] Deadline extension: Nov 12, 04:29
 - [ ] Current date: Nov 9, 2026
 - [ ] Days remaining: ~2 days (as of session start)

@@ -65,7 +65,7 @@ export default function Footer() {
                 <p className="font-mono text-[10px] uppercase tracking-widest text-[#929DA5]">
                   {col.heading}
                 </p>
-                <ul className="mt-3 space-y-2">
+                <ul className="mt-3 space-y-1">
                   {col.links.map((l) => (
                     <li key={l.href}>
                       {l.external ? (
@@ -73,14 +73,14 @@ export default function Footer() {
                           href={l.href}
                           target="_blank"
                           rel="noreferrer"
-                          className="font-mono text-[11px] tracking-wider text-[#929DA5] transition-colors duration-200 hover:text-[#C6F36B]"
+                          className="inline-flex min-h-[36px] items-center font-mono text-[11px] tracking-wider text-[#929DA5] transition-colors duration-200 hover:text-[#C6F36B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
                         >
                           {l.label}
                         </a>
                       ) : (
                         <Link
                           href={l.href}
-                          className="font-mono text-[11px] tracking-wider text-[#929DA5] transition-colors duration-200 hover:text-[#C6F36B]"
+                          className="inline-flex min-h-[36px] items-center font-mono text-[11px] tracking-wider text-[#929DA5] transition-colors duration-200 hover:text-[#C6F36B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
                         >
                           {l.label}
                         </Link>

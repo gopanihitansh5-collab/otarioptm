@@ -58,7 +58,7 @@
 ## Per-step flow
 
 1. **Estimate** a cost for the step.
-2. **Reserve** it atomically via `BudgetManager` (`src/services/budget.py`) — reserve/release/record all run under an `asyncio.Lock`, so concurrent runs cannot overspend. At the project cap the step is rejected with HTTP 402.
+2. **Reserve** it atomically via `BudgetManager` (`src/services/budget.py`): reserve/release/record all run under an `asyncio.Lock`, so concurrent runs cannot overspend. At the project cap the step is rejected with HTTP 402.
 3. **Call** the provider: Otari hosted gateway first, then Groq free tier, then local demo mode.
 4. **Record** actual spend. If the provider doesn't report usage/cost, a conservative estimate is charged instead.
 

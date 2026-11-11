@@ -60,8 +60,9 @@ export function ClosingCTA() {
               aria-hidden
               className="pointer-events-none absolute -top-24 left-1/2 h-56 w-[420px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(198,243,107,0.08),transparent)]"
             />
-            <h2 className="mx-auto max-w-2xl text-[clamp(32px,4.5vw,48px)] font-semibold leading-[1.1] tracking-tight text-[#C6F36B]">
-              Finish your project, not your prompt engineering.
+            <h2 className="mx-auto max-w-2xl text-[clamp(32px,4.5vw,48px)] font-semibold leading-[1.1] tracking-tight text-[#F3F5F2]">
+              <span className="text-[#C6F36B]">Finish your project</span>, not
+              your prompt engineering.
             </h2>
             <p className="mx-auto mt-4 max-w-md text-base text-[#929DA5]">
               Open the studio, wire a workflow, and let the gateway account for
@@ -70,7 +71,7 @@ export function ClosingCTA() {
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <a
                 href="/studio"
-                className="group inline-flex h-12 items-center gap-2 rounded-lg bg-[#C6F36B] px-6 text-sm font-semibold text-[#10140A] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
+                className="group inline-flex h-12 items-center gap-2 rounded-lg bg-[#C6F36B] px-6 text-sm font-semibold text-[#10140A] shadow-[0_0_28px_rgba(198,243,107,0.18)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
               >
                 Open Studio
                 <span
@@ -84,7 +85,7 @@ export function ClosingCTA() {
                 href="https://github.com/gopanihitansh5-collab/otarioptm"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#293239] px-6 text-sm font-medium text-[#F3F5F2] transition-all duration-200 hover:border-[#C6F36B]/40 hover:text-[#C6F36B] active:scale-[0.98]"
+                className="inline-flex h-12 items-center gap-2 rounded-lg border border-[#293239] px-6 text-sm font-medium text-[#F3F5F2] transition-all duration-200 hover:border-[#C6F36B]/40 hover:text-[#C6F36B] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
               >
                 View source <span aria-hidden className="text-[10px]">↗</span>
               </a>

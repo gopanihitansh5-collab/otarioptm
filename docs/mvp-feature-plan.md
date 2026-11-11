@@ -20,8 +20,8 @@
 | Item | Status |
 |---|---|
 | Landing page at `/` (dark graphite + electric lime) | In progress, parallel build |
-| Demo video (3–5 min) | TODO — record |
-| Feedback recording | TODO — record |
+| Demo video (3–5 min) | TODO: record |
+| Feedback recording | TODO: record |
 | 1–2 PRs/issues on `mozilla-ai/otari` | TODO |
 | DoraHacks submission form | TODO |
 

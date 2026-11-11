@@ -1,17 +1,24 @@
 # Convenience only: the gateway runs fine alone with `docker build` + `docker run`.
-# Keys come from the host environment or a local .env (never committed).
+#
+# Secrets: this file contains none. Optional keys (OTARI_API_KEY, GROQ_API_KEY,
+# EXA_API_KEY, RESEND_API_KEY, BUDGET_ALERT_EMAIL, OTARIOPTM_CONFIG) are read
+# from a repo-root .env (never committed) via the optional env_file below —
+# the long syntax needs Compose v2.24+. No .env at all? Zero-key demo mode
+# still boots and everything is labeled DEMO.
 services:
   gateway:
     build: .
+    env_file:
+      - path: .env
+        required: false
     ports:
       - "8000:8000"
-    environment:
-      OTARI_API_KEY: ${OTARI_API_KEY:-}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      EXA_API_KEY: ${EXA_API_KEY:-}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      BUDGET_ALERT_EMAIL: ${BUDGET_ALERT_EMAIL:-}
-      OTARIOPTM_CONFIG: ${OTARIOPTM_CONFIG:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   web:
     build:
@@ -23,4 +30,11 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-T", "4", "-O", "/dev/null", "http://127.0.0.1:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

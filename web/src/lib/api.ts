@@ -35,6 +35,18 @@ export function getModels(): Promise<CatalogModel[]> {
   return request<CatalogModel[]>("/api/v1/models");
 }
 
+export type WorkflowTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  nodeCount?: number;
+  graph: { nodes: WorkflowNode[]; edges: WorkflowEdge[] };
+};
+
+export function getTemplates(): Promise<WorkflowTemplate[]> {
+  return request<WorkflowTemplate[]>("/api/v1/templates");
+}
+
 export function runWorkflow(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],

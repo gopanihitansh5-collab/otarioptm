@@ -10,6 +10,11 @@ tier** and records cost into the project budget. When a reservation does not
 fit the remaining cap, the call is refused with HTTP 402 before any provider
 request is made.
 
+New in this submission: SSE streaming, the templates gallery, and per-IP
+rate limiting. These are part of the API surface by contract; the final
+code-level reconciliation against `src/gateway/main.py` is confirmed at
+PROVE.
+
 ## GET /api/v1/health
 
 Gateway status plus a live budget snapshot.
@@ -73,7 +78,75 @@ full catalogue. Response re-shaped to the OpenAI form, with cost attached:
 ```
 
 Errors: `400` when `messages` is empty; `402` when the budget reservation does
-not fit.
+not fit; `429` when the per-IP rate limit trips (see
+[Rate limiting](#rate-limiting)).
+
+## POST /api/v1/chat/completions/stream
+
+The same OpenAI-compatible completion as a Server-Sent Events token stream.
+Request body is identical to `POST /api/v1/chat/completions`; the response is
+`text/event-stream`:
+
+```
+data: {"choices":[{"delta":{"content":"Hel"}}]}
+
+data: {"choices":[{"delta":{"content":"lo"}}]}
+
+data: [DONE]
+```
+
+Each `data:` line carries one JSON delta; the stream ends with the
+`data: [DONE]` sentinel. Budget accounting is unchanged: the reservation is
+made before the stream starts and the recorded cost lands in the activity
+feed and CSV export like any other call.
+
+## GET /api/v1/templates
+
+Starter workflow templates for the studio's templates gallery:
+
+```json
+[
+  {
+    "id": "search-summarize",
+    "name": "Search then summarize",
+    "description": "Web search feeding a routed chat step",
+    "nodeCount": 2
+  }
+]
+```
+
+Entries are illustrative of the shape: each carries an `id`, a display
+`name`, a short `description`, and a node count.
+
+## GET /api/v1/templates/{id}
+
+One template's full graph, ready to load into the studio or POST directly to
+`/api/v1/workflow/run`:
+
+```json
+{
+  "id": "search-summarize",
+  "name": "Search then summarize",
+  "graph": {
+    "nodes": [
+      { "id": "n0", "type": "web-search", "data": { "query": "..." } },
+      { "id": "n1", "type": "chat", "data": { "prompt": "Summarise {{n0}}" } }
+    ],
+    "edges": [{ "source": "n0", "target": "n1" }]
+  }
+}
+```
+
+Unknown ids return `404`.
+
+## Rate limiting
+
+Per-IP rate limiting protects the gateway: when a single client IP sends
+requests too quickly, responses come back as HTTP `429` and the client should
+back off and retry. This is a plain limit-and-backoff behavior; no
+quota-telemetry headers are promised beyond the status code. The limit
+applies to the write-heavy routes (chat completions, streaming, workflow
+runs); health/read endpoints stay available for dashboards.
 
 ## POST /api/v1/workflow/run
 

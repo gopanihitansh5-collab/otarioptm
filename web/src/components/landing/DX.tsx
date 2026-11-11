@@ -98,7 +98,7 @@ export default function DX() {
               <button
                 type="button"
                 onClick={copy}
-                className="mr-3 shrink-0 rounded border border-[#293239] px-2.5 py-1 font-mono text-[9px] tracking-widest text-[#929DA5] transition-colors duration-200 hover:border-[#C6F36B]/40 hover:text-[#C6F36B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
+                className="mr-3 inline-flex h-11 shrink-0 items-center rounded-lg border border-[#293239] px-3 font-mono text-[9px] tracking-widest text-[#929DA5] transition-colors duration-200 hover:border-[#C6F36B]/40 hover:text-[#C6F36B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
               >
                 {copied ? "COPIED" : "COPY"}
               </button>
@@ -124,8 +124,9 @@ export default function DX() {
               YOUR GATEWAY, YOUR KEYS
             </p>
             <p className="mt-2 text-sm leading-relaxed text-[#929DA5]">
-              Hosted on Otari for the demo, or self-hosted coming with your own
-              provider credentials in config.yml.
+              Run against the hosted Otari gateway for the demo, or self-host
+              the FastAPI gateway with your own provider credentials in
+              config.yml.
             </p>
           </Reveal>
           <Reveal className="panel p-5" delay={260}>

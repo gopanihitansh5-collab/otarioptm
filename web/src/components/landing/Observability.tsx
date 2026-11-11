@@ -48,7 +48,7 @@ export default function Observability() {
             </div>
 
             {live.budget ? (
-              <div className="mt-6 grid grid-cols-3 gap-4">
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
                 {[
                   {
                     label: "PROJECT CAP",
@@ -127,7 +127,7 @@ export default function Observability() {
               href={`${GATEWAY_BASE}/api/v1/export`}
               target="_blank"
               rel="noreferrer"
-              className="mt-5 inline-flex h-10 items-center rounded-lg border border-[#293239] px-4 font-mono text-[11px] tracking-widest text-[#F3F5F2] transition-all duration-200 hover:border-[#C6F36B]/40 hover:text-[#C6F36B] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
+              className="mt-5 inline-flex h-11 items-center rounded-lg border border-[#293239] px-4 font-mono text-[11px] tracking-widest text-[#F3F5F2] transition-all duration-200 hover:border-[#C6F36B]/40 hover:text-[#C6F36B] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
             >
               EXPORT SPEND CSV
             </a>
@@ -144,7 +144,7 @@ export default function Observability() {
                 href={`${GATEWAY_BASE}/api/v1/activity`}
                 target="_blank"
                 rel="noreferrer"
-                className="font-mono text-[9px] tracking-widest text-[#929DA5] transition-colors duration-200 hover:text-[#C6F36B]"
+                className="font-mono text-[9px] tracking-widest text-[#929DA5] transition-colors duration-200 hover:text-[#C6F36B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
               >
                 /api/v1/activity ↗
               </a>

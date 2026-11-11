@@ -27,6 +27,8 @@ type CanvasProps = {
   nodeTypes: NodeTypes;
   onNodeClick?: (node: WorkflowNode) => void;
   onPaneClick?: () => void;
+  animated?: boolean;
+  fitKey?: number;
 };
 
 export function Canvas({
@@ -38,18 +40,21 @@ export function Canvas({
   nodeTypes,
   onNodeClick,
   onPaneClick,
+  animated = false,
+  fitKey = 0,
 }: CanvasProps) {
   const rf = useReactFlow();
   const nodeCount = nodes.length;
 
-  // Keep every node in view: refit whenever the node count changes, capped
-  // at a readable zoom so a single node never fills the screen.
+  // Keep every node in view: refit whenever the node count changes or the
+  // graph is replaced (template load / import), capped at a readable zoom so
+  // a single node never fills the screen.
   useEffect(() => {
     const t = setTimeout(() => {
       rf.fitView({ padding: 0.25, maxZoom: 1.1 });
     }, 100);
     return () => clearTimeout(t);
-  }, [rf, nodeCount]);
+  }, [rf, nodeCount, fitKey]);
 
   return (
     <ReactFlow
@@ -67,8 +72,8 @@ export function Canvas({
       className="h-full w-full"
       defaultEdgeOptions={{
         type: "smoothstep",
-        animated: true,
-        style: { stroke: "#6366f1", strokeWidth: 1.5 },
+        animated,
+        style: { stroke: "rgba(198, 243, 107, 0.55)", strokeWidth: 1.5 },
       }}
       onNodeClick={(_: unknown, node: { id: string }) => {
         if (!onNodeClick) return;
@@ -78,14 +83,14 @@ export function Canvas({
       onPaneClick={onPaneClick}
     >
       <Background
-        color="rgba(255,255,255,0.06)"
-        bgColor="#0f0f10"
+        color="rgba(255,255,255,0.05)"
+        bgColor="#090B0D"
         gap={24}
         size={1}
         variant={BackgroundVariant.Dots}
       />
       <Controls />
-      <MiniMap pannable zoomable nodeColor="#3f3f46" maskColor="rgba(0,0,0,0.6)" />
+      <MiniMap pannable zoomable nodeColor="#293239" maskColor="rgba(9, 11, 13, 0.65)" />
     </ReactFlow>
   );
 }
