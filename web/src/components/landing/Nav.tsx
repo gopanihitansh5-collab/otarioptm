@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import WordmarkSignature from "../motion/WordmarkSignature";
 
 const GH = "https://github.com/gopanihitansh5-collab/otarioptm";
 const GHB = `${GH}/blob/main`;
@@ -107,9 +108,10 @@ export default function Nav() {
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6">
         <a href="#top" className={`flex items-baseline gap-3 ${LINK_RING}`}>
-          <span className="font-mono text-sm font-semibold tracking-[0.2em] text-[#E9E4DA]">
-            OTARIOPTM
-          </span>
+          <WordmarkSignature
+            className="font-mono text-sm font-semibold tracking-[0.2em] text-[#E9E4DA]"
+            staggerMs={55}
+          />
           <span className="hidden font-mono text-[10px] tracking-[0.2em] text-[#A6A197] sm:inline">
             ORCHESTRATION CONTROL PLANE
           </span>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { Reveal, CountUp, useLiveGuard } from "../../lib/landing/Reveal";
+import KineticType from "../motion/KineticType";
 
 // The 3D routing sphere loads only on the client, after hydration, so the
 // three.js bundle never blocks the first paint.
@@ -118,8 +119,13 @@ export default function Hero() {
           </Reveal>
           <Reveal delay={60}>
             <h1 className="mt-5 font-display text-[clamp(44px,6vw,76px)] font-normal leading-[1.05] tracking-tight text-[#E9E4DA]">
-              Intelligence,{" "}
-              <span className="otari-gradient-text">without the overhead</span>.
+              <KineticType text="Intelligence," speed={40} startDelay={350} />{" "}
+              <KineticType
+                text="without the overhead."
+                speed={40}
+                startDelay={950}
+                className="otari-gradient-text"
+              />
             </h1>
           </Reveal>
           <Reveal delay={120}>

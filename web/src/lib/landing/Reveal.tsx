@@ -112,8 +112,18 @@ export function CountUp({
     io.observe(el);
     if (visible.current) render(value);
 
+    // If the observer never fires (headless reader, print view, odd
+    // viewport), still land on the real value instead of a stale zero.
+    const fallback = window.setTimeout(() => {
+      if (!visible.current) {
+        visible.current = true;
+        render(value);
+      }
+    }, 1500);
+
     return () => {
       io.disconnect();
+      window.clearTimeout(fallback);
       if (frame.current !== null) cancelAnimationFrame(frame.current);
     };
   }, [value, reduced]);
