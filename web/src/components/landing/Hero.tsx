@@ -7,7 +7,10 @@ import KineticType from "../motion/KineticType";
 
 // The 3D routing sphere loads only on the client, after hydration, so the
 // three.js bundle never blocks the first paint.
-const RoutingScene = dynamic(() => import("./RoutingScene"), { ssr: false });
+const RoutingVisualizer = dynamic(
+  () => import("../motion/RoutingVisualizer"),
+  { ssr: false },
+);
 
 function useRoutingSphere(): boolean {
   const [enabled, setEnabled] = useState(false);
@@ -217,8 +220,8 @@ export default function Hero() {
             </p>
 
             {sphere && (
-              <div className="absolute inset-0" aria-hidden>
-                <RoutingScene />
+              <div className="absolute inset-0 p-3" aria-hidden>
+                <RoutingVisualizer />
               </div>
             )}
             {sphere && (

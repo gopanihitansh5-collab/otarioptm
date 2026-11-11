@@ -280,7 +280,15 @@ export default function RoutingVisualizer({
     <div className={className}>
       <div
         ref={wrapRef}
-        style={{ position: "relative", width: "100%", aspectRatio: "640 / 420" }}
+        style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "640 / 420",
+          background: "#141311",
+          border: "1px solid rgba(184, 169, 143, 0.18)",
+          borderRadius: "0.75rem",
+          overflow: "hidden",
+        }}
       >
         {use3D ? (
           <Canvas
@@ -306,7 +314,7 @@ export default function RoutingVisualizer({
             marginTop: "0.5rem",
             fontSize: "0.72rem",
             lineHeight: 1.4,
-            color: "var(--color-muted, #929da5)",
+            color: "var(--color-silver, #a6a197)",
             fontFamily: "var(--font-mono, ui-monospace, Menlo, monospace)",
             letterSpacing: "0.04em",
           }}
