@@ -105,7 +105,7 @@ export default function Hero() {
           </Reveal>
           <Reveal delay={240}>
             <p className="mt-4 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
-              OTARI-FIRST ROUTING · AUTOMATIC GROQ FALLBACK · FREE TIER
+              OTARI-FIRST · AUTO FALLBACK TO FREE GROQ MODELS
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
               <span>

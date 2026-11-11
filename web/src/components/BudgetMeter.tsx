@@ -24,8 +24,11 @@ export function BudgetMeter({ snapshot, connected, transport }: BudgetMeterProps
   return (
     <div className="rounded-xl border border-steel bg-elevated p-3">
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-lime">
-          Budget
+        <span
+          className="font-mono text-[10px] uppercase tracking-[0.25em] text-lime"
+          title="App-level run budget enforced by the OtariOptm gateway - separate from your Otari provider wallet balance"
+        >
+          App Run Budget
         </span>
         <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-silver">
           <span
