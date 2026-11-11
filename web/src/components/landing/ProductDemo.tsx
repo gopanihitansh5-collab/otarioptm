@@ -134,15 +134,15 @@ function DemoGraph({ stage }: { stage: number }) {
   const chip = (name: string, col: number) => {
     const act = active[col];
     const done = isDone(col);
-    const stroke = act ? "#B8A98F" : done ? "#34322D" : "#34322D";
-    const fill = done ? "#1D1C19" : "#1D1C19";
+    const stroke = act ? "var(--color-lime)" : done ? "var(--color-steel)" : "var(--color-steel)";
+    const fill = done ? "var(--color-elevated)" : "var(--color-elevated)";
     return (
       <rect
         x={col * 96 + 26}
         y={92}
         width={86}
         height={40}
-        rx={9}
+        rx={14}
         fill={fill}
         stroke={stroke}
         strokeWidth={act ? 1.5 : 1}
@@ -151,7 +151,7 @@ function DemoGraph({ stage }: { stage: number }) {
   };
 
   return (
-    <svg viewBox="0 0 380 210" className="mt-4 h-auto w-full" aria-hidden={false}>
+    <svg viewBox="0 0 430 210" className="mt-4 h-auto w-full" aria-hidden={false}>
       {chip(nodes[0].name, 0)}
       {chip(nodes[1].name, 1)}
       {chip(nodes[2].name, 2)}
@@ -163,7 +163,7 @@ function DemoGraph({ stage }: { stage: number }) {
           x={n.col * 96 + 69}
           y={115}
           textAnchor="middle"
-          fill={active[n.col] ? "#B8A98F" : "#A6A197"}
+          fill={active[n.col] ? "var(--color-lime)" : "var(--color-silver)"}
           fontSize="8"
           fontFamily="ui-monospace, monospace"
           letterSpacing="1.2"
@@ -179,7 +179,7 @@ function DemoGraph({ stage }: { stage: number }) {
           y1={112}
           x2={(i + 1) * 96 + 26}
           y2={112}
-          stroke={completed > i ? "#8FA6B7" : "#34322D"}
+          stroke={completed > i ? "var(--color-cyan)" : "var(--color-steel)"}
           strokeWidth={completed > i ? 1.5 : 1}
           strokeDasharray={completed > i ? undefined : "3 4"}
         />
@@ -188,24 +188,24 @@ function DemoGraph({ stage }: { stage: number }) {
       {completed > 0 && completed < 4 && (
         <circle
           cx={Math.min(completed, 3) * 96 + 69}
-          cy={112}
-          r={5}
-          fill="#8FA6B7"
+          cy={128}
+          r={3}
+          fill="var(--color-cyan)"
         />
       )}
 
-      <text x="30" y="40" fill="#A6A197" fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="1.5">
-        {stage >= 4 ? "TOKENS 182" : stage === 3 ? "TOKENS..." : stage === 2 ? "SCANNING" : "WAITING"}
+      <text x="30" y="40" fill="var(--color-silver)" fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="1.5">
+        {stage >= 4 ? "ILLUSTRATIVE TOKENS 182" : stage === 3 ? "TOKENS..." : stage === 2 ? "SCANNING" : "WAITING"}
       </text>
-      <text x="30" y="60" fill={stage >= 4 ? "#B8A98F" : "#A6A197"} fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="1.5">
-        COST $0.00{Math.min(2 + stage, 7)}
+      <text x="30" y="60" fill={stage >= 4 ? "var(--color-lime)" : "var(--color-silver)"} fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="1.5">
+        ILLUSTRATIVE COST $0.00{Math.min(2 + stage, 7)}
       </text>
 
-      <rect x="26" y="152" width="338" height="1" fill="#34322D" />
-      <text x="26" y="172" fill="#A6A197" fontSize="7" fontFamily="ui-monospace, monospace" letterSpacing="1.5">
+      <rect x="26" y="152" width="374" height="1" fill="var(--color-steel)" />
+      <text x="26" y="172" fill="var(--color-silver)" fontSize="7" fontFamily="ui-monospace, monospace" letterSpacing="1.5">
         {stage === 0 ? "REQUEST ADMITTED" : stage === 1 ? "CLASSIFYING TASK" : stage === 2 ? "CANDIDATES SCORED" : stage === 3 ? "MODEL EXECUTING" : "ANALYTICS PUBLISHED"}
       </text>
-      <text x="352" y="172" textAnchor="end" fill="#B8A98F" fontSize="7" fontFamily="ui-monospace, monospace" letterSpacing="1.5">
+      <text x="400" y="172" textAnchor="end" fill="var(--color-lime)" fontSize="7" fontFamily="ui-monospace, monospace" letterSpacing="1.5">
         {stage === 4 ? "COMPLETE" : `STEP ${Math.min(stage + 1, 5)}/5`}
       </text>
     </svg>

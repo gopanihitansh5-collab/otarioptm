@@ -113,14 +113,14 @@ export default function Architecture() {
           </div>
         </div>
 
-        <div className="mx-auto mt-10 max-w-4xl">
+        <div className="mx-auto mt-10 max-w-4xl rounded-3xl border border-[var(--color-steel)] bg-[var(--color-graphite)]/70 p-5 md:p-8">
           {LAYERS.map((layer, i) => {
             const active = tracing && (staticAll || i === step);
             const next = LAYERS[i + 1];
             return (
               <div key={layer.name}>
                 <div
-                  className={`group relative flex items-start gap-4 rounded-xl border bg-[var(--color-elevated)] p-4 transition-colors duration-200 md:p-5 ${
+                  className={`group relative flex items-start gap-4 rounded-2xl border bg-[var(--color-elevated)] p-4 transition-colors duration-200 md:p-5 ${
                     active
                       ? "border-[var(--color-lime)]"
                       : "border-[var(--color-steel)] hover:border-[var(--color-lime)]/40"
@@ -155,8 +155,8 @@ export default function Architecture() {
                       </span>
                     </p>
                     <p
-                      className={`mt-1 h-5 max-w-xl text-xs text-[var(--color-silver)] transition-opacity duration-200 ${
-                        active || "opacity-0 group-hover:opacity-100"
+                      className={`mt-1 min-h-5 max-w-xl text-xs text-[var(--color-silver)] transition-opacity duration-200 ${
+                        active ? "opacity-100" : "opacity-80"
                       }`}
                     >
                       {layer.desc}
