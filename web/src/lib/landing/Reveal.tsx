@@ -90,7 +90,7 @@ export function CountUp({
       const t0 = performance.now();
       const dur = 900;
       const tick = (t: number) => {
-        const p = Math.min(1, (t - t0) / dur);
+        const p = Math.min(1, Math.max(0, (t - t0) / dur));
         const eased = 1 - Math.pow(1 - p, 3);
         const next = from + (target - from) * eased;
         shown.current = next;
