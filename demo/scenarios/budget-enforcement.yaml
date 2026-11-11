@@ -1,0 +1,21 @@
+scenario: budget-enforcement
+title: Budget limit enforcement
+status: verified
+purpose: Prove budgets are enforced (reserve/settle exactly-once, 402 on overspend), not just displayed.
+inputs:
+  control: TRY OVERSPEND DEMO (studio budget panel)
+config:
+  project_budget_usd: 5.00 (default)
+expected:
+  - GET /api/v1/budget reports remaining budget
+  - With the overspend control on, the next run returns 402 budget-exceeded
+  - No partial settlement: a rejected run leaves budget unchanged
+steps:
+  - GET /api/v1/budget, record remaining
+  - Run a workflow normally; confirm settle (budget meter updates, run recorded)
+  - Enable TRY OVERSPEND DEMO; run again
+  - Confirm 402 and unchanged budget
+validation:
+  - 402 response body identifies budget as the cause
+  - Budget meter matches GET /api/v1/budget exactly
+cleanup: "Local: restart run_server.py to reset in-memory budget. Production: state resets when the serverless instance recycles; do not present stale meter readings as fresh."

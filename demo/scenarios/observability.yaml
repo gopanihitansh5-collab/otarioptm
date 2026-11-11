@@ -1,0 +1,21 @@
+scenario: observability
+title: Real-time observability (activity feed)
+status: partial
+purpose: Show live execution visibility, honestly per-transport.
+inputs:
+  any runnable workflow (see workflow-execution scenario)
+config:
+  local: WebSocket /api/v1/activity
+  production: poll GET /api/v1/activity (serverless cannot hold WebSockets)
+expected:
+  - GET /api/v1/health advertises runtime and activity_transport
+  - Local run: events stream over the WebSocket as nodes complete
+  - Production run: the feed polls and shows the same event sequence
+steps:
+  - GET /api/v1/health; read activity_transport aloud
+  - Run a workflow; watch the feed
+  - Contrast local (WS) vs production (poll) if demonstrating both
+validation:
+  - Event sequence matches the run (started, node completions, finished)
+  - Transport shown in the UI matches the health label
+cleanup: none

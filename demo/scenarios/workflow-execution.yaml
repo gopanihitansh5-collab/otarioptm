@@ -1,0 +1,24 @@
+scenario: workflow-execution
+title: Multi-step AI workflow (search -> summarize)
+status: verified
+purpose: Show topological execution of a real multi-node workflow with live activity and a labeled demo-tier answer.
+inputs:
+  workflow: fixtures/research-summarize.workflow.json
+config:
+  provider_keys: none (demo tier)
+  endpoint: /api/v1/workflow/run
+expected:
+  - 200 response with node results in dependency order
+  - search node returns real DuckDuckGo result text
+  - chat node answer carries the [demo mode ...] label and $0.0000 cost
+  - activity feed shows WORKFLOW.STARTED, NODE.COMPLETED (x2), WORKFLOW.FINISHED
+steps:
+  - GET /api/v1/health and confirm 200
+  - Load the fixture in the studio import box (or POST it to /api/v1/workflow/run)
+  - Run; watch the activity feed and budget meter
+validation:
+  - Response contains results for both nodes in order search -> summarize
+  - Chat output includes the demo-mode label
+  - GET /api/v1/budget shows the run recorded at $0.0000
+  - GET /api/v1/export CSV includes the run
+cleanup: Export CSV if keeping evidence; clear localStorage to reset the studio.

@@ -1,0 +1,21 @@
+scenario: intelligent-routing
+title: Intelligent model routing
+status: partial
+purpose: Show the deterministic routing decision (task -> provider tier) and its trace, honestly labeled.
+inputs:
+  prompt: "Classify this ticket and draft a reply: ..."
+  model: auto
+config:
+  provider_keys: none in production -> routing resolves to the demo tier
+expected:
+  - Routing decision is visible (chosen tier + reason), not a hidden mock
+  - With no keys the selected tier is demo and the output is labeled [demo mode ...]
+  - No claim of live provider routing without OTARI_API_KEY / GROQ_API_KEY
+steps:
+  - POST /api/v1/chat/completions with model auto
+  - Inspect the response for the selected tier and label
+  - Narrate: with provider keys the same call routes Otari -> Groq -> demo
+validation:
+  - Output label matches the tier the gateway reports
+  - Never presented as a live provider call when running keyless
+cleanup: none
