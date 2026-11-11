@@ -91,7 +91,7 @@ export function Canvas({
       maxZoom={2.5}
       className="h-full w-full"
       defaultEdgeOptions={{
-        type: "smoothstep",
+        type: "default",
         animated,
         style: { stroke: edgeStroke, strokeWidth: 2, strokeLinecap: "round" },
         markerEnd: {

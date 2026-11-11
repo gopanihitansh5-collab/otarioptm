@@ -38,12 +38,12 @@ export function NodeChat(props: NodeProps) {
       <RunBadge status={status} step={step} />
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         style={handleStyle(NODE_ACCENT)}
       />
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         style={handleStyle(NODE_ACCENT)}
       />
 

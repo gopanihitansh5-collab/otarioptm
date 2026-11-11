@@ -45,12 +45,12 @@ export function NodeGuardrails(props: NodeProps) {
       <RunBadge status={status} step={step} />
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         style={handleStyle(blocked ? NODE_FAIL : NODE_ACCENT)}
       />
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         style={handleStyle(blocked ? NODE_FAIL : NODE_ACCENT)}
       />
 
