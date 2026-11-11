@@ -53,6 +53,16 @@ DEMO_COMPLETION_COST = 0.0
 # model is always reserved with exactly the router's affordability estimate.
 MIN_RESERVATION = 0.01
 
+# Measured-fast Otari chat models (direct API timing, 2026-11-11:
+# meta/llama-3.1-8b-instruct answered in ~2.3s). The Otari catalog carries no
+# latency data, so without this preference the router can select a slow
+# reasoning model that can never answer inside OTARI_TIMEOUT_SECONDS.
+_OTARI_PREFERRED_MODELS = (
+    "meta/llama-3.1-8b-instruct",
+    "google/gemma-3-4b-it",
+    "meta/llama-3.3-70b-turbo",
+)
+
 # Inbound payload caps (P0-3). Every one of them answers 400, never 500.
 MAX_WORKFLOW_NODES = 100
 MAX_WORKFLOW_EDGES = 300
@@ -519,6 +529,21 @@ async def execute_chat_step(
     step_type = _routing_step_type(node)
     remaining = await budget.get_remaining()
     chosen, score, reason = _select_model(candidates, remaining, step_type)
+
+    # Otari-first only works if the Otari leg can actually answer inside the
+    # user-approved 5s window. The router scores every catalog model with the
+    # same default latency (999), so it can pick a slow reasoning model
+    # (measured: qwen-3.5-35b-a3b needed >110s for a full completion) and the
+    # Otari leg then ALWAYS times out, silently turning routing Groq-only.
+    # Prefer a measured-fast Otari chat model when the catalog offers one;
+    # otherwise keep the router's choice.
+    if otari_client is not None:
+        by_id = {str(m.get("id") or m.get("name")): m for m in candidates}
+        for preferred in _OTARI_PREFERRED_MODELS:
+            if preferred in by_id:
+                chosen = by_id[preferred]
+                reason = f"preferred fast otari model ({preferred})"
+                break
 
     # ONE estimate, shared with the router: the router judged this model
     # affordable with exactly this number, so the reservation can never be

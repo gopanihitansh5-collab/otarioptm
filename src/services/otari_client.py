@@ -20,10 +20,13 @@ class OTARIClient:
 
     def __init__(self, api_key: str):
         self.api_key = api_key
+        # User-approved responsiveness target: give Otari 5s to answer, then
+        # the gateway falls back to Groq. Env-tunable for slower deployments.
+        timeout = float(os.environ.get("OTARI_TIMEOUT_SECONDS", "5"))
         self.client = httpx.AsyncClient(
             base_url=OTARI_BASE_URL,
             headers={"Otari-Key": api_key, "Content-Type": "application/json"},
-            timeout=60.0,
+            timeout=timeout,
         )
 
     async def fetch_models(self) -> List[Dict[str, Any]]:
