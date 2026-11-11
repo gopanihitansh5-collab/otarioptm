@@ -266,3 +266,30 @@ def test_gateway_default_backend_stays_local(monkeypatch):
 
     assert gateway_main.CODE_EXEC_BACKEND == "local"  # no env var set in tests
     assert gateway_main.CODE_EXEC_DISABLED is True  # kill switch still on
+
+
+def test_error_detail_surfaces_status_and_safe_code_only(monkeypatch):
+    class FakeApiError(Exception):
+        status_code = 400
+        code = "invalid_resources"
+
+    _install_fake_vercel(monkeypatch, create_effect=FakeApiError("nope"))
+    result = asyncio.run(_test_error_detail_surfaces_status_and_safe_code_only())
+    assert "status 400" in result["error"]
+    assert "code invalid_resources" in result["error"]
+
+
+async def _test_error_detail_surfaces_status_and_safe_code_only():
+    return await vsr.run_in_vercel_sandbox("print('x')")
+
+
+def test_provider_controlled_code_is_dropped_unless_slug(monkeypatch):
+    class EvilApiError(Exception):
+        status_code = 400
+        code = 'evil"; leak: sk_live_secret_value <script>'
+
+    _install_fake_vercel(monkeypatch, create_effect=EvilApiError("nope"))
+    result = asyncio.run(vsr.run_in_vercel_sandbox("print('x')"))
+    assert "status 400" in result["error"]
+    assert "sk_live_secret" not in result["error"]
+    assert ", code" not in result["error"]  # no provider-controlled code surfaced

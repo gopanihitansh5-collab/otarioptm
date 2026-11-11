@@ -30,6 +30,7 @@ under the free quotas for interactive traffic.
 """
 
 import asyncio
+import re
 from typing import Any, Dict
 
 MAX_OUTPUT_CHARS = 64 * 1024
@@ -112,14 +113,16 @@ async def run_in_vercel_sandbox(code: str) -> Dict[str, Any]:
         # the context manager destroys it on cancellation where possible.
         return _fail("code-exec sandbox timed out", error="timeout")
     except Exception as exc:  # noqa: BLE001 - quota pause, auth, API errors
-        # Structured detail only (exception class, HTTP status, API error
-        # code): enough to diagnose quota/auth/parameter failures honestly,
-        # never the response body (which can echo request data).
+        # Structured detail only: exception class (known SDK classes) and
+        # integer HTTP status are safe. The API error code is provider-
+        # controlled content, so it is surfaced ONLY when it matches a
+        # strict slug allowlist format; anything else is dropped. The
+        # response body is never surfaced.
         detail = f"code-exec sandbox unavailable ({exc.__class__.__name__}"
         status = getattr(exc, "status_code", None)
-        code = getattr(exc, "code", None)
-        if status is not None:
+        if isinstance(status, int):
             detail += f", status {status}"
-        if code:
+        code = getattr(exc, "code", None)
+        if isinstance(code, str) and re.fullmatch(r"[a-z0-9_.-]{1,64}", code):
             detail += f", code {code}"
         return _fail(detail + ")")
