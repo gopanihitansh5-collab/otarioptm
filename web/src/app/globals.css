@@ -219,6 +219,11 @@ body {
   --surface-glass: rgba(28, 26, 22, 0.03);
   --surface-border: rgba(138, 122, 91, 0.28);
 }
+/* Hero routing-trace labels: dark-theme silver washes out on ivory. */
+[data-theme="light"] .hero-trace text[font-size="9"],
+[data-theme="light"] .hero-trace text[font-size="10"] {
+  fill: #615B4E;
+}
 [data-theme="light"] .otari-premium-surface {
   background: linear-gradient(145deg, rgba(28, 26, 22, 0.05), rgba(28, 26, 22, 0.01));
 }
