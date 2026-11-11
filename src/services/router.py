@@ -144,25 +144,46 @@ def _max_model_cost(m: Dict[str, Any]) -> float:
     return max(vals, default=0.0)
 
 
-def strict_call_bound(m: Dict[str, Any], *, payload_bytes: int, max_tokens: int) -> float:
-    """Provable upper bound on the USD cost of ONE call to ``m``.
+# Conservative per-message allowance for provider chat-template overhead
+# (role wrappers, special tokens). Those tokens are added provider-side and
+# are NOT in the serialized payload, so the byte bound alone does not cover
+# them. 32 tokens/message covers common templates (typical: 3-20); larger
+# provider injections are an explicitly documented residual, below.
+TEMPLATE_TOKENS_PER_MESSAGE = 32
 
-    BPE tokenizers encode every token as at least one byte, so prompt
-    tokens never exceed the serialized request's byte length; output
-    tokens are capped provider-side by ``max_tokens``. Therefore
 
-        cost <= max-per-token-price x (payload_bytes + max_tokens)
+def strict_call_bound(m: Dict[str, Any], *, payload_bytes: int, max_tokens: int,
+                      message_count: int = 0) -> float:
+    """Conditional conservative upper bound on the USD cost of ONE call to ``m``.
 
-    is an upper bound, not an estimate. Conditions (documented residuals):
-    the provider must bill only prompt+completion tokens (no uncapped
-    hidden reasoning or injected system/tool tokens) and the config's
-    prices must not lag the provider's. Within those conditions a crash
-    after the call can never lose spend: the reservation IS the bound.
+    Basis: BPE tokenizers encode every token as at least one byte, so
+    payload-derived prompt tokens never exceed the serialized request's
+    byte length; output tokens are capped provider-side by ``max_tokens``;
+    and ``message_count`` x TEMPLATE_TOKENS_PER_MESSAGE conservatively
+    covers chat-template overhead. Therefore, UNDER THE CONDITIONS BELOW,
+
+        cost <= max-per-token-price
+                x (payload_bytes + template_allowance + max_tokens)
+
+    conservatively upper-bounds the call. This is NOT an unconditional
+    guarantee. Conditions / documented residuals:
+      * the provider bills only prompt+completion tokens - no uncapped
+        hidden reasoning tokens;
+      * provider-injected system/tool prompts beyond the template
+        allowance are NOT covered (they never appear in this payload);
+      * the config's prices must not lag the provider's.
+    When these hold, a crash after the call loses no spend: the
+    reservation is the bound. When they do not, the loss is limited to
+    (actual - bound) for that call. Scope note: the $5/month account
+    ceiling backstops OTARI spend only; it does not cover other
+    providers' billing (e.g. Exa bills its own credit balance).
     """
     price = _max_model_cost(m)
     if price <= 0:
         return 0.0
-    tokens = max(0, int(payload_bytes)) + max(0, int(max_tokens))
+    tokens = (max(0, int(payload_bytes))
+              + TEMPLATE_TOKENS_PER_MESSAGE * max(0, int(message_count))
+              + max(0, int(max_tokens)))
     return max(0.0, price * tokens)
 
 

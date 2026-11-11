@@ -92,7 +92,7 @@ def test_crash_path_charges_bound_and_loses_nothing(monkeypatch):
     import json
     messages = [{"role": "user", "content": "hi"}]
     payload_bytes = len(json.dumps(messages, ensure_ascii=False).encode("utf-8"))
-    bound = router_mod.strict_call_bound(PAID, payload_bytes=payload_bytes, max_tokens=100)
+    bound = router_mod.strict_call_bound(PAID, payload_bytes=payload_bytes, max_tokens=100, message_count=1)
 
     real_settle = gw._settle_reservation
 
@@ -137,7 +137,7 @@ def test_reported_cost_above_flat_estimate_still_within_bound(monkeypatch):
     # but the byte-based bound must cover any real charge.
     messages = [{"role": "user", "content": "word " * 2000}]
     payload_bytes = len(json.dumps(messages, ensure_ascii=False).encode("utf-8"))
-    bound = router_mod.strict_call_bound(PAID, payload_bytes=payload_bytes, max_tokens=100)
+    bound = router_mod.strict_call_bound(PAID, payload_bytes=payload_bytes, max_tokens=100, message_count=1)
     flat_est = router_mod.estimated_call_cost(PAID)
     reported = flat_est * 3  # way above the flat estimate
     assert reported < bound  # the bound, not the estimate, must cover it
@@ -174,3 +174,36 @@ def test_free_tier_still_reserves_nothing(monkeypatch):
         )
     assert reserved["est"] == 0.0
     assert result["demo"] is True
+
+
+def test_web_search_reserves_the_exa_bound(monkeypatch):
+    """A web-search step reserves EXA_SEARCH_BOUND_USD (conditional bound for
+    the exact Exa request shape), not the old flat $0.01."""
+    from fastapi.testclient import TestClient
+
+    async def fake_search(query, objective=None):
+        return {"results_text": "stub", "cost": 0.0, "provider": "stub", "objective": objective}
+
+    monkeypatch.setattr(gw, "_web_search", fake_search)
+    reserved = []
+    original_reserve = gw.budget.reserve
+
+    async def spy_reserve(est):
+        reserved.append(est)
+        return await original_reserve(est)
+
+    monkeypatch.setattr(gw.budget, "reserve", spy_reserve)
+    with _isolated_budget(cap=5.0):
+        client = TestClient(gw.app)
+        r = client.post(
+            "/api/v1/workflow/run",
+            json={"nodes": [{"id": "s1", "type": "web-search", "data": {"query": "q"}}], "edges": []},
+        )
+    assert r.status_code == 200
+    assert reserved and reserved[0] == pytest.approx(gw.EXA_SEARCH_BOUND_USD)
+    assert gw.EXA_SEARCH_BOUND_USD >= 0.017  # derived worst case, see constant
+
+
+def test_message_template_allowance_counts():
+    bound = router_mod.strict_call_bound(PAID, payload_bytes=100, max_tokens=100, message_count=2)
+    assert bound == pytest.approx(0.0000002 * (100 + 2 * router_mod.TEMPLATE_TOKENS_PER_MESSAGE + 100))

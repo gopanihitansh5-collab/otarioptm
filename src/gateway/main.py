@@ -54,6 +54,20 @@ DEMO_COMPLETION_COST = 0.0
 # router.strict_call_bound), never an estimate that actuals can exceed.
 MIN_RESERVATION = 0.01
 
+# Conditional conservative bound for ONE web-search step's Exa call, derived
+# from the owning pricing source (https://docs.exa.ai/reference/pricing,
+# fetched 2026-11-11): the gateway sends exactly `type: "auto"` (base
+# $7/1k requests, up to 10 results included, default numResults=10) plus
+# `contents.highlights` (a billed content type: $1/1k pages, so <= $0.010
+# for 10 pages). Worst case $0.007 + $0.010 = $0.017; reserve $0.02.
+# Residuals: Exa price changes after 2026-11-11 are not covered, and the
+# bound only limits crash loss, not the charge itself - Exa bills the
+# account's own loaded credit balance (pay-as-you-go), which is the only
+# backstop for Exa spend; the Otari $5/month ceiling does NOT apply to
+# Exa. The provider-reported costDollars.total is always settled as the
+# actual.
+EXA_SEARCH_BOUND_USD = 0.02
+
 # Measured-fast Otari chat models (direct API timing, 2026-11-11:
 # meta/llama-3.1-8b-instruct answered in ~2.3s). The Otari catalog carries no
 # latency data, so without this preference the router can select a slow
@@ -539,17 +553,20 @@ async def execute_chat_step(
     # STRICT reservation bound: the router's flat affordability estimate can
     # be EXCEEDED by a real call (it ignores prompt size), which made a crash
     # between call and settle lose the difference. The reservation is now a
-    # provable upper bound for one call to the chosen model: BPE tokenizers
-    # encode >= 1 byte per token (prompt tokens <= serialized payload bytes)
-    # and output is capped provider-side by max_tokens, so
-    #   cost <= max-per-token-price x (payload_bytes + max_tokens).
+    # CONDITIONAL conservative upper bound for one call to the chosen model
+    # (see router.strict_call_bound for the exact conditions): BPE tokenizers
+    # encode >= 1 byte per token (payload-derived prompt tokens <= serialized
+    # payload bytes), chat-template overhead is covered by a per-message
+    # allowance, and output is capped provider-side by max_tokens.
     # The chain makes at most ONE paid attempt (paid-first -> free Groq ->
-    # free demo), so the bound covers the whole step and a crash can never
-    # lose spend. Trade-off (intended, conservative): a 402 can now fire for
-    # a large prompt that would actually have fit the remaining budget.
+    # free demo), so the bound covers the whole step: while the bound's
+    # conditions hold, a crash loses no spend. Trade-off (intended,
+    # conservative): a 402 can now fire for a large prompt that would
+    # actually have fit the remaining budget.
     payload_bytes = len(json.dumps(ctx_messages, ensure_ascii=False).encode("utf-8"))
     bound = router_mod.strict_call_bound(
-        chosen, payload_bytes=payload_bytes, max_tokens=max_tokens
+        chosen, payload_bytes=payload_bytes, max_tokens=max_tokens,
+        message_count=len(ctx_messages),
     ) if chosen else 0.0
     if bound > 0:
         reservation = bound
@@ -660,9 +677,9 @@ async def execute_chat_step(
     finally:
         if not settled:
             # Uncertain execution: the provider region was entered but no
-            # settlement recorded the outcome. Charge the reserved strict bound
-            # (conservative - never frees possibly-billed spend) instead of
-            # releasing.
+            # settlement recorded the outcome. Charge the reserved strict
+            # bound (conservative: >= any spend this step could have made
+            # while the bound's conditions hold) instead of releasing.
             await _settle_reservation(rid, reservation)
 
     # Safe, body-free provider context: names, statuses and exception classes.
@@ -1142,8 +1159,10 @@ async def workflow_run(request: Request) -> Dict[str, Any]:
                 query = _trim(query)
                 raw_objective = data.get("objective")
                 objective = str(raw_objective) if raw_objective else None
-                # Budget: reserve a padded estimate, charge the real Exa cost after.
-                ok, rid = await budget.reserve(0.01)
+                # Budget: reserve the conditional bound for this exact Exa
+                # request shape (see EXA_SEARCH_BOUND_USD), then charge the
+                # provider-reported cost after.
+                ok, rid = await budget.reserve(EXA_SEARCH_BOUND_USD)
                 if not ok:
                     if getattr(budget, "_ledger_error", None):
                         raise HTTPException(status_code=503, detail="Budget store unavailable - search blocked before any spend (fail-closed)")
@@ -1156,9 +1175,9 @@ async def workflow_run(request: Request) -> Dict[str, Any]:
                 finally:
                     if not settled:
                         # Uncertain execution (search raised after reserve):
-                        # charge the reserved 0.01 estimate rather than freeing
-                        # a possibly-billed call.
-                        await _settle_reservation(rid, 0.01)
+                        # charge the reserved bound rather than freeing a
+                        # possibly-billed call.
+                        await _settle_reservation(rid, EXA_SEARCH_BOUND_USD)
                 provider = search_out.get("provider", "duckduckgo")
                 results.append({"nodeId": nid, "type": ntype, "output": search_out["results_text"],
                                 "provider": provider, "cost": search_cost,

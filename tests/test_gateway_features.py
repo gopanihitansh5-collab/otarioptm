@@ -498,15 +498,17 @@ def test_reservation_is_the_strict_bound_not_the_router_estimate(monkeypatch):
     import json as _json
     payload_bytes = len(_json.dumps([{"role": "user", "content": "hi"}], ensure_ascii=False).encode("utf-8"))
     expected_bound = gw.router_mod.strict_call_bound(
-        models[0], payload_bytes=payload_bytes, max_tokens=100
+        models[0], payload_bytes=payload_bytes, max_tokens=100, message_count=1
     )
     assert reserved["est"] == pytest.approx(expected_bound)
-    assert expected_bound == pytest.approx(0.0000002 * (payload_bytes + 100))
+    assert expected_bound == pytest.approx(
+        0.0000002 * (payload_bytes + gw.router_mod.TEMPLATE_TOKENS_PER_MESSAGE + 100)
+    )
     assert result["cost"] == pytest.approx(expected_bound)  # unreported paid attempt charged at bound
 
     big = [{"role": "user", "content": "word " * 5000}]
     big_bytes = len(_json.dumps(big, ensure_ascii=False).encode("utf-8"))
-    big_bound = gw.router_mod.strict_call_bound(models[0], payload_bytes=big_bytes, max_tokens=100)
+    big_bound = gw.router_mod.strict_call_bound(models[0], payload_bytes=big_bytes, max_tokens=100, message_count=1)
     assert big_bound > router_est  # flat estimate would have under-reserved here
 
 
