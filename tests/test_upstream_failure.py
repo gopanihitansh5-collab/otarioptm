@@ -155,3 +155,65 @@ def test_consistency_absent_without_upstream_numbers():
         payload = _run(nodes, [{"source": "calc", "target": "rec"}])
     rec = [r for r in payload["steps"] if r["nodeId"] == "rec"][0]
     assert "consistency" not in rec
+
+
+def test_report_status_and_deterministic_fields():
+    import unittest.mock as mock
+
+    async def fake_run_code(code):
+        return {"ok": True, "output": "{'Model A': 1.5, 'Model B': 3.0}"}
+
+    async def fake_chat(node, messages, models, max_tokens):
+        return {"nodeId": str(node["id"]), "output": "A costs $0.15.", "model": "m",
+                "chain": ["groq"], "cost": 0.0, "demo": False}
+
+    async def fake_search(query, objective=None):
+        return {"results_text": "1. GroqDocs (https://console.groq.com/docs/models)\n2. Pricing (https://groq.com/pricing/)",
+                "cost": 0.007, "provider": "exa", "objective": objective}
+
+    async def fake_log(event):
+        return None
+
+    nodes = [
+        {"id": "search-1", "type": "web-search", "data": {"query": "q"}},
+        {"id": "calc", "type": "code-exec", "data": {"code": "print(1)"}},
+        {"id": "rec", "type": "chat", "data": {"prompt": "report {{calc}}"}},
+    ]
+    edges = [{"source": "search-1", "target": "calc"},
+             {"source": "calc", "target": "rec"}]
+    with mock.patch.object(gw, "_run_code", fake_run_code), \
+         mock.patch.object(gw, "execute_chat_step", fake_chat), \
+         mock.patch.object(gw, "_web_search", fake_search), \
+         mock.patch.object(gw, "_log_activity", fake_log):
+        payload = _run(nodes, edges)
+    # mismatch -> report is incomplete/unverified, not success
+    assert payload["reportStatus"] == "incomplete"
+    assert payload["unverifiedNodes"] == ["rec"]
+    # deterministic fields come from actual outputs, not prose
+    assert payload["computedData"] == {"calc": "{'Model A': 1.5, 'Model B': 3.0}"}
+    assert payload["sources"] == ["https://console.groq.com/docs/models", "https://groq.com/pricing/"]
+
+
+def test_report_complete_when_all_cited():
+    import unittest.mock as mock
+
+    async def fake_run_code(code):
+        return {"ok": True, "output": "1.5"}
+
+    async def fake_chat(node, messages, models, max_tokens):
+        return {"nodeId": str(node["id"]), "output": "cost is $1.50", "model": "m",
+                "chain": ["groq"], "cost": 0.0, "demo": False}
+
+    async def fake_log(event):
+        return None
+
+    nodes = [
+        {"id": "calc", "type": "code-exec", "data": {"code": "print(1)"}},
+        {"id": "rec", "type": "chat", "data": {"prompt": "report {{calc}}"}},
+    ]
+    with mock.patch.object(gw, "_run_code", fake_run_code), \
+         mock.patch.object(gw, "execute_chat_step", fake_chat), \
+         mock.patch.object(gw, "_log_activity", fake_log):
+        payload = _run(nodes, [{"source": "calc", "target": "rec"}])
+    assert payload["reportStatus"] == "complete"
+    assert payload["unverifiedNodes"] == []

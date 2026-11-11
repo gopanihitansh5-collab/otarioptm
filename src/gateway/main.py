@@ -1490,6 +1490,27 @@ async def _execute_graph(
     snap = await budget.snapshot()
     await _log_activity({"event": "workflow.finished", "aborted": aborted, "budget": snap})
 
+    # Deterministic report data, built from ACTUAL step outputs only - never
+    # from chat prose. The UI/report renders numbers and sources from here;
+    # LLM text is optional prose on top and can never override these.
+    computed_data = {
+        str(r["nodeId"]): str(r.get("output", ""))
+        for r in results
+        if r.get("type") == "code-exec" and r.get("status") == "completed"
+    }
+    source_urls: List[str] = []
+    for r in results:
+        if r.get("type") == "web-search" and r.get("output"):
+            source_urls.extend(re.findall(r"https?://[^\s)\]>\",]+", str(r["output"])))
+    # A chat answer that did not cite its computed inputs is UNVERIFIED:
+    # numeric presence ("cited") is a presence check, never proof of
+    # correctness; a mismatch means the report must not be called success.
+    unverified_nodes = sorted(
+        str(r["nodeId"]) for r in results
+        if isinstance(r.get("consistency"), dict) and r["consistency"].get("status") == "mismatch"
+    )
+    incomplete = bool(aborted) or bool(failed) or bool(unverified_nodes)
+
     payload = {
         "results": [r for r in results if r.get("type") != "chat" or "nodeId" in r],
         "steps": results,
@@ -1497,6 +1518,10 @@ async def _execute_graph(
         "aborted": aborted,
         "partial": bool(failed),
         "failedNodes": sorted(failed),
+        "unverifiedNodes": unverified_nodes,
+        "reportStatus": "incomplete" if incomplete else "complete",
+        "computedData": computed_data,
+        "sources": sorted(set(source_urls))[:20],
         "overBudget": any(bool(r.get("overBudget")) for r in results),
         # Nodes whose answer came from the simulated demo tier. These never
         # count as successful real inference; they are labeled, not hidden.
@@ -1510,6 +1535,10 @@ async def _execute_graph(
             "aborted": aborted,
             "partial": payload["partial"],
             "failedNodes": payload["failedNodes"],
+            "unverifiedNodes": unverified_nodes,
+            "reportStatus": payload["reportStatus"],
+            "computedData": computed_data,
+            "sources": payload["sources"],
             "overBudget": payload["overBudget"],
             "demoNodes": payload["demoNodes"],
             "budget": snap,

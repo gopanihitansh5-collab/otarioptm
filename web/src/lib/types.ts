@@ -63,6 +63,10 @@ export type BudgetSnapshot = {
 export type ActivityEvent = { event: string; ts: number } & Record<string, unknown>;
 
 export type RunResponse = {
+  reportStatus?: string;
+  unverifiedNodes?: string[];
+  computedData?: Record<string, string>;
+  sources?: string[];
   partial?: boolean;
   failedNodes?: string[];
   steps: StepResult[];
