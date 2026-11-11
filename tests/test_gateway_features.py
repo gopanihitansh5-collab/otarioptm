@@ -628,3 +628,82 @@ def test_health_probe_task_is_scheduled_on_startup_and_cancelled_on_shutdown(mon
     task = asyncio.run(_scenario())
     assert task.cancelled(), "shutdown must cancel the probe task"
     assert gw._probe_task is None
+
+
+# --- Router chat-model hygiene: no classifiers/embeddings serve chat steps ---
+
+class _FakeOtariCatalog:
+    def __init__(self, payload):
+        self._payload = payload
+
+    async def fetch_models(self):
+        return self._payload
+
+
+class _FakeGroqModels:
+    def __init__(self, ids):
+        self._ids = ids
+
+    async def get(self, path):
+        class _Resp:
+            status_code = 200
+
+            def __init__(self, ids):
+                self._ids = ids
+
+            def json(self):
+                return {"data": [{"id": i} for i in self._ids]}
+
+        return _Resp(self._ids)
+
+
+def test_is_chat_model_excludes_guard_and_embedding_ids():
+    assert gw._is_chat_model({"id": "alibaba/qwen3-32b"})
+    assert gw._is_chat_model({"id": "openai:gpt-4o-mini"})
+    assert not gw._is_chat_model({"id": "meta-llama/llama-prompt-guard-2-22m"})
+    assert not gw._is_chat_model({"id": "meta/llama-guard-4-12b", "type": "chat"})
+    assert not gw._is_chat_model({"id": "openai/gpt-oss-safeguard-20b", "type": "chat"})
+    assert not gw._is_chat_model({"id": "alibaba/qwen3-embedding-4b"})
+    assert not gw._is_chat_model({"id": "some/model", "type": "embedding"})
+
+
+def test_model_catalog_unwraps_otari_list_and_filters_non_chat(monkeypatch):
+    payload = {
+        "object": "list",
+        "data": [
+            {"id": "alibaba/qwen3-embedding-0.6b", "type": "embedding"},
+            {"id": "alibaba/qwen-3.5-35b-a3b", "type": "chat"},
+            {"id": "meta/llama-guard-4-12b", "type": "chat"},
+        ],
+    }
+    monkeypatch.setattr(gw, "otari_client", _FakeOtariCatalog(payload))
+    catalog = asyncio.run(gw._model_catalog())
+    ids = [m.get("id") for m in catalog]
+    assert "alibaba/qwen-3.5-35b-a3b" in ids
+    assert "alibaba/qwen3-embedding-0.6b" not in ids
+    assert "meta/llama-guard-4-12b" not in ids
+    assert "demo" in ids  # demo tier always appended
+    monkeypatch.setattr(gw, "otari_client", None)
+
+
+def test_model_catalog_accepts_plain_list(monkeypatch):
+    monkeypatch.setattr(gw, "otari_client", _FakeOtariCatalog([{"id": "a/b", "type": "chat"}]))
+    ids = [m.get("id") for m in asyncio.run(gw._model_catalog())]
+    assert "a/b" in ids
+    monkeypatch.setattr(gw, "otari_client", None)
+
+
+def test_groq_pick_prefers_priority_chat_model(monkeypatch):
+    monkeypatch.setattr(gw, "groq_client", _FakeGroqModels(
+        ["meta-llama/llama-prompt-guard-2-22m", "llama-3.1-8b-instant"]))
+    monkeypatch.setattr(gw, "_groq_model_cache", None)
+    assert asyncio.run(gw._groq_pick_model()) == "llama-3.1-8b-instant"
+    monkeypatch.setattr(gw, "_groq_model_cache", None)
+
+
+def test_groq_pick_never_selects_classifier(monkeypatch):
+    monkeypatch.setattr(gw, "groq_client", _FakeGroqModels(
+        ["meta-llama/llama-prompt-guard-2-22m", "meta-llama/llama-4-scout-17b-16e-instruct"]))
+    monkeypatch.setattr(gw, "_groq_model_cache", None)
+    assert asyncio.run(gw._groq_pick_model()) == "meta-llama/llama-4-scout-17b-16e-instruct"
+    monkeypatch.setattr(gw, "_groq_model_cache", None)
