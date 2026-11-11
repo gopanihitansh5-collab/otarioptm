@@ -219,6 +219,22 @@ body {
   --surface-glass: rgba(28, 26, 22, 0.03);
   --surface-border: rgba(138, 122, 91, 0.28);
 }
+/* .panel is a fixed dark surface in BOTH themes. In light theme the theme
+   tokens flip dark-on-ivory, which leaves panel text dark-on-dark; restore
+   the dark tokens inside every panel so its content always matches its
+   background. */
+[data-theme="light"] .panel {
+  --color-elevated: #1D1C19;
+  --color-steel: #34322D;
+  --color-steel-dim: #292823;
+  --color-lime: #B8A98F;
+  --color-ice: #E9E4DA;
+  --color-silver: #A6A197;
+  --color-signal: #8FA6B7;
+  --color-amber: #D1AD75;
+  --color-fail: #C68179;
+}
+
 /* Hero routing-trace labels: dark-theme silver washes out on ivory. */
 [data-theme="light"] .hero-trace text[font-size="9"],
 [data-theme="light"] .hero-trace text[font-size="10"] {
