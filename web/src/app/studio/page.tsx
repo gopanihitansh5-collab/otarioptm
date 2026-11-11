@@ -754,6 +754,7 @@ function StudioInner() {
           templates={templates}
           source={templateSource}
           canvasEmpty={canvasEmpty}
+          codeExecAvailable={health?.code_exec ?? false}
           onLoad={loadTemplate}
           onLoadAndRun={loadAndRunTemplate}
         />

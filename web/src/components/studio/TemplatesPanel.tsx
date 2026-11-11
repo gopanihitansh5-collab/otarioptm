@@ -10,6 +10,8 @@ type TemplatesPanelProps = {
   templates: WorkflowTemplate[] | null;
   source: "gateway" | "local" | null;
   canvasEmpty: boolean;
+  /** Live from /api/v1/health: whether the code-exec node executes. */
+  codeExecAvailable: boolean;
   onLoad: (template: WorkflowTemplate) => void;
   onLoadAndRun: (template: WorkflowTemplate) => void;
 };
@@ -20,6 +22,7 @@ export function TemplatesPanel({
   templates,
   source,
   canvasEmpty,
+  codeExecAvailable,
   onLoad,
   onLoadAndRun,
 }: TemplatesPanelProps) {
@@ -58,6 +61,7 @@ export function TemplatesPanel({
                 key={template.id}
                 template={template}
                 canvasEmpty={canvasEmpty}
+                codeExecAvailable={codeExecAvailable}
                 onLoad={onLoad}
                 onLoadAndRun={onLoadAndRun}
               />
@@ -72,11 +76,13 @@ export function TemplatesPanel({
 function TemplateCard({
   template,
   canvasEmpty,
+  codeExecAvailable,
   onLoad,
   onLoadAndRun,
 }: {
   template: WorkflowTemplate;
   canvasEmpty: boolean;
+  codeExecAvailable: boolean;
   onLoad: (template: WorkflowTemplate) => void;
   onLoadAndRun: (template: WorkflowTemplate) => void;
 }) {
@@ -84,6 +90,7 @@ function TemplateCard({
     canvasEmpty ||
     window.confirm(`Replace the current canvas with "${template.name}"?`);
   const usesCodeExec = template.graph.nodes.some((n) => n.type === "code-exec");
+  const codeExecBlocked = usesCodeExec && !codeExecAvailable;
 
   return (
     <article className="rounded-lg border border-steel bg-elevated p-3">
@@ -92,10 +99,10 @@ function TemplateCard({
       <div className="mt-2 font-mono text-[10px] tracking-wider text-silver">
         {template.graph.nodes.length} nodes · {template.graph.edges.length} edges
       </div>
-      {usesCodeExec && (
+      {codeExecBlocked && (
         <p className="mt-2 font-mono text-[9px] leading-snug tracking-wide text-amber">
-          Contains a code-exec step: temporarily unavailable, that step will
-          fail with an explicit error while the node is disabled.
+          Contains a code-exec step: unavailable in this deployment, that step
+          will fail with an explicit error.
         </p>
       )}
       <div className="mt-3 grid grid-cols-2 gap-2">
@@ -113,12 +120,12 @@ function TemplateCard({
         <button
           type="button"
           onClick={() => {
-            if (!usesCodeExec && confirmReplace()) {
+            if (!codeExecBlocked && confirmReplace()) {
               onLoadAndRun(template);
             }
           }}
-          disabled={usesCodeExec}
-          title={usesCodeExec ? "Contains a temporarily unavailable code-exec step" : undefined}
+          disabled={codeExecBlocked}
+          title={codeExecBlocked ? "Contains a code-exec step that is unavailable in this deployment" : undefined}
           aria-label={`Load ${template.name} and run it immediately`}
           className={`flex h-11 items-center justify-center rounded-lg border border-steel text-xs font-medium text-silver transition-colors duration-150 hover:border-lime/40 hover:text-lime active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-steel disabled:hover:text-silver ${FOCUS_RING}`}
         >

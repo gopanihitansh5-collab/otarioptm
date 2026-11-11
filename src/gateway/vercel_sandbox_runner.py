@@ -30,6 +30,7 @@ under the free quotas for interactive traffic.
 """
 
 import asyncio
+import re
 from typing import Any, Dict
 
 MAX_OUTPUT_CHARS = 64 * 1024
@@ -82,7 +83,7 @@ async def run_in_vercel_sandbox(code: str) -> Dict[str, Any]:
                 env={},  # no env vars in the VM: nothing to leak
                 persistent=False,  # destroy on exit; no snapshot storage
                 region=SANDBOX_REGION,
-                resources=SandboxResources(vcpus=1, memory=1024),
+                resources=SandboxResources(vcpus=1, memory=2048),  # memory is MB, 2048/vCPU required
             ) as box:
                 result = await box.run_command(
                     "python",
@@ -112,4 +113,16 @@ async def run_in_vercel_sandbox(code: str) -> Dict[str, Any]:
         # the context manager destroys it on cancellation where possible.
         return _fail("code-exec sandbox timed out", error="timeout")
     except Exception as exc:  # noqa: BLE001 - quota pause, auth, API errors
-        return _fail(f"code-exec sandbox unavailable ({exc.__class__.__name__})")
+        # Structured detail only: exception class (known SDK classes) and
+        # integer HTTP status are safe. The API error code is provider-
+        # controlled content, so it is surfaced ONLY when it matches a
+        # strict slug allowlist format; anything else is dropped. The
+        # response body is never surfaced.
+        detail = f"code-exec sandbox unavailable ({exc.__class__.__name__}"
+        status = getattr(exc, "status_code", None)
+        if isinstance(status, int):
+            detail += f", status {status}"
+        code = getattr(exc, "code", None)
+        if isinstance(code, str) and re.fullmatch(r"[a-z0-9_.-]{1,64}", code):
+            detail += f", code {code}"
+        return _fail(detail + ")")

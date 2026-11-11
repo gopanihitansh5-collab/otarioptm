@@ -34,7 +34,7 @@ const QA = [
   },
   {
     q: "Is the code-exec node safe to run untrusted code?",
-    a: "Not right now: the code-exec node is temporarily unavailable and refuses every program. A confirmed escape in the previous in-process sandbox means it returns only behind a genuine isolation boundary (separate container and user, no shared filesystem), not another best-effort filter.",
+    a: "Yes. Each program runs in an isolated Vercel Sandbox microVM with deny-all network egress, no environment secrets, and a hard timeout. The old in-process sandbox was removed entirely - there is no in-process fallback.",
   },
 ];
 

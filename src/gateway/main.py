@@ -982,6 +982,9 @@ async def health() -> Dict[str, Any]:
         "otari": otari_client is not None,
         "groq": groq_client is not None,
         "free_only": FREE_ONLY,
+        # Truthful availability flag so the UI never shows a stale
+        # "temporarily unavailable" label for the code-exec node.
+        "code_exec": not CODE_EXEC_DISABLED,
         "budget": snap,
         **_runtime_info(),
     }

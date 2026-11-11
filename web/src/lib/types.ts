@@ -78,6 +78,8 @@ export type HealthResponse = {
   runtime?: string;
   activity_transport?: string;
   activity_snapshot_path?: string;
+  /** True when the code-exec node executes (isolated sandbox backend live). */
+  code_exec?: boolean;
 };
 
 export const NODE_LABELS: Record<NodeType, string> = {
