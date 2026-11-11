@@ -484,6 +484,8 @@ def _raise_if_empty(result: Dict[str, Any], provider: str) -> None:
 
 def _reported_cost(result: Dict[str, Any]) -> float:
     """Provider-reported USD spend of ONE attempt (0.0 when unreported)."""
+    if not isinstance(result, dict):
+        return 0.0
     try:
         return max(0.0, float(result.get("cost") or result.get("actual_cost") or 0.0))
     except (TypeError, ValueError):
@@ -531,10 +533,11 @@ async def execute_chat_step(
     settled = False
     over_budget = False
     actual_cost = 0.0
-    # Spend reported by FAILED attempts (e.g. an empty completion that still
-    # billed). It is charged on top of the winning attempt so recorded spend
-    # stays truthful - a discarded response is never silently free.
-    billed_failed_attempts = 0.0
+    # Spend from FAILED attempts (e.g. an empty completion that still billed),
+    # kept separate by source so the ledger never presents an estimate as a
+    # provider-reported charge.
+    reported_failed = 0.0
+    estimated_failed = 0.0
     result: Dict[str, Any] = {}
     try:
         try:
@@ -554,17 +557,24 @@ async def execute_chat_step(
                 result = await _demo_chat(ctx_messages, node_id)
                 chain = ["demo"]
         except Exception as exc:  # provider failure (incl. wallet-level HTTP errors) -> next tier
-            failures.append(_safe_provider_error(primary or "provider", exc))
-            # A failed attempt that still reported spend keeps its cost: the
-            # provider billed it even though the answer is unusable.
+            if isinstance(exc, EmptyCompletion):
+                # Self-authored safe message (provider name + fixed text); it
+                # must explain the failure, e.g. tool-call-only responses this
+                # gateway cannot render, not pretend the model simply errored.
+                failures.append(str(exc))
+            else:
+                failures.append(_safe_provider_error(primary or "provider", exc))
+            # A failed attempt that still billed keeps its cost: the provider
+            # charged it even though the answer is unusable.
             attempt_cost = _reported_cost(result)
-            if attempt_cost == 0.0 and isinstance(exc, EmptyCompletion) and primary == "otari":
+            if attempt_cost > 0:
+                reported_failed += attempt_cost
+            elif isinstance(exc, EmptyCompletion) and primary == "otari":
                 # A 200 with no content and no cost report (e.g. a reasoning
                 # model that spent its tokens on hidden reasoning) can still
-                # have billed: charge the shared estimate, never record a
-                # paid attempt as free.
-                attempt_cost = est
-            billed_failed_attempts += attempt_cost
+                # have billed: charge the shared estimate, clearly labeled as
+                # an estimate, never record a paid attempt as free.
+                estimated_failed += est
             if primary == "otari":
                 if groq_client is not None:
                     try:
@@ -572,8 +582,11 @@ async def execute_chat_step(
                         _raise_if_empty(result, "groq")
                         chain = ["otari->groq"]
                     except Exception as _gexc:
-                        failures.append(_safe_provider_error("groq", _gexc))
-                        billed_failed_attempts += _reported_cost(result)
+                        if isinstance(_gexc, EmptyCompletion):
+                            failures.append(str(_gexc))
+                        else:
+                            failures.append(_safe_provider_error("groq", _gexc))
+                        reported_failed += _reported_cost(result)
                         result = await _demo_chat(ctx_messages, node_id)
                         chain = ["otari->groq->demo"]
                 else:
@@ -588,11 +601,23 @@ async def execute_chat_step(
         latency_ms = (time.time() - t0) * 1000
 
         usage = result.get("usage") or {}
-        reported = _reported_cost(result)
-        # When the provider doesn't report spend, charge the shared estimate
-        # so the cap can't be bypassed; demo/Groq tiers are explicitly free.
-        # Failed paid attempts that reported spend are added on top.
-        actual_cost = (reported if reported > 0 else (est if chain[:1] == ["otari"] else 0.0)) + billed_failed_attempts
+        reported_total = _reported_cost(result) + reported_failed
+        # When the winning paid attempt doesn't report spend, charge the
+        # shared estimate so the cap can't be bypassed; demo/Groq tiers are
+        # explicitly free. Estimated portions are tracked separately from
+        # provider-reported spend.
+        estimated_total = estimated_failed
+        if _reported_cost(result) == 0.0 and chain[:1] == ["otari"]:
+            estimated_total += est
+        actual_cost = reported_total + estimated_total
+        if reported_total > 0 and estimated_total > 0:
+            cost_source = "provider-reported+estimate"
+        elif reported_total > 0:
+            cost_source = "provider-reported"
+        elif estimated_total > 0:
+            cost_source = "estimate"
+        else:
+            cost_source = "free"
         actual_cost, over_budget = await _settle_reservation(rid, actual_cost)
         settled = True
     finally:
@@ -622,6 +647,7 @@ async def execute_chat_step(
         "chain": chain,
         "tokens": usage.get("total_tokens"),
         "cost": actual_cost,
+        "costSource": cost_source,
         "latencyMs": round(latency_ms),
         "routing": reason,
         **({"fallbackNote": fallback_note} if fallback_note else {}),
@@ -635,6 +661,7 @@ async def execute_chat_step(
         "chain": chain,
         "tokens": usage.get("total_tokens", 0),
         "cost": actual_cost,
+        "costSource": cost_source,
         "latencyMs": round(latency_ms),
         "routing": reason,
         "demo": result.get("demo", False),
@@ -1188,7 +1215,7 @@ async def activity_ws(websocket: WebSocket) -> None:
 async def export_csv() -> Response:
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["ts", "event", "node", "model", "chain", "tokens", "cost_usd", "latency_ms", "routing"])
+    writer.writerow(["ts", "event", "node", "model", "chain", "tokens", "cost_usd", "cost_source", "latency_ms", "routing"])
     for e in ACTIVITY_LOG:
         if e.get("event") == "workflow.started":
             continue
@@ -1196,7 +1223,7 @@ async def export_csv() -> Response:
             writer.writerow([
                 round(e.get("ts", 0), 3), e.get("event"), e.get("nodeId", ""),
                 e.get("model", ""), ",".join(e.get("chain", []) or []), e.get("tokens", ""),
-                e.get("cost", ""), e.get("latencyMs", ""), (e.get("routing") or "").replace(",", ";"),
+                e.get("cost", ""), e.get("costSource", ""), e.get("latencyMs", ""), (e.get("routing") or "").replace(",", ";"),
             ])
     remaining = await budget.get_remaining()
     writer.writerow(["TOTAL", "", "", "", "", "", round(budget.spend, 6), "remaining: " + str(round(remaining, 6))])

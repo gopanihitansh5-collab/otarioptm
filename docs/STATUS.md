@@ -51,9 +51,9 @@ Gateway v2 surface (this is what `docs/api.md` now documents):
 - `GET /api/v1/templates` and `GET /api/v1/templates/{template_id}`: four runnable
   starters (`research-then-summarize`, `guarded-chat`, `code-review`,
   `web-fact-check`), each with a full `{nodes, edges}` graph.
-- Per-IP token-bucket rate limiting on `POST` / `PUT` / `PATCH` / `DELETE`
-  under `/api/v1/`, HTTP 429 with a `Retry-After` header; every `GET` route
-  (including `/api/v1/health`) is exempt.
+- Per-IP plus per-instance global token-bucket rate limiting on `POST` /
+  `PUT` / `PATCH` / `DELETE` under `/api/v1/`, HTTP 429 with a `Retry-After`
+  header; every `GET` route (including `/api/v1/health`) is exempt.
 - Background model-health probes behind a 60 second TTL cache, stamped onto
   every catalog model as `health_probe {value, source, ts}`. The source is
   labeled `catalog` with a live provider and `synthetic-demo` without one.

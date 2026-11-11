@@ -108,7 +108,8 @@ def test_empty_otari_completion_falls_back_to_groq_and_keeps_billed_cost(monkeyp
     assert result["demo"] is False
     # The failed paid attempt was billed by the provider and stays billed.
     assert snap["spent"] == pytest.approx(0.0004)
-    assert result["note"] and "EmptyCompletion" in result["note"]
+    assert result["note"] and "no completion content" in result["note"]
+    assert result["costSource"] == "provider-reported"
 
 
 def test_empty_otari_without_groq_falls_to_labeled_demo(monkeypatch):
@@ -119,7 +120,8 @@ def test_empty_otari_without_groq_falls_to_labeled_demo(monkeypatch):
     assert result["chain"] == ["otari->demo"]
     assert result["demo"] is True
     assert result["output"].startswith("[DEMO")
-    assert result["note"] and "EmptyCompletion" in result["note"]
+    assert result["note"] and "no completion content" in result["note"]
+    assert result["costSource"] == "estimate"
 
 
 def test_empty_completion_with_unreported_cost_charges_estimate_not_zero(monkeypatch):
@@ -132,6 +134,8 @@ def test_empty_completion_with_unreported_cost_charges_estimate_not_zero(monkeyp
     # A 200 with no content and no cost report can still have billed: the
     # shared estimate is charged, never a silently free paid attempt.
     assert snap["spent"] > 0.0
+    assert result["costSource"] == "estimate"
+    assert snap["spent"] == pytest.approx(result["cost"])
 
 
 def test_tool_call_only_response_is_a_failure_not_an_empty_success(monkeypatch):
@@ -142,7 +146,9 @@ def test_tool_call_only_response_is_a_failure_not_an_empty_success(monkeypatch):
         result = _run_step()
     assert result["chain"] == ["otari->demo"]
     assert result["demo"] is True
-    assert result["note"] and "EmptyCompletion" in result["note"]
+    # Tool-call-only responses must be explained, not flattened into a
+    # generic provider error.
+    assert result["note"] and "tool calls only" in result["note"]
 
 
 def test_valid_otari_completion_unchanged(monkeypatch):
@@ -154,6 +160,7 @@ def test_valid_otari_completion_unchanged(monkeypatch):
     assert result["chain"] == ["otari"]
     assert result["output"] == "solid answer"
     assert result["note"] is None
+    assert result["costSource"] == "provider-reported"
     assert snap["spent"] == pytest.approx(0.001)
 
 

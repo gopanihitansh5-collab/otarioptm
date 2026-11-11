@@ -227,25 +227,27 @@ Errors:
 
 ## Rate limiting
 
-Per-IP token-bucket rate limiting protects the gateway
-(`src/gateway/main.py:954-1005`).
+Token-bucket rate limiting protects the gateway: one bucket per client IP
+plus one global bucket per instance (`_TokenBucketLimiter`,
+`_rate_limit_middleware` in `src/gateway/main.py`).
 
 - **Which requests are limited:** only `POST`, `PUT`, `PATCH` and `DELETE`
-  requests whose path starts with `/api/v1/` (`_MUTATING_METHODS`,
-  `src/gateway/main.py:992`, middleware condition at
-  `src/gateway/main.py:996`). Every `GET` route is exempt, so
-  `/api/v1/health` and the other read endpoints stay available to dashboards
-  and uptime probes.
-- **Bucket size:** burst capacity 30 requests per IP, refilled at 1.0 token
-  per second. Configurable under `gateway.rate_limit` in `config/config.yml`
-  (`enabled`, `capacity`, `refill_per_sec`).
+  requests whose path starts with `/api/v1/` (`_MUTATING_METHODS`). Every
+  `GET` route is exempt, so `/api/v1/health` and the other read endpoints
+  stay available to dashboards and uptime probes.
+- **Bucket sizes:** per IP, burst capacity 30 requests refilled at 1.0 token
+  per second; globally (all IPs on one instance), burst capacity 120
+  refilled at 5.0 tokens per second. Configurable under `gateway.rate_limit`
+  in `config/config.yml` (`enabled`, `capacity`, `refill_per_sec`,
+  `global_capacity`, `global_refill_per_sec`). The global bucket blunts
+  IP-rotation abuse; a normal user hits the per-IP limit first.
 - **Response:** HTTP `429` with the body
   `{"detail": "Rate limit exceeded - slow down and retry"}` and a
-  `Retry-After` header carrying the whole number of seconds to wait
-  (`src/gateway/main.py:1000-1004`). The limiter is installed inside CORS, so
-  the `429` still carries CORS headers (`src/gateway/main.py:1268-1270`).
-- **No other telemetry headers are promised.** The limiter is in-process and
-  resets when the gateway restarts.
+  `Retry-After` header carrying the whole number of seconds to wait. The
+  limiter is installed inside CORS, so the `429` still carries CORS headers.
+- **No other telemetry headers are promised.** Both buckets are in-process
+  and per-instance: they reset on restart and do not bound spend across
+  serverless instances.
 
 ## POST /api/v1/workflow/run
 
