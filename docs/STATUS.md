@@ -336,3 +336,39 @@ Secrets:
 Still outstanding from those sessions: live-provider verification (awaiting
 key scope approval), actual `docker build`/`docker compose up` (no Docker
 runtime available in the build environment).
+
+---
+
+## 2026-11-11 - Pre-deploy state map (verified same day)
+
+Verified against main @ 8dae360 by the integration lane on 2026-11-11 IST:
+
+Done and tested:
+- Backend: 87/87 pytest pass; gateway boots on port 8000; all 4 starter
+  templates run end-to-end in demo mode (including real DuckDuckGo search in
+  the web-search node); SSE stream works; rate limit returns 429 after burst;
+  CSV export works; /api/v1/health, /models, /templates, /budget all 200.
+- Frontend: npm ci clean; lint clean; production build clean.
+- Landing page: all 14 checklist sections implemented per MASTER.md (the
+  graphite/lime/cyan infrastructure brief); studio templates panel loads live
+  from the gateway; load-and-run works with an explicit "Demo mode" state.
+- CI green on latest commit.
+
+Known gaps / in flight (do not claim as done):
+- Vercel: multi-service deploy (FastAPI via api/index.py + Next.js web/) is
+  being validated; the Python entrypoint on Vercel's runtime is not yet
+  confirmed.
+- /api/v1/activity is a WebSocket endpoint; Vercel serverless does not hold
+  persistent WebSocket connections, so the live activity panel needs a
+  verified alternative before it can be called supported on the deploy.
+- Live-provider verification still awaits provider key scope approval; demo
+  mode is the honest default.
+- docker build / docker compose up remain unrun (no container runtime in the
+  build environment).
+- The hackathon-2026-nov branch no longer exists on the remote; main is the
+  only branch and the current source of truth.
+
+README architecture diagram is now a pre-rendered SVG (brand/architecture.svg,
+portrait, brand palette) so it renders on GitHub mobile where Mermaid code
+blocks show as raw text; the Mermaid source is kept in docs/assets/architecture.mmd
+and in a details block under the diagram.
