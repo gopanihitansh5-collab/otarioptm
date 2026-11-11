@@ -753,7 +753,25 @@ def _substitute(text: str, outputs: Dict[str, Dict[str, Any]]) -> str:
         if not node_out:
             return m.group(0)
         if field:
-            return str(node_out.get(field, m.group(0)))
+            if field in node_out:
+                return str(node_out[field])
+            # Structured stdout contract: a code-exec node printing a JSON
+            # object exposes its fields as {{node-id.field}} (the planner
+            # emits these, e.g. {{calc.rows}}). Without this the placeholder
+            # reached the model literally.
+            parsed = None
+            raw = str(node_out.get("output", "")).strip().strip("`")
+            try:
+                parsed = json.loads(raw)
+            except (ValueError, TypeError):
+                try:
+                    parsed = ast.literal_eval(raw)
+                except (ValueError, SyntaxError, MemoryError):
+                    parsed = None
+            if isinstance(parsed, dict) and field in parsed:
+                val = parsed[field]
+                return json.dumps(val) if isinstance(val, (dict, list)) else str(val)
+            return m.group(0)
         return str(node_out.get("output", m.group(0)))
 
     return _TEMPLATE_RE.sub(repl, text)
