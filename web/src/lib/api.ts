@@ -85,3 +85,15 @@ export function activityWebSocketUrl(): string {
 export const CSV_EXPORT_URL = `${GATEWAY_URL}/api/v1/export`;
 
 export const GATEWAY_BASE = GATEWAY_URL;
+
+export type PlanResponse = {
+  graph: { nodes: WorkflowNode[]; edges: WorkflowEdge[] };
+  summary: string | null;
+  warnings: string[];
+  source: "live-planner";
+  planner: { provider: "otari" | "groq"; chain: string[]; cost: number; costSource: string };
+};
+
+export function planWorkflow(task: string): Promise<PlanResponse> {
+  return request<PlanResponse>("/api/v1/workflow/plan", { method: "POST", body: JSON.stringify({ task }) });
+}

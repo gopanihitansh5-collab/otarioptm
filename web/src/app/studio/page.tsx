@@ -17,6 +17,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { OverdraftDemo } from "@/components/studio/OverdraftDemo";
 import { SaveIndicator } from "@/components/studio/SaveIndicator";
 import { ShortcutsDialog } from "@/components/studio/ShortcutsDialog";
+import { TaskPlanner } from "@/components/studio/TaskPlanner";
+import { ResultsDialog, type RunDeliverable } from "@/components/studio/ResultsDialog";
 import { TemplatesPanel } from "@/components/studio/TemplatesPanel";
 import { DANGER_BTN, FOCUS_RING, SECONDARY_BTN } from "@/components/studio/ui";
 import { IconClock, IconLayers, IconPlay, IconPlus, IconSliders } from "@/components/studio/icons";
@@ -25,7 +27,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useRunHistory } from "@/hooks/useRunHistory";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useWorkflowState } from "@/hooks/useWorkflowState";
-import { CSV_EXPORT_URL, getHealth, runWorkflow } from "@/lib/api";
+import { CSV_EXPORT_URL, getHealth, runWorkflow, type PlanResponse } from "@/lib/api";
 import { DEMO_CAP, estimateOverdraft } from "@/lib/workflow/demoOverdraft";
 import { buildWorkflowExport, downloadWorkflowJson } from "@/lib/workflow/exportImport";
 import { buildRunRecord, deriveRunStatus } from "@/lib/workflow/runHistory";
@@ -53,13 +55,6 @@ function isNarrowViewport(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(max-width: 767px)").matches;
 }
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 function StudioInner() {
   const state = useWorkflowState();
@@ -109,6 +104,11 @@ function StudioInner() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [fitKey, setFitKey] = useState(0);
+  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [planProvenance, setPlanProvenance] = useState<PlanResponse["planner"] | undefined>();
+  const [generatedTask, setGeneratedTask] = useState<string | undefined>();
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [lastDeliverable, setLastDeliverable] = useState<RunDeliverable | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // Ref based run lock: the `running` state is only a label, a double click
   // inside one task must never fire two POST /workflow/run requests.
@@ -270,18 +270,14 @@ function StudioInner() {
       setBlocked402(null);
       const startedAt = performance.now();
       for (const node of runNodes) {
-        updateNodeData(node.id, { status: "running", statusInfo: null });
+        updateNodeData(node.id, { status: "idle", statusInfo: null });
       }
       try {
         const response = await runWorkflow(runNodes, runEdges);
+        setLastDeliverable({ steps: response.steps, edges: runEdges, aborted: response.aborted, completedAt: new Date().toISOString(), task: generatedTask, planner: planProvenance });
         const byId = new Map(response.steps.map((s) => [s.nodeId, s]));
-        // Reveal the real gateway step results in execution order with a
-        // short stagger so each node is seen finishing; data and order are
-        // the gateway's, only the pacing is presentational. Reduced-motion
-        // users get the same results with no stagger.
-        const stagger = prefersReducedMotion() ? 0 : 550;
+        // Batch responses carry real results, but not live per-node start times.
         for (const step of response.steps) {
-          if (stagger > 0) await sleep(stagger);
           updateNodeData(step.nodeId, {
             status: step.error || step.blocked ? "error" : "done",
             statusInfo: step,
@@ -333,6 +329,7 @@ function StudioInner() {
   };
 
   const loadTemplate = (template: WorkflowTemplate) => {
+    setGeneratedTask(undefined); setPlanProvenance(undefined);
     const result = validateWorkflowInput(template.graph);
     if (!result.ok) {
       setError(`Template "${template.name}" is malformed and cannot be loaded.`);
@@ -512,13 +509,16 @@ function StudioInner() {
             <span className="hidden sm:inline">History</span>
           </button>
 
+          <button type="button" onClick={() => setPlannerOpen(true)} disabled={running} className={`${SECONDARY_BTN} disabled:opacity-40`}>Plan a task</button>
+          <button type="button" onClick={() => setResultsOpen(true)} disabled={!lastDeliverable || running} className={`${SECONDARY_BTN} disabled:opacity-40`} aria-label="View run results">Results</button>
           <SaveIndicator status={saveStatus} />
         </div>
 
         <button
           type="button"
           onClick={() => run()}
-          disabled={running || nodes.length === 0}
+          aria-label="Run Workflow"
+          disabled={running || plannerOpen || nodes.length === 0}
           title={
             nodes.length === 0
               ? "Add a node or load a template to run a workflow"
@@ -661,7 +661,7 @@ function StudioInner() {
                 if (isNarrowViewport()) setInspectorOpen(true);
               }}
               onPaneClick={() => setSelectedId(null)}
-              animated={running}
+              animated={false}
               fitKey={fitKey}
             />
           </NodePatchProvider>
@@ -748,6 +748,11 @@ function StudioInner() {
           {sidebar}
         </div>
 
+        <TaskPlanner open={plannerOpen} onClose={() => setPlannerOpen(false)} onApply={(nn, ee, task, plan) => {
+          setPlanProvenance(plan.planner);
+          setGraph(nn, ee); setGeneratedTask(task); setSelectedId(null); setFitKey(k => k + 1); setPlannerOpen(false);
+        }} />
+        <ResultsDialog run={lastDeliverable} open={resultsOpen} onClose={() => setResultsOpen(false)} />
         <TemplatesPanel
           open={templatesOpen}
           onClose={closeTemplates}

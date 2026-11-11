@@ -1,0 +1,80 @@
+"use client";
+
+import { useRef } from "react";
+import type { PlanResponse } from "@/lib/api";
+import type { StepResult, WorkflowEdge } from "@/lib/types";
+import { useFocusTrap } from "./useFocusTrap";
+import { CLOSE_BTN, SECONDARY_BTN } from "./ui";
+
+export type RunDeliverable = {
+  steps: StepResult[];
+  edges: WorkflowEdge[];
+  completedAt: string;
+  aborted?: string | null;
+  task?: string;
+  planner?: PlanResponse["planner"];
+};
+
+function reportMarkdown(run: RunDeliverable): string {
+  const incomplete = Boolean(run.aborted || run.steps.some(s => s.error || s.blocked));
+  const demo = run.steps.some(s => s.demo);
+  const sections = ["# OtariOptm run report", `Recorded: ${run.completedAt}`, `Status: ${incomplete ? "Incomplete or blocked" : "Returned by gateway"}${demo ? " (includes demo output)" : ""}`];
+  if (run.task) sections.push(`## Task\n\n${run.task}`);
+  if (run.planner) sections.push(`## Planning provenance\n\nProvider: ${run.planner.provider} | Route: ${run.planner.chain.join(" -> ")} | Recorded cost: $${run.planner.cost?.toFixed(6) ?? "not reported"} (${run.planner.costSource ?? "not reported"})`);
+  for (const s of run.steps) {
+    sections.push(`## ${s.nodeId} (${s.type ?? "step"})`, `Provider/model: ${s.model ?? "not reported"}\n\nRoute: ${s.chain?.join(" -> ") || "not reported"}\n\nRecorded cost: ${s.cost === undefined ? "not reported" : `$${s.cost.toFixed(6)}`} (${s.costSource ?? "source not reported"})\n\nTokens: ${s.tokens ?? "not reported"} | Latency: ${s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}`);
+    if (s.demo) sections.push("DEMO OUTPUT - not live model inference.");
+    if (s.error) sections.push(`Error: ${s.error}`);
+    if (s.blocked) sections.push("This step was blocked.");
+    if (s.note) sections.push(`Diagnostic: ${s.note}`);
+    sections.push(s.output || "No output was returned for this step.");
+  }
+  sections.push("## Cost note\n\nAmounts are the gateway's recorded costs, not an independent provider invoice. Estimates and reservations depend on configured prices. The app run budget is separate from provider wallets.");
+  return sections.join("\n\n");
+}
+
+export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | null; open: boolean; onClose: () => void }) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  useFocusTrap({ active: open, containerRef: panelRef, onEscape: onClose });
+  if (!open || !run) return null;
+  const outgoing = new Set(run.edges.map(e => e.source));
+  const terminals = run.steps.filter(s => !outgoing.has(s.nodeId));
+  const failed = Boolean(run.aborted || run.steps.some(s => s.error || s.blocked));
+  const demo = run.steps.some(s => s.demo);
+  const download = () => {
+    const blob = new Blob([reportMarkdown(run)], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `otarioptm-report-${run.completedAt.replace(/[:.]/g, "-")}.md`;
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="results-title" className="flex max-h-[90vh] w-[min(1100px,96vw)] flex-col overflow-hidden rounded-2xl border border-steel bg-graphite shadow-2xl">
+      <header className="flex items-center justify-between gap-3 border-b border-steel px-5 py-4">
+        <div><p className="mono-label">Actual gateway response</p><h2 id="results-title" className="mt-1 text-xl font-semibold text-ice">Run results</h2></div>
+        <div className="flex items-center gap-2"><button type="button" onClick={download} className={SECONDARY_BTN}>Download report</button><button type="button" data-autofocus onClick={onClose} aria-label="Close run results" className={CLOSE_BTN}>×</button></div>
+      </header>
+      <div className="scroll-thin overflow-y-auto p-5">
+        {(failed || demo) && <p role="status" className="mb-5 rounded-xl border border-amber/40 bg-amber/10 p-3 text-sm text-amber">{failed ? "This run is incomplete or contains blocked/failed steps. " : ""}{demo ? "This run includes explicitly labeled demo output, not live model inference." : ""}</p>}
+        {run.task && <p className="mb-5 whitespace-pre-wrap text-sm text-silver">{run.task}</p>}
+        <div className="space-y-5">
+          {terminals.length === 0 && <p className="text-sm text-silver">No terminal-node output was returned. Inspect the trace below.</p>}
+          {terminals.map(s => <section key={s.nodeId} className="rounded-xl border border-steel bg-elevated p-5">
+            <div className="mb-3 flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-ice">{s.nodeId}</h3><span className="font-mono text-[10px] text-silver">{s.model || s.type || "terminal output"}</span>{s.demo && <span className="text-xs text-amber">DEMO</span>}{(s.error || s.blocked) && <span className="text-xs text-fail">FAILED / BLOCKED</span>}</div>
+            <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-ice">{s.output || s.error || "No output returned."}</pre>
+          </section>)}
+        </div>
+        <h3 className="mb-3 mt-7 text-sm font-semibold text-ice">Execution trace</h3>
+        <div className="space-y-2">{run.steps.map(s => <details key={s.nodeId} className="rounded-xl border border-steel-dim bg-obsidian p-3">
+          <summary className="cursor-pointer text-xs text-ice"><span className="font-medium">{s.nodeId}</span> · {s.chain?.join(" → ") || s.model || s.type || "step"} · {s.error || s.blocked ? "failed / blocked" : s.demo ? "demo" : "response received"}</summary>
+          <p className="mt-3 font-mono text-[10px] leading-5 text-silver">Model: {s.model || "not reported"} · Cost: {s.cost === undefined ? "not reported" : `$${s.cost.toFixed(6)}`} ({s.costSource || "source not reported"}) · Tokens: {s.tokens ?? "not reported"} · Latency: {s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}</p>
+          {s.note && <p className="mt-2 text-xs text-amber">{s.note}</p>}{s.error && <p className="mt-2 text-xs text-fail">{s.error}</p>}
+          <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-silver">{s.output || "No output returned."}</pre>
+        </details>)}</div>
+        <p className="mt-5 text-[11px] leading-5 text-silver">Otari catalog zero prices are not proof of zero wallet charges. Recorded costs are not an independent provider invoice. Source citations, if returned by the workflow, remain in the output above and the downloaded report. Workflow data and node outputs may persist in this browser. Download saves a local Markdown copy.</p>
+      </div>
+    </div>
+  </div>;
+}

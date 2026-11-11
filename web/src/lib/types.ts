@@ -39,6 +39,9 @@ export type StepResult = {
   cost?: number;
   latencyMs?: number;
   routing?: string;
+  costSource?: string;
+  note?: string | null;
+  realInference?: boolean;
   demo?: boolean;
   blocked?: boolean;
   violations?: GuardViolation[];
