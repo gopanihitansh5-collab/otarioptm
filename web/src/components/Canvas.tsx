@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -46,6 +46,25 @@ export function Canvas({
   const rf = useReactFlow();
   const nodeCount = nodes.length;
 
+  // Follow the app theme (data-theme on <html>): the canvas, edges and
+  // minimap flip between obsidian and the light lavender surface.
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  useEffect(() => {
+    const read = () =>
+      setTheme(
+        document.documentElement.dataset.theme === "light" ? "light" : "dark",
+      );
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => obs.disconnect();
+  }, []);
+  const light = theme === "light";
+  const edgeStroke = light ? "rgba(88, 71, 158, 0.55)" : "rgba(184, 169, 143, 0.55)";
+
   // Keep every node in view: refit whenever the node count changes or the
   // graph is replaced (template load / import), capped at a readable zoom so
   // a single node never fills the screen.
@@ -64,7 +83,7 @@ export function Canvas({
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       nodeTypes={nodeTypes}
-      colorMode="dark"
+      colorMode={theme}
       fitView
       fitViewOptions={{ padding: 0.25, maxZoom: 1.1 }}
       minZoom={0.25}
@@ -73,7 +92,7 @@ export function Canvas({
       defaultEdgeOptions={{
         type: "smoothstep",
         animated,
-        style: { stroke: "rgba(184, 169, 143, 0.55)", strokeWidth: 1.5 },
+        style: { stroke: edgeStroke, strokeWidth: 1.5 },
       }}
       onNodeClick={(_: unknown, node: { id: string }) => {
         if (!onNodeClick) return;
@@ -83,14 +102,19 @@ export function Canvas({
       onPaneClick={onPaneClick}
     >
       <Background
-        color="rgba(255,255,255,0.05)"
-        bgColor="#111110"
+        color={light ? "rgba(88, 71, 158, 0.14)" : "rgba(255,255,255,0.05)"}
+        bgColor={light ? "#F6F5FC" : "#111110"}
         gap={24}
         size={1}
         variant={BackgroundVariant.Dots}
       />
       <Controls />
-      <MiniMap pannable zoomable nodeColor="#34322D" maskColor="rgba(9, 11, 13, 0.65)" />
+      <MiniMap
+        pannable
+        zoomable
+        nodeColor={light ? "#DCD8ED" : "#34322D"}
+        maskColor={light ? "rgba(240, 237, 247, 0.7)" : "rgba(9, 11, 13, 0.65)"}
+      />
     </ReactFlow>
   );
 }

@@ -59,9 +59,9 @@ export const viewport: Viewport = {
 const THEME_INIT = `
 try {
   var q = new URLSearchParams(location.search).get('theme');
-  var t = q === 'light' || q === 'dark' ? q : (localStorage.getItem('otari-theme') || 'dark');
+  var t = q === 'light' || q === 'dark' ? q : (localStorage.getItem('otari-theme') || 'light');
   document.documentElement.dataset.theme = t;
-} catch (e) { document.documentElement.dataset.theme = 'dark'; }
+} catch (e) { document.documentElement.dataset.theme = 'light'; }
 `;
 
 export default function RootLayout({

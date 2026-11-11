@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme inline {
+@theme {
   --color-obsidian: #111110;
   --color-graphite: #171715;
   --color-elevated: #1D1C19;
@@ -78,7 +78,7 @@ html {
 
 body {
   background: var(--color-obsidian);
-  color: #E9E4DA;
+  color: var(--color-ice);
 }
 
 ::selection {
@@ -194,52 +194,96 @@ body {
   }
 }
 
-/* ---- Light theme: ivory paper, deepened champagne for contrast ---- */
+/* ---- Light theme: Stitch "pale lavender/blue" palette ----
+   Adapted from the user's approved Stitch export: ivory-lavender page,
+   violet accent #58479e, signal blue #0051d5, lavender surfaces/borders. */
 [data-theme="light"] {
-  --color-obsidian: #F5F2EA;
-  --color-graphite: #ECE8DD;
-  --color-elevated: #FBF9F4;
-  --color-steel: #D9D3C3;
-  --color-steel-dim: #E4DFD2;
-  --color-lime: #8A7A5B;
-  --color-lime-ink: #F5F2EA;
-  --color-ice: #1C1A16;
-  --color-silver: #615B4E;
-  --color-signal: #46677A;
-  --color-amber: #96702E;
-  --color-fail: #A44A41;
-  --accent: #8A7A5B;
-  --accent-strong: #6F6046;
-  --accent-dim: rgba(138, 122, 91, 0.35);
-  --accent-contrast: #F5F2EA;
-  --glow-champagne: 0 0 45px rgba(138, 122, 91, 0.1);
-  --glow-soft: 0 0 80px rgba(138, 122, 91, 0.07);
-  --glow-active: 0 0 22px rgba(138, 122, 91, 0.16);
-  --otari-material-glow: 0 12px 65px rgba(138, 122, 91, 0.12);
-  --surface-glass: rgba(28, 26, 22, 0.03);
-  --surface-border: rgba(138, 122, 91, 0.28);
-}
-/* .panel is a fixed dark surface in BOTH themes. In light theme the theme
-   tokens flip dark-on-ivory, which leaves panel text dark-on-dark; restore
-   the dark tokens inside every panel so its content always matches its
-   background. */
-[data-theme="light"] .panel {
-  --color-elevated: #1D1C19;
-  --color-steel: #34322D;
-  --color-steel-dim: #292823;
-  --color-lime: #B8A98F;
-  --color-ice: #E9E4DA;
-  --color-silver: #A6A197;
-  --color-signal: #8FA6B7;
-  --color-amber: #D1AD75;
-  --color-fail: #C68179;
+  --color-obsidian: #FAF9FD;
+  --color-graphite: #F0EDF7;
+  --color-elevated: #FFFFFF;
+  --color-steel: #DCD8ED;
+  --color-steel-dim: #E8E4F5;
+  --color-lime: #58479E;
+  --color-lime-ink: #FFFFFF;
+  --color-ice: #121215;
+  --color-silver: #555562;
+  --color-signal: #0051D5;
+  --color-amber: #58479E;
+  --color-fail: #BA1A1A;
+  --accent: #58479E;
+  --accent-strong: #463A80;
+  --accent-dim: rgba(88, 71, 158, 0.35);
+  --accent-contrast: #FFFFFF;
+  --glow-champagne: 0 0 45px rgba(88, 71, 158, 0.1);
+  --glow-soft: 0 0 80px rgba(88, 71, 158, 0.07);
+  --glow-active: 0 0 22px rgba(0, 81, 213, 0.16);
+  --otari-material-glow: 0 12px 65px rgba(88, 71, 158, 0.12);
+  --surface-glass: rgba(18, 18, 21, 0.03);
+  --surface-border: rgba(88, 71, 158, 0.3);
 }
 
-/* Hero routing-trace labels: dark-theme silver washes out on ivory. */
+/* Panels follow the light theme (lavender-tinted white surfaces). */
+[data-theme="light"] .panel {
+  border-color: var(--color-steel);
+  background: var(--color-elevated);
+}
+[data-theme="light"] .panel:hover {
+  border-color: rgba(88, 71, 158, 0.55);
+}
+
+/* Hero routing-trace labels stay legible on the light background. */
 [data-theme="light"] .hero-trace text[font-size="9"],
 [data-theme="light"] .hero-trace text[font-size="10"] {
-  fill: #615B4E;
+  fill: #555562;
 }
 [data-theme="light"] .otari-premium-surface {
-  background: linear-gradient(145deg, rgba(28, 26, 22, 0.05), rgba(28, 26, 22, 0.01));
+  background: linear-gradient(145deg, rgba(18, 18, 21, 0.04), rgba(18, 18, 21, 0.01));
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(88, 71, 158, 0.25);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(88, 71, 158, 0.45);
+}
+[data-theme="light"] .scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(88, 71, 158, 0.25);
+}
+[data-theme="light"] .scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(88, 71, 158, 0.45);
+}
+[data-theme="light"] .scroll-thin {
+  scrollbar-color: rgba(88, 71, 158, 0.25) transparent;
+}
+
+/* Slowly drifting lavender/blue background gradient (user-requested
+   "gradually moving gradients colour"). Movement is a gentle 54s drift of
+   large soft washes; text and controls never move. Decorative only - it is
+   not tied to routing state. Reduced-motion users get the static gradient. */
+@keyframes oo-gradient-drift {
+  0% {
+    background-position: 0% 0%, 100% 0%, 50% 100%, 0 0;
+  }
+  50% {
+    background-position: 55% 40%, 45% 60%, 60% 40%, 0 0;
+  }
+  100% {
+    background-position: 0% 0%, 100% 0%, 50% 100%, 0 0;
+  }
+}
+
+[data-theme="light"] body {
+  background:
+    radial-gradient(ellipse 70% 55% at 18% 8%, rgba(180, 197, 255, 0.45), transparent 62%),
+    radial-gradient(ellipse 60% 50% at 82% 22%, rgba(237, 231, 252, 0.9), transparent 66%),
+    radial-gradient(ellipse 80% 65% at 50% 95%, rgba(196, 181, 253, 0.32), transparent 62%),
+    linear-gradient(180deg, #FAF9FD 0%, #F6F5FC 100%);
+  background-size: 165% 165%, 165% 165%, 185% 185%, 100% 100%;
+  animation: oo-gradient-drift 54s ease-in-out infinite;
+  background-attachment: fixed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="light"] body {
+    animation: none;
+  }
 }
