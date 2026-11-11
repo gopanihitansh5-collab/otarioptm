@@ -273,13 +273,12 @@ body {
 
 [data-theme="light"] body {
   background:
-    radial-gradient(ellipse 70% 55% at 18% 8%, rgba(180, 197, 255, 0.45), transparent 62%),
-    radial-gradient(ellipse 60% 50% at 82% 22%, rgba(237, 231, 252, 0.9), transparent 66%),
-    radial-gradient(ellipse 80% 65% at 50% 95%, rgba(196, 181, 253, 0.32), transparent 62%),
+    radial-gradient(ellipse 70% 55% at 18% 8%, rgba(180, 197, 255, 0.6), transparent 62%),
+    radial-gradient(ellipse 60% 50% at 82% 22%, rgba(226, 217, 250, 0.95), transparent 66%),
+    radial-gradient(ellipse 80% 65% at 50% 95%, rgba(196, 181, 253, 0.45), transparent 62%),
     linear-gradient(180deg, #FAF9FD 0%, #F6F5FC 100%);
   background-size: 165% 165%, 165% 165%, 185% 185%, 100% 100%;
   animation: oo-gradient-drift 54s ease-in-out infinite;
-  background-attachment: fixed;
 }
 
 @media (prefers-reduced-motion: reduce) {
