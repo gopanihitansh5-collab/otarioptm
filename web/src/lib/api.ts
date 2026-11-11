@@ -1,4 +1,5 @@
 import type {
+  BudgetSnapshot,
   HealthResponse,
   RunResponse,
   CatalogModel,
@@ -30,6 +31,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>("/api/v1/health");
+}
+
+export type ActivitySnapshotResponse = {
+  events: Array<Record<string, unknown>>;
+  budget: BudgetSnapshot;
+  runtime?: string;
+  activity_transport?: string;
+  activity_snapshot_path?: string;
+};
+
+/** Serverless-compatible activity feed (no WebSocket required). */
+export function getActivitySnapshot(): Promise<ActivitySnapshotResponse> {
+  return request<ActivitySnapshotResponse>("/api/v1/activity");
 }
 
 export function getModels(): Promise<CatalogModel[]> {

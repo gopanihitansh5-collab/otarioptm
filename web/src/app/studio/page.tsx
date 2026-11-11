@@ -76,7 +76,7 @@ function StudioInner() {
     [setGraph],
   );
   const { undo, redo, canUndo, canRedo } = useUndoRedo(nodes, edges, restoreGraph);
-  const { snapshot, events, connected } = useBudget();
+  const { snapshot, events, connected, transport } = useBudget();
   const { runs, recordRun, clearRuns } = useRunHistory();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -377,6 +377,7 @@ function StudioInner() {
       onDeselect={() => setSelectedId(null)}
       snapshot={snapshot}
       connected={connected}
+      transport={transport}
       events={events}
     />
   );

@@ -74,6 +74,10 @@ export type HealthResponse = {
   otari: boolean;
   groq: boolean;
   budget: BudgetSnapshot;
+  /** Present on gateway v2: truthful runtime + supported activity transport. */
+  runtime?: string;
+  activity_transport?: string;
+  activity_snapshot_path?: string;
 };
 
 export const NODE_LABELS: Record<NodeType, string> = {
