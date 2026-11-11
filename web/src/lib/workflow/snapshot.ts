@@ -88,6 +88,8 @@ function sanitizeStep(raw: unknown): StepResult | null {
   const step: StepResult = {
     nodeId: typeof raw.nodeId === "string" ? raw.nodeId : "",
   };
+  if (typeof raw.status === "string") step.status = raw.status;
+  if (typeof raw.provider === "string") step.provider = raw.provider;
   if (typeof raw.output === "string") step.output = raw.output;
   if (typeof raw.model === "string" || raw.model === null) step.model = raw.model;
   if (Array.isArray(raw.chain)) {

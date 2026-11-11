@@ -1,5 +1,6 @@
 "use client";
 
+import { stepFailed } from "@/lib/stepStatus";
 import { costLabel } from "@/lib/costLabel";
 import { useRef } from "react";
 import type { PlanResponse } from "@/lib/api";
@@ -15,19 +16,23 @@ export type RunDeliverable = {
   task?: string;
   planner?: PlanResponse["planner"];
   stages?: PlanResponse["stages"];
+  partial?: boolean;
+  failedNodes?: string[];
 };
 
 function reportMarkdown(run: RunDeliverable): string {
-  const incomplete = Boolean(run.aborted || run.steps.some(s => s.error || s.blocked));
+  const incomplete = Boolean(run.partial || run.failedNodes?.length || run.aborted || run.steps.some(stepFailed) || run.steps.length === 0);
   const demo = run.steps.some(s => s.demo);
   const sections = ["# OtariOptm run report", `Recorded: ${run.completedAt}`, `Status: ${incomplete ? "Incomplete or blocked" : "Returned by gateway"}${demo ? " (includes demo output)" : ""}`];
+  if (run.failedNodes?.length) sections.push(`Failed or skipped nodes: ${run.failedNodes.join(", ")}`);
   if (run.task) sections.push(`## Task\n\n${run.task}`);
   if (run.planner) sections.push(`## Planning provenance\n\nProvider: ${run.planner.provider} | Route: ${run.planner.chain.join(" -> ")} | Recorded cost: $${run.planner.cost?.toFixed(6) ?? "not reported"} (${run.planner.costSource ?? "not reported"})`);
   if (run.stages) sections.push(`## Planning stages\n\n${JSON.stringify(run.stages, null, 2)}`);
   for (const s of run.steps) {
-    sections.push(`## ${s.nodeId} (${s.type ?? "step"})`, `Provider/model: ${s.model ?? "not reported"}\n\nRoute: ${s.chain?.join(" -> ") || "not reported"}\n\nRecorded cost: ${costLabel(s)}\n\nTokens: ${s.tokens ?? "not reported"} | Latency: ${s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}`);
+    sections.push(`## ${s.nodeId} (${s.type ?? "step"})`, `Provider/model: ${s.model ?? s.provider ?? "not reported"}\n\nRoute: ${s.chain?.join(" -> ") || "not reported"}\n\nRecorded cost: ${costLabel(s)}\n\nTokens: ${s.tokens ?? "not reported"} | Latency: ${s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}`);
     if (s.demo) sections.push("DEMO OUTPUT - not live model inference.");
     if (s.error) sections.push(`Error: ${s.error}`);
+    if (s.status === "failed" || s.status === "skipped") sections.push(`Step status: ${s.status}`);
     if (s.blocked) sections.push("This step was blocked.");
     if (s.note) sections.push(`Diagnostic: ${s.note}`);
     sections.push(s.output || "No output was returned for this step.");
@@ -42,7 +47,7 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
   if (!open || !run) return null;
   const outgoing = new Set(run.edges.map(e => e.source));
   const terminals = run.steps.filter(s => !outgoing.has(s.nodeId));
-  const failed = Boolean(run.aborted || run.steps.some(s => s.error || s.blocked));
+  const failed = Boolean(run.partial || run.failedNodes?.length || run.aborted || run.steps.some(stepFailed) || run.steps.length === 0);
   const demo = run.steps.some(s => s.demo);
   const download = () => {
     const blob = new Blob([reportMarkdown(run)], { type: "text/markdown;charset=utf-8" });
@@ -65,14 +70,14 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
         <div className="space-y-5">
           {terminals.length === 0 && <p className="text-sm text-silver">No terminal-node output was returned. Inspect the trace below.</p>}
           {terminals.map(s => <section key={s.nodeId} className="rounded-xl border border-steel bg-elevated p-5">
-            <div className="mb-3 flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-ice">{s.nodeId}</h3><span className="font-mono text-[10px] text-silver">{s.model || s.type || "terminal output"}</span>{s.demo && <span className="text-xs text-amber">DEMO</span>}{(s.error || s.blocked) && <span className="text-xs text-fail">FAILED / BLOCKED</span>}</div>
+            <div className="mb-3 flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-ice">{s.nodeId}</h3><span className="font-mono text-[10px] text-silver">{s.model || s.provider || s.type || "terminal output"}</span>{s.demo && <span className="text-xs text-amber">DEMO</span>}{stepFailed(s) && <span className="text-xs text-fail">{s.status === "skipped" ? "SKIPPED" : "FAILED / BLOCKED"}</span>}</div>
             <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-ice">{s.output || s.error || "No output returned."}</pre>
           </section>)}
         </div>
         <h3 className="mb-3 mt-7 text-sm font-semibold text-ice">Execution trace</h3>
         <div className="space-y-2">{run.steps.map(s => <details key={s.nodeId} className="rounded-xl border border-steel-dim bg-obsidian p-3">
-          <summary className="cursor-pointer text-xs text-ice"><span className="font-medium">{s.nodeId}</span> · {s.chain?.join(" → ") || s.model || s.type || "step"} · {s.error || s.blocked ? "failed / blocked" : s.demo ? "demo" : "response received"}</summary>
-          <p className="mt-3 font-mono text-[10px] leading-5 text-silver">Model: {s.model || "not reported"} · Cost: {costLabel(s)} · Tokens: {s.tokens ?? "not reported"} · Latency: {s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}</p>
+          <summary className="cursor-pointer text-xs text-ice"><span className="font-medium">{s.nodeId}</span> · {s.chain?.join(" → ") || s.model || s.type || "step"} · {stepFailed(s) ? "failed / blocked" : s.demo ? "demo" : "response received"}</summary>
+          <p className="mt-3 font-mono text-[10px] leading-5 text-silver">Model: {s.model || s.provider || "not reported"} · Cost: {costLabel(s)} · Tokens: {s.tokens ?? "not reported"} · Latency: {s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}</p>
           {s.note && <p className="mt-2 text-xs text-amber">{s.note}</p>}{s.error && <p className="mt-2 text-xs text-fail">{s.error}</p>}
           <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-silver">{s.output || "No output returned."}</pre>
         </details>)}</div>

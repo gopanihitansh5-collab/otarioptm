@@ -31,6 +31,8 @@ export type WorkflowEdge = {
 export type GuardViolation = { rule: string; sample: string };
 
 export type StepResult = {
+  status?: string;
+  provider?: string;
   nodeId: string;
   type?: NodeType;
   output?: string;
@@ -60,6 +62,8 @@ export type BudgetSnapshot = {
 export type ActivityEvent = { event: string; ts: number } & Record<string, unknown>;
 
 export type RunResponse = {
+  partial?: boolean;
+  failedNodes?: string[];
   steps: StepResult[];
   budget: BudgetSnapshot;
   aborted: string | null;

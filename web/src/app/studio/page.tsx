@@ -33,6 +33,7 @@ import { buildWorkflowExport, downloadWorkflowJson } from "@/lib/workflow/export
 import { buildRunRecord, deriveRunStatus } from "@/lib/workflow/runHistory";
 import { fetchTemplates, type WorkflowTemplate } from "@/lib/workflow/templates";
 import { validateWorkflowInput, validateWorkflowJson } from "@/lib/workflow/validate";
+import { stepFailed } from "@/lib/stepStatus";
 import type {
   HealthResponse,
   WorkflowEdge,
@@ -277,15 +278,15 @@ function StudioInner() {
         const response = await streamWorkflow(runNodes, runEdges, (event) => {
           if (!event.nodeId) return;
           if (event.event === "node.started") updateNodeData(event.nodeId, { status: "running", statusInfo: null });
-          if (event.event === "node.completed") updateNodeData(event.nodeId, { status: event.error || event.blocked ? "error" : "done", statusInfo: event as import("@/lib/types").StepResult });
+          if (event.event === "node.completed") updateNodeData(event.nodeId, { status: stepFailed(event as import("@/lib/types").StepResult) ? "error" : "done", statusInfo: event as import("@/lib/types").StepResult });
           if (event.event === "node.blocked") updateNodeData(event.nodeId, { status: "error" });
         });
-        setLastDeliverable({ steps: response.steps, edges: runEdges, aborted: response.aborted, completedAt: new Date().toISOString(), task: generatedTask, planner: planProvenance, stages: planStages });
+        setLastDeliverable({ steps: response.steps, edges: runEdges, aborted: response.aborted, completedAt: new Date().toISOString(), task: generatedTask, planner: planProvenance, stages: planStages, partial: response.partial, failedNodes: response.failedNodes });
         const byId = new Map(response.steps.map((s) => [s.nodeId, s]));
         // Batch responses carry real results, but not live per-node start times.
         for (const step of response.steps) {
           updateNodeData(step.nodeId, {
-            status: step.error || step.blocked ? "error" : "done",
+            status: stepFailed(step) ? "error" : "done",
             statusInfo: step,
           });
         }
@@ -304,7 +305,7 @@ function StudioInner() {
         }
         recordRun(
           buildRunRecord({
-            status: deriveRunStatus(response.steps, response.aborted),
+            status: response.partial ? "error" : deriveRunStatus(response.steps, response.aborted),
             nodeCount: runNodes.length,
             durationMs: Math.round(performance.now() - startedAt),
             steps: response.steps,

@@ -1,3 +1,4 @@
+import { stepFailed } from "../stepStatus";
 import type { StepResult } from "@/lib/types";
 
 export type StoredStep = {
@@ -58,7 +59,7 @@ export function deriveRunStatus(
 ): RunRecord["status"] {
   if (aborted) return "aborted";
   if (steps.some((s) => s.blocked)) return "blocked";
-  if (steps.some((s) => s.error)) return "error";
+  if (steps.length === 0 || steps.some(stepFailed)) return "error";
   return "completed";
 }
 

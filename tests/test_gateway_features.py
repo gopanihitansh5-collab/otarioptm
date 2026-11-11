@@ -145,10 +145,18 @@ def test_every_template_runs_to_completion_in_demo_mode(monkeypatch):
             body = r.json()
             assert body["aborted"] is None, f"{tpl['id']} aborted at {body.get('aborted')}"
             assert len(body["steps"]) == tpl["nodeCount"], tpl["id"]
+            failed_ids = {s["nodeId"] for s in body["steps"] if "error" in s}
+            parents = {}
+            for e in tpl["graph"].get("edges", []):
+                parents.setdefault(e["target"], set()).add(e["source"])
             for step in body["steps"]:
                 if step.get("type") == "code-exec":
                     # Code-exec is fail-closed while the hardened sandbox lands.
                     assert "unavailable" in step.get("error", "") or "unavailable" in step.get("output", ""), step
+                    continue
+                if step.get("status") == "skipped" and parents.get(step["nodeId"], set()) & failed_ids:
+                    # Dependent of a failed node: blocked by design so it
+                    # cannot present an analysis its inputs never computed.
                     continue
                 assert "error" not in step, f"{tpl['id']} step failed: {step}"
             assert body["budget"]["spent"] <= body["budget"]["cap"]

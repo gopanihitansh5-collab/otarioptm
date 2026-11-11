@@ -1282,6 +1282,14 @@ async def _execute_graph(
     outputs: Dict[str, Dict[str, Any]] = {}
     results: List[Dict[str, Any]] = []
     aborted: Optional[str] = None
+    parents: Dict[str, set] = {str(n["id"]): set() for n in ordered}
+    for edge in edges or []:
+        parents.setdefault(str(edge.get("target")), set()).add(str(edge.get("source")))
+    # Nodes that produced no usable output. Dependents of a failed node are
+    # blocked by default: a downstream node must not present an analysis as
+    # complete when its inputs never computed. A node opts out explicitly
+    # with data.handles_failure = true.
+    failed: set = set()
 
     await _log_activity({
         "event": "workflow.started",
@@ -1297,6 +1305,17 @@ async def _execute_graph(
         if on_event is not None:
             await on_event({"event": "node.started", "nodeId": nid, "type": ntype})
         stop = False
+
+        bad_parents = sorted(p for p in parents.get(nid, ()) if p in failed)
+        if bad_parents and not data.get("handles_failure"):
+            reason = f"skipped: upstream node '{bad_parents[0]}' failed"
+            results.append({"nodeId": nid, "type": ntype, "status": "skipped", "error": reason})
+            outputs[nid] = {"output": f"[{reason}]"}
+            failed.add(nid)
+            await _log_activity({"event": "node.skipped", "nodeId": nid, "reason": reason})
+            if on_event is not None:
+                await on_event({"event": "node.completed", **results[-1]})
+            continue
 
         try:
             if ntype == "guardrails":
@@ -1351,7 +1370,16 @@ async def _execute_graph(
                 results.append({"nodeId": nid, "type": ntype, "output": out,
                                 "status": "completed" if sandbox.get("ok") else "failed",
                                 **({"error": sandbox["error"]} if sandbox.get("error") else {})})
-                outputs[nid] = {"output": out}
+                if sandbox.get("ok"):
+                    outputs[nid] = {"output": out}
+                else:
+                    failed.add(nid)
+                    # Full stderr stays in results for the UI, but a raw
+                    # traceback must not be substituted into downstream
+                    # prompts: it derails the chat model (observed live: the
+                    # recommendation node echoed literal placeholders).
+                    err = str(sandbox.get("error") or "execution failed")
+                    outputs[nid] = {"output": f"[node {nid} failed: {err}]"}
                 await _log_activity({"event": "node.completed", "nodeId": nid, "model": "sandbox",
                                      "tokens": 0, "cost": 0.0})
 
@@ -1380,6 +1408,8 @@ async def _execute_graph(
                 res["type"] = ntype
                 results.append(res)
                 outputs[nid] = res
+                if res.get("error"):
+                    failed.add(nid)
         except HTTPException as exc:
             if exc.status_code == 402:
                 aborted = nid
@@ -1389,12 +1419,14 @@ async def _execute_graph(
             else:
                 results.append({"nodeId": nid, "type": ntype, "error": exc.detail})
                 outputs[nid] = {"output": f"error: {exc.detail}"}
+                failed.add(nid)
         except Exception as exc:
             # Never echo a raw exception string: it can carry a provider
             # response body. The exception class is safe and enough to triage.
             detail = exc.__class__.__name__
             results.append({"nodeId": nid, "type": ntype, "error": detail})
             outputs[nid] = {"output": f"error: {detail}"}
+            failed.add(nid)
 
         if on_event is not None:
             if results and str(results[-1].get("nodeId")) == nid:
@@ -1412,6 +1444,8 @@ async def _execute_graph(
         "steps": results,
         "budget": snap,
         "aborted": aborted,
+        "partial": bool(failed),
+        "failedNodes": sorted(failed),
         "overBudget": any(bool(r.get("overBudget")) for r in results),
         # Nodes whose answer came from the simulated demo tier. These never
         # count as successful real inference; they are labeled, not hidden.
@@ -1423,6 +1457,8 @@ async def _execute_graph(
         await on_event({
             "event": "workflow.finished",
             "aborted": aborted,
+            "partial": payload["partial"],
+            "failedNodes": payload["failedNodes"],
             "overBudget": payload["overBudget"],
             "demoNodes": payload["demoNodes"],
             "budget": snap,
