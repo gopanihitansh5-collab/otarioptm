@@ -20,6 +20,7 @@ import math
 import os
 import re
 import time
+import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
@@ -785,60 +786,14 @@ def _apply_guardrails(text: str, banned_extra: List[str]) -> Dict[str, Any]:
             hits.append({"rule": "banned_term", "sample": term})
     return {"blocked": bool(hits), "violations": hits}
 
-SAFE_GLOBALS = {
-    "__builtins__": {
-        "abs": abs, "all": all, "any": any, "bool": bool, "dict": dict, "divmod": divmod,
-        "enumerate": enumerate, "filter": filter, "float": float, "format": format,
-        "frozenset": frozenset, "int": int, "len": len, "list": list, "map": map,
-        "max": max, "min": min, "print": lambda *a, **k: None,
-        "range": range, "repr": repr, "reversed": reversed, "round": round, "set": set,
-        "sorted": sorted, "str": str, "sum": sum, "tuple": tuple, "zip": zip,
-        "__import__": lambda name, *a, **k: (_ for _ in ()).throw(
-            RuntimeError(f"import blocked in sandbox: {name}")
-        ),
-    }
-}
+from src.gateway.sandbox_runner import sandbox_violation as _sandbox_violation
 
-SANDBOX_DUNDER_ALLOWLIST = {"__name__", "__doc__", "__file__"}
+_SANDBOX_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sandbox_runner.py")
+_SANDBOX_WALL_TIMEOUT = 15.0
 
-SANDBOX_BANNED_NAMES = {
-    "eval", "exec", "compile", "open", "__import__", "input", "breakpoint",
-    "globals", "locals", "vars", "getattr", "setattr", "delattr", "memoryview",
-    "exit", "quit", "help", "id",
-}
-
-
-def _sandbox_violation(code: str) -> Optional[str]:
-    """Static check of untrusted code; returns a reason string or None.
-
-    Blocks the classic ``().__class__.__bases__[0].__subclasses__()`` escape:
-    dunder attribute access is refused (except a tiny allowlist) and the
-    builtins that expose the interpreter internals are refused by name, so
-    no import call is needed to walk out of the sandbox.
-    """
-    try:
-        tree = ast.parse(code, mode="exec")
-    except SyntaxError as exc:
-        return f"syntax error: {exc.msg} (line {exc.lineno})"
-    except Exception as exc:
-        return f"could not parse code: {exc.__class__.__name__}"
-
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            return "imports are not allowed in the sandbox"
-        if isinstance(node, ast.Attribute):
-            attr = node.attr
-            if attr in SANDBOX_BANNED_NAMES:
-                return f"'{attr}' is not allowed in the sandbox"
-            if attr.startswith("__") and attr.endswith("__") and attr not in SANDBOX_DUNDER_ALLOWLIST:
-                return f"attribute '{attr}' is not allowed in the sandbox"
-        elif isinstance(node, ast.Name):
-            name = node.id
-            if name in SANDBOX_BANNED_NAMES:
-                return f"'{name}' is not allowed in the sandbox"
-            if name.startswith("__") and name.endswith("__") and name not in SANDBOX_DUNDER_ALLOWLIST:
-                return f"name '{name}' is not allowed in the sandbox"
-    return None
+# Fail-closed kill switch: stays True until the isolated runner is proven
+# with a benign spawn on the production runtime. NEVER an in-process fallback.
+CODE_EXEC_DISABLED = True
 
 
 # Fail-closed kill switch: a confirmed sandbox escape (str.format attribute
@@ -849,11 +804,27 @@ CODE_EXEC_DISABLED = True
 
 
 async def _run_code(code: str) -> Dict[str, Any]:
-    """Run untrusted code in a restricted namespace after AST validation.
+    """Run untrusted code in a FRESH interpreter subprocess; fail closed.
 
-    Returns ``{"output", "ok", "error"}``. A rejected program never raises,
-    never returns a traceback and never reaches ``exec``.
+    The child is spawned (``python -I sandbox_runner.py``) with an EMPTY
+    environment, not forked: it inherits no module globals, no loaded API
+    clients and no env keys from this process, so there is nothing sensitive
+    in its memory to reach. Inside the child, AST validation, a minimal
+    builtins set and hard RLIMIT_CPU/RLIMIT_AS limits apply; the parent
+    enforces a wall-clock timeout and kills the child.
+
+    FAIL CLOSED: if the isolated subprocess cannot be spawned or does not
+    return a well-formed result (e.g. killed by a resource limit), the step
+    fails with an explanatory error. Untrusted code NEVER falls back to
+    in-process execution. Returns ``{"output", "ok", "error"}``; a rejected
+    program never raises and never reaches ``exec``.
     """
+    if CODE_EXEC_DISABLED:
+        return {
+            "output": "code-exec unavailable: sandbox hardening in progress",
+            "ok": False,
+            "error": "code-exec temporarily disabled (sandbox hardening in progress)",
+        }
     if CODE_EXEC_DISABLED:
         return {
             "output": "code-exec unavailable: sandbox hardening in progress",
@@ -864,25 +835,34 @@ async def _run_code(code: str) -> Dict[str, Any]:
     if violation:
         return {"output": f"sandbox rejected: {violation}", "ok": False, "error": violation}
 
-    stdout: List[str] = []
-
-    def _fake_print(*args, **kwargs):
-        stdout.append(" ".join(str(a) for a in args))
-
-    gl = dict(SAFE_GLOBALS)
-    gl["print"] = _fake_print
     try:
-        def run() -> Any:
-            exec(code, gl, {})  # noqa: S102 - AST-validated, restricted namespace
-        await asyncio.wait_for(asyncio.to_thread(run), timeout=5.0)
-        return {"output": "\n".join(stdout) or "(no output)", "ok": True, "error": None}
-    except asyncio.CancelledError:
-        raise
-    except asyncio.TimeoutError:
-        return {"output": "sandbox error: timeout after 5s", "ok": False, "error": "timeout"}
-    except Exception as exc:  # noqa: BLE001
-        detail = f"{exc.__class__.__name__}: {exc}"
-        return {"output": f"sandbox error: {detail}", "ok": False, "error": detail}
+        proc = await asyncio.create_subprocess_exec(
+            sys.executable, "-I", _SANDBOX_RUNNER,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+            env={},  # empty environment: no keys, no config, nothing to leak
+            limit=128 * 1024,
+        )
+    except Exception as exc:  # spawn failed: refuse, never exec in-process
+        detail = f"sandbox unavailable: isolated process could not start ({exc.__class__.__name__})"
+        return {"output": detail, "ok": False, "error": detail}
+    try:
+        out, _ = await asyncio.wait_for(proc.communicate(code.encode()), timeout=_SANDBOX_WALL_TIMEOUT)
+    except (asyncio.TimeoutError, Exception):  # noqa: BLE001
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        await proc.wait()
+        return {"output": "sandbox error: execution killed (timeout or resource limit)", "ok": False, "error": "timeout"}
+    try:
+        line = out.decode(errors="replace").strip().splitlines()[-1]
+        result = json.loads(line)
+        return {"output": result["output"], "ok": bool(result["ok"]), "error": result.get("error")}
+    except Exception:
+        # Child died before answering (RLIMIT_SIGKILL etc.): fail closed.
+        return {"output": "sandbox error: execution killed (timeout or resource limit)", "ok": False, "error": "killed"}
 
 
 async def _send_budget_alert(node_id: str) -> None:

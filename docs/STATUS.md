@@ -67,14 +67,22 @@ Security and correctness hardening pass:
   (`https://.*\.vercel\.app`) instead of a literal `*` inside a string,
   which Starlette matches exactly. Extra origins come from
   `ALLOWED_ORIGINS`.
-- **Code-exec temporarily fail-closed** (2026-11-11): a confirmed sandbox
-  escape (`str.format` attribute bypass leaking the module namespace) and a
-  CPU/thread DoS were reported against the in-process sandbox. The code-exec
-  node refuses every program with an explicit unavailable error until the
-  hardened forked-child sandbox lands. All other workflow nodes stay public.
-- Code execution sandbox: AST validation before `exec`, imports refused,
-  dunder attribute access refused (tiny allowlist), interpreter-internals
-  builtins refused by name, 5 second timeout, non-root container user.
+- Code execution sandbox: untrusted code runs ONLY in a freshly spawned
+  interpreter (`python -I sandbox_runner.py`) with an empty environment -
+  never forked, never in-process - so no server memory, module globals or
+  env keys exist in the child at all. Inside the child: AST validation
+  (imports refused, dunder access refused except a tiny allowlist,
+  interpreter-internals builtins refused by name, frame/object-model
+  attributes like `gi_frame`/`cr_frame`/`f_globals` refused, `str.format` /
+  `format_map` attribute paths refused), a minimal builtins set, and hard
+  RLIMIT_CPU / RLIMIT_AS limits (the child refuses to run if either limit
+  cannot be applied); the parent enforces a wall-clock kill.
+  Fail closed: if the isolated process cannot start or dies without a
+  well-formed result, the step fails with an explanatory error - there is
+  no in-process fallback. Non-root container user.
+  **Gate:** the code-exec node stays REFUSED (CODE_EXEC_DISABLED) until the
+  isolated runner is proven with a benign spawn on the production runtime.
+  All other workflow nodes stay public.
 - Budget reservations are settled exactly once: `record` charges and closes,
   `release` closes without charging, and a failed step releases what it
   reserved.
@@ -213,7 +221,11 @@ Secrets:
   shines), but re-check before recording the demo video.
 - Budget state is in-process; it resets on gateway restart (documented
   MVP limitation).
-- Code exec sandbox is not a security boundary (documented MVP-grade).
+- Code exec sandbox is process-isolated (fresh empty-environment
+  interpreter per run, OS resource limits, fail-closed) but still not a
+  hardened multi-tenant boundary: no syscall filtering, no network
+  namespace, no cgroup accounting. Suitable for a public demo; not for
+  mutually hostile workloads.
 - The SSE endpoint has no frontend consumer yet: there is no `EventSource`
   anywhere in `web/src` (grep: 0 hits). It is a real, tested API, but the
   studio does not read it.
@@ -243,9 +255,10 @@ Secrets:
 
 ### 2026-11-11 hardening, audit and deployment pass
 
-- Security and correctness hardening landed: AST validation before `exec`
-  (imports refused, dunder access refused, interpreter-internal builtins
-  refused by name, 5s timeout, non-root container user), budget
+- Security and correctness hardening landed: process-isolated code exec
+  (fresh spawned interpreter with an empty environment, AST validation,
+  minimal builtins, RLIMIT_CPU/RLIMIT_AS, wall-clock kill, fail-closed on
+  spawn or limit failure, non-root container user), budget
   exactly-once settlement, inbound input size caps that answer 400 instead
   of 500, cycle detection in the topological sort, the CORS origin regex and
   the bounded per-IP rate limiter.

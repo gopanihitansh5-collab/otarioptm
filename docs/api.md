@@ -270,7 +270,7 @@ Node types:
 |---|---|---|
 | `chat` | LLM call, routed per step | `prompt`, optional `system` |
 | `web-search` | Exa search, DuckDuckGo fallback | `query` (required in practice), optional `objective` |
-| `code-exec` | Sandboxed Python snippet (MVP-grade) | `code` |
+| `code-exec` | Python snippet in a fresh isolated subprocess (empty env, AST validation, OS limits, fail-closed) | `code` |
 | `guardrails` | Block or flag banned terms | `banned` (list), optional `input`, `stop_on_block` (default true) |
 
 Inside `prompt`/`query`/`code`, `{{nodeId}}` substitutes the named node's
