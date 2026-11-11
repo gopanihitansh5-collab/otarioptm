@@ -97,7 +97,7 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
           {terminals.length === 0 && <p className="text-sm text-silver">No terminal-node output was returned. Inspect the trace below.</p>}
           {terminals.map(s => <section key={s.nodeId} className="rounded-xl border border-steel bg-elevated p-5">
             <div className="mb-3 flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-ice">{s.nodeId}</h3><span className="font-mono text-[10px] text-silver">{s.model || s.provider || s.type || "terminal output"}</span>{s.demo && <span className="text-xs text-amber">DEMO</span>}{stepFailed(s) && <span className="text-xs text-fail">{s.status === "skipped" ? "SKIPPED" : "FAILED / BLOCKED"}</span>}</div>
-            {s.consistency && <p className="mb-3 rounded-lg border border-amber/40 p-3 text-xs leading-6 text-amber">{s.consistency.status === "mismatch" ? "UNVERIFIED: this output does not match all computed inputs. Do not treat it as a trusted report." : "Numeric citation check only. Numbers cited does not verify the facts, sources, assumptions or recommendation."} {s.consistency.note}</p>}
+            {s.consistency && <p className="mb-3 rounded-lg border border-amber/40 p-3 text-xs leading-6 text-amber">{["mismatch", "contradiction"].includes(s.consistency.status) ? "UNVERIFIED: this output omits or contradicts computed inputs. Do not treat it as a trusted report." : "Numeric citation check only. Numbers cited does not verify the facts, sources, assumptions or recommendation."} {s.consistency.note}</p>}
             <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-ice">{s.output || s.error || "No output returned."}</pre>
           </section>)}
         </div>

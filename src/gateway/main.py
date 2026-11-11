@@ -511,14 +511,32 @@ def _raise_if_empty(result: Dict[str, Any], provider: str) -> None:
     raise EmptyCompletion(detail)
 
 
-def _reported_cost(result: Dict[str, Any]) -> float:
-    """Provider-reported USD spend of ONE attempt (0.0 when unreported)."""
+def _reported_cost_value(result: Dict[str, Any]) -> Optional[float]:
+    """Valid explicitly reported USD cost, preserving zero versus absence."""
     if not isinstance(result, dict):
-        return 0.0
-    try:
-        return max(0.0, float(result.get("cost") or result.get("actual_cost") or 0.0))
-    except (TypeError, ValueError):
-        return 0.0
+        return None
+    usage = result.get("usage")
+    candidates = ([usage.get("cost_usd")] if isinstance(usage, dict) else [])
+    candidates += [result.get("cost"), result.get("actual_cost")]
+    for index, raw in enumerate(candidates):
+        if raw is None or isinstance(raw, bool):
+            continue
+        try:
+            value = float(raw)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if math.isfinite(value) and value >= 0:
+            # Legacy cost=0 was historically the absent-price sentinel.
+            # Only usage.cost_usd explicitly distinguishes reported zero.
+            if value == 0 and not (isinstance(usage, dict) and index == 0):
+                continue
+            return value
+    return None
+
+
+def _reported_cost(result: Dict[str, Any]) -> float:
+    """Provider-reported spend for one attempt; zero if not reported."""
+    return _reported_cost_value(result) or 0.0
 
 
 async def execute_chat_step(
@@ -629,7 +647,7 @@ async def execute_chat_step(
             attempt_cost = _reported_cost(result)
             if attempt_cost > 0:
                 reported_failed += attempt_cost
-            elif isinstance(exc, EmptyCompletion) and primary == "otari":
+            elif isinstance(exc, EmptyCompletion) and primary == "otari" and _reported_cost_value(result) is None:
                 # A 200 with no content and no cost report (e.g. a reasoning
                 # model that spent its tokens on hidden reasoning) can still
                 # have billed: charge the strict bound, clearly labeled as
@@ -667,12 +685,12 @@ async def execute_chat_step(
         # explicitly free. Estimated portions are tracked separately from
         # provider-reported spend.
         estimated_total = estimated_failed
-        if _reported_cost(result) == 0.0 and chain[:1] == ["otari"]:
+        if _reported_cost_value(result) is None and chain[:1] == ["otari"]:
             estimated_total += bound
         actual_cost = reported_total + estimated_total
         if reported_total > 0 and estimated_total > 0:
             cost_source = "provider-reported+estimate"
-        elif reported_total > 0:
+        elif reported_total > 0 or _reported_cost_value(result) is not None:
             cost_source = "provider-reported"
         elif estimated_total > 0:
             cost_source = "estimate"
@@ -812,11 +830,58 @@ def _consistency_check(output_text: str, parents: List[str], outputs: Dict[str, 
         return None
     cited = _numbers_in(output_text)
     missing = [e for e in expected if not any(abs(e - c) < 1e-6 for c in cited)]
+    contradictions = _direction_contradictions(output_text, expected)
+    if contradictions:
+        return {"status": "contradiction", "checked": len(expected),
+                "contradictions": contradictions[:5],
+                "note": ("answer asserts a budget comparison that the computed "
+                         "numbers invert; treat content as unverified")}
     if not missing:
         return {"status": "cited", "checked": len(expected)}
     return {"status": "mismatch", "checked": len(expected),
             "missing": missing[:10],
             "note": "answer does not cite these upstream-computed numbers; treat content as unverified"}
+
+
+_COMPARISON_RE = re.compile(
+    r"(?P<value>-?\d+(?:,\d{3})*(?:\.\d+)?)"
+    r"(?P<before>[^\d.!?;\n]{0,65}?)"
+    r"(?P<op>\b(?:exceeds?|over|above|more than|within|under|below|less than|meets|inside)\b|>=|<=|>|<|≥|≤)"
+    r"[^\d.!?;\n]{0,45}(?P<bound>-?\d+(?:,\d{3})*(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+
+
+def _direction_contradictions(output_text: str, expected: List[float]) -> List[str]:
+    """Check simple adjacent numeric comparisons, not arbitrary prose truth.
+
+    Only the nearest preceding computed number and following bound are paired.
+    Negation and compound claims are deliberately left unverified rather than
+    guessing their semantics. Quality claims and model rankings are out of scope.
+    """
+    out: List[str] = []
+    for match in _COMPARISON_RE.finditer(output_text):
+        before = match.group("before")
+        if re.search(r"\b(?:not|never|no|cannot|can't|doesn't|isn't|won't)\b", before, re.I):
+            continue
+        v = float(match.group("value").replace(",", ""))
+        b = float(match.group("bound").replace(",", ""))
+        if not any(abs(v - e) < 1e-6 for e in expected):
+            continue
+        op = match.group("op").lower()
+        if op in ("≥", ">="):
+            valid = v >= b
+        elif op in ("≤", "<=", "within", "meets", "inside"):
+            valid = v <= b
+        elif op in (">", "exceed", "exceeds", "over", "above", "more than"):
+            valid = v > b
+        else:
+            valid = v < b
+        if not valid:
+            claim = f"comparison {v} {op} {b} contradicts computed values"
+            if claim not in out:
+                out.append(claim)
+    return out
 
 
 def _topo_order(nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -1557,7 +1622,7 @@ async def _execute_graph(
     # correctness; a mismatch means the report must not be called success.
     unverified_nodes = sorted(
         str(r["nodeId"]) for r in results
-        if isinstance(r.get("consistency"), dict) and r["consistency"].get("status") == "mismatch"
+        if isinstance(r.get("consistency"), dict) and r["consistency"].get("status") in ("mismatch", "contradiction")
     )
     # Deterministic cost-only analysis from computed rows (keys "rows" or
     # "results" with monthly_cost). This is the trustworthy recommendation:
