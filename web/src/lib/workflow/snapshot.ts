@@ -117,6 +117,7 @@ function sanitizeData(raw: unknown, type: WorkflowNode["type"]): WorkflowNodeDat
     label:
       typeof src.label === "string" && src.label ? src.label : NODE_LABELS[type],
   };
+  if (typeof src.model === "string") data.model = src.model;
   if (typeof src.system === "string") data.system = src.system;
   if (typeof src.prompt === "string") data.prompt = src.prompt;
   if (typeof src.query === "string") data.query = src.query;

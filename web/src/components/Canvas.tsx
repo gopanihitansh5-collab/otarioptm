@@ -79,7 +79,7 @@ export function Canvas({
   return (
     <ReactFlow
       nodes={nodes}
-      edges={edges}
+      edges={edges.map(edge => ({ ...edge, animated: nodes.some(n => n.id === edge.target && n.data.status === "running") }))}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}

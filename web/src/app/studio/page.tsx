@@ -27,7 +27,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useRunHistory } from "@/hooks/useRunHistory";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { useWorkflowState } from "@/hooks/useWorkflowState";
-import { CSV_EXPORT_URL, getHealth, runWorkflow, type PlanResponse } from "@/lib/api";
+import { CSV_EXPORT_URL, getHealth, streamWorkflow, type PlanResponse } from "@/lib/api";
 import { DEMO_CAP, estimateOverdraft } from "@/lib/workflow/demoOverdraft";
 import { buildWorkflowExport, downloadWorkflowJson } from "@/lib/workflow/exportImport";
 import { buildRunRecord, deriveRunStatus } from "@/lib/workflow/runHistory";
@@ -105,6 +105,7 @@ function StudioInner() {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [fitKey, setFitKey] = useState(0);
   const [plannerOpen, setPlannerOpen] = useState(false);
+  const [planStages, setPlanStages] = useState<PlanResponse["stages"]>();
   const [planProvenance, setPlanProvenance] = useState<PlanResponse["planner"] | undefined>();
   const [generatedTask, setGeneratedTask] = useState<string | undefined>();
   const [resultsOpen, setResultsOpen] = useState(false);
@@ -273,8 +274,13 @@ function StudioInner() {
         updateNodeData(node.id, { status: "idle", statusInfo: null });
       }
       try {
-        const response = await runWorkflow(runNodes, runEdges);
-        setLastDeliverable({ steps: response.steps, edges: runEdges, aborted: response.aborted, completedAt: new Date().toISOString(), task: generatedTask, planner: planProvenance });
+        const response = await streamWorkflow(runNodes, runEdges, (event) => {
+          if (!event.nodeId) return;
+          if (event.event === "node.started") updateNodeData(event.nodeId, { status: "running", statusInfo: null });
+          if (event.event === "node.completed") updateNodeData(event.nodeId, { status: event.error || event.blocked ? "error" : "done", statusInfo: event as import("@/lib/types").StepResult });
+          if (event.event === "node.blocked") updateNodeData(event.nodeId, { status: "error" });
+        });
+        setLastDeliverable({ steps: response.steps, edges: runEdges, aborted: response.aborted, completedAt: new Date().toISOString(), task: generatedTask, planner: planProvenance, stages: planStages });
         const byId = new Map(response.steps.map((s) => [s.nodeId, s]));
         // Batch responses carry real results, but not live per-node start times.
         for (const step of response.steps) {
@@ -329,7 +335,7 @@ function StudioInner() {
   };
 
   const loadTemplate = (template: WorkflowTemplate) => {
-    setGeneratedTask(undefined); setPlanProvenance(undefined);
+    setGeneratedTask(undefined); setPlanProvenance(undefined); setPlanStages(undefined);
     const result = validateWorkflowInput(template.graph);
     if (!result.ok) {
       setError(`Template "${template.name}" is malformed and cannot be loaded.`);
@@ -749,7 +755,7 @@ function StudioInner() {
         </div>
 
         <TaskPlanner open={plannerOpen} onClose={() => setPlannerOpen(false)} onApply={(nn, ee, task, plan) => {
-          setPlanProvenance(plan.planner);
+          setPlanProvenance(plan.planner); setPlanStages(plan.stages);
           setGraph(nn, ee); setGeneratedTask(task); setSelectedId(null); setFitKey(k => k + 1); setPlannerOpen(false);
         }} />
         <ResultsDialog run={lastDeliverable} open={resultsOpen} onClose={() => setResultsOpen(false)} />

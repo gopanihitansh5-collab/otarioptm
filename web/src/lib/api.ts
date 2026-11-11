@@ -91,9 +91,55 @@ export type PlanResponse = {
   summary: string | null;
   warnings: string[];
   source: "live-planner";
+  stages?: Record<string, { provider?: string; chain?: string[]; cost?: number; costSource?: string; assigned?: unknown; enhancedNodes?: string[] }>;
   planner: { provider: "otari" | "groq"; chain: string[]; cost: number; costSource: string };
 };
 
 export function planWorkflow(task: string): Promise<PlanResponse> {
   return request<PlanResponse>("/api/v1/workflow/plan", { method: "POST", body: JSON.stringify({ task }) });
+}
+
+export type WorkflowStreamEvent = { event: string; nodeId?: string; type?: import("./types").NodeType; error?: string; blocked?: boolean; budget?: BudgetSnapshot; aborted?: string | null } & Partial<import("./types").StepResult>;
+
+/** One POST only. Never retry a partially executed workflow on stream failure. */
+export async function streamWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[], onEvent: (event: WorkflowStreamEvent) => void): Promise<RunResponse> {
+  const res = await fetch(`${GATEWAY_URL}/api/v1/workflow/run/stream`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nodes: nodes.map(n => ({ id: n.id, type: n.type, data: n.data })), edges: edges.map(e => ({ source: e.source, target: e.target })) }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let detail = text;
+    try { detail = JSON.parse(text).detail || text; } catch { /* plain response */ }
+    throw new Error(`${res.status}: ${detail}`);
+  }
+  if (!res.body) throw new Error("No execution stream returned. Do not retry automatically.");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const steps: import("./types").StepResult[] = [];
+  let finished: RunResponse | null = null;
+  const consume = (frame: string) => {
+    const lines = frame.split("\n");
+    const eventName = lines.find(l => l.startsWith("event:"))?.slice(6).trim();
+    const data = lines.filter(l => l.startsWith("data:")).map(l => l.slice(5).trim()).join("\n");
+    if (!data) return;
+    const ev = JSON.parse(data) as WorkflowStreamEvent;
+    if (eventName === "error") throw new Error(ev.error || "Execution stream failed. Some nodes may have run.");
+    if (eventName === "done") return;
+    if (ev.event === "node.completed" && ev.nodeId) steps.push(ev as import("./types").StepResult);
+    if (ev.event === "workflow.finished" && ev.budget) finished = { steps, budget: ev.budget, aborted: ev.aborted ?? null };
+    onEvent(ev);
+  };
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, "\n");
+      let split;
+      while ((split = buffer.indexOf("\n\n")) >= 0) { consume(buffer.slice(0, split)); buffer = buffer.slice(split + 2); }
+      if (done) break;
+    }
+    if (!finished) throw new Error("Execution connection ended before confirmation. Some nodes may have run; inspect activity before retrying.");
+    return finished;
+  } finally { reader.releaseLock(); }
 }

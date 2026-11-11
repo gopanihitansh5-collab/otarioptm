@@ -4,6 +4,7 @@ export type NodeRunStatus = "idle" | "running" | "done" | "error" | "skipped";
 
 export type WorkflowNodeData = {
   label: string;
+  model?: string;
   system?: string;
   prompt?: string;
   query?: string;

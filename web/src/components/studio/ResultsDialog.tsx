@@ -13,6 +13,7 @@ export type RunDeliverable = {
   aborted?: string | null;
   task?: string;
   planner?: PlanResponse["planner"];
+  stages?: PlanResponse["stages"];
 };
 
 function reportMarkdown(run: RunDeliverable): string {
@@ -21,6 +22,7 @@ function reportMarkdown(run: RunDeliverable): string {
   const sections = ["# OtariOptm run report", `Recorded: ${run.completedAt}`, `Status: ${incomplete ? "Incomplete or blocked" : "Returned by gateway"}${demo ? " (includes demo output)" : ""}`];
   if (run.task) sections.push(`## Task\n\n${run.task}`);
   if (run.planner) sections.push(`## Planning provenance\n\nProvider: ${run.planner.provider} | Route: ${run.planner.chain.join(" -> ")} | Recorded cost: $${run.planner.cost?.toFixed(6) ?? "not reported"} (${run.planner.costSource ?? "not reported"})`);
+  if (run.stages) sections.push(`## Planning stages\n\n${JSON.stringify(run.stages, null, 2)}`);
   for (const s of run.steps) {
     sections.push(`## ${s.nodeId} (${s.type ?? "step"})`, `Provider/model: ${s.model ?? "not reported"}\n\nRoute: ${s.chain?.join(" -> ") || "not reported"}\n\nRecorded cost: ${s.cost === undefined ? "not reported" : `$${s.cost.toFixed(6)}`} (${s.costSource ?? "source not reported"})\n\nTokens: ${s.tokens ?? "not reported"} | Latency: ${s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}`);
     if (s.demo) sections.push("DEMO OUTPUT - not live model inference.");
