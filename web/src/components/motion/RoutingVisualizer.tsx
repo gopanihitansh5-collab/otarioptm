@@ -22,9 +22,36 @@ import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion";
 
 const CHAMPAGNE = "#b8a98f";
 const CHAMPAGNE_BRIGHT = "#d8cbb8";
-const TAUPE = "#73695b";
-const STEEL = "#555c60";
+const TAUPE = "#8a7f6e";
+const STEEL = "#9aa4ad";
 const ICE = "#e9e4da";
+
+/** Small canvas-texture sprite label with a dark pill background, so the
+ * label stays readable over dark and light page themes. */
+function makeLabelSprite(text: string, active: boolean): THREE.Sprite {
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 64;
+  const g = c.getContext("2d");
+  if (g) {
+    g.fillStyle = "rgba(17, 17, 16, 0.88)";
+    g.beginPath();
+    g.roundRect(8, 10, 240, 44, 14);
+    g.fill();
+    g.font = "600 22px ui-monospace, Menlo, monospace";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillStyle = active ? CHAMPAGNE_BRIGHT : ICE;
+    g.fillText(text, 128, 33);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }),
+  );
+  sprite.scale.set(1.05, 0.26, 1);
+  return sprite;
+}
 
 const PROVIDERS = [
   { name: "OTARI", angle: -90 },
@@ -50,9 +77,11 @@ function useInView(ref: React.RefObject<HTMLDivElement | null>) {
 }
 
 function ProviderNode({
+  name,
   angle,
   active,
 }: {
+  name: string;
   angle: number;
   active: boolean;
 }) {
@@ -71,6 +100,8 @@ function ProviderNode({
     return new THREE.Vector3(Math.cos(a) * 2.9, 0, Math.sin(a) * 2.9);
   }, [angle]);
 
+  const label = useMemo(() => makeLabelSprite(name, active), [name, active]);
+
   useFrame(({ clock }) => {
     const m = ref.current;
     if (!m) return;
@@ -80,6 +111,7 @@ function ProviderNode({
     m.position.lerpVectors(scatter, target, eased);
     const s = active ? 1.25 : 1;
     m.scale.setScalar(THREE.MathUtils.lerp(m.scale.x, s, 0.08));
+    label.position.set(0, 0.42, 0);
   });
 
   return (
@@ -87,11 +119,12 @@ function ProviderNode({
       <octahedronGeometry args={[0.16, 0]} />
       <meshStandardMaterial
         color={active ? CHAMPAGNE_BRIGHT : STEEL}
-        emissive={active ? CHAMPAGNE : "#000000"}
-        emissiveIntensity={active ? 0.9 : 0}
+        emissive={active ? CHAMPAGNE : STEEL}
+        emissiveIntensity={active ? 0.9 : 0.18}
         metalness={0.85}
         roughness={0.3}
       />
+      <primitive object={label} />
     </mesh>
   );
 }
@@ -144,9 +177,9 @@ function Engine() {
   const routeLine = useMemo(() => {
     const geo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(48));
     const mat = new THREE.LineBasicMaterial({
-      color: CHAMPAGNE,
+      color: CHAMPAGNE_BRIGHT,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.85,
     });
     return new THREE.Line(geo, mat);
   }, [curve]);
@@ -177,7 +210,7 @@ function Engine() {
       <primitive object={routeLine} />
       <RoutePulse curve={curve} />
       {PROVIDERS.map((p) => (
-        <ProviderNode key={p.name} angle={p.angle} active={p.name === active.name} />
+        <ProviderNode key={p.name} name={p.name} angle={p.angle} active={p.name === active.name} />
       ))}
     </group>
   );
