@@ -33,7 +33,16 @@ function rowDetail(e: ActivityEvent): string {
     if (typeof e.nodeId === "string") parts.push(e.nodeId);
     if (typeof e.model === "string") parts.push(e.model);
     if (typeof e.tokens === "number") parts.push(`${e.tokens} tok`);
-    if (typeof e.cost === "number") parts.push(`$${e.cost.toFixed(4)}`);
+    if (typeof e.cost === "number") {
+      const src = typeof e.costSource === "string" ? e.costSource : "";
+      parts.push(
+        src === "estimate"
+          ? `~$${e.cost.toFixed(4)} est`
+          : src === "provider-reported+estimate"
+            ? `$${e.cost.toFixed(4)} part-est`
+            : `$${e.cost.toFixed(4)}`,
+      );
+    }
     if (typeof e.latencyMs === "number") parts.push(`${e.latencyMs} ms`);
     return parts.join(" · ");
   }

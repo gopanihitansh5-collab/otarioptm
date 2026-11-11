@@ -13,11 +13,7 @@ const NODES = [
   { name: "CLAUDE-SONNET", dx: "62px", dy: "80px" },
 ];
 
-const CANDIDATES = [
-  { model: "qwen-3.5-35b", cost: "$0.30/1M tok", lat: "900ms" },
-  { model: "gpt-4o-mini", cost: "$0.15/1M tok", lat: "600ms" },
-  { model: "claude-sonnet-4-6", cost: "$3.00/1M tok", lat: "1400ms" },
-];
+const CANDIDATES = ["qwen-3.5-35b", "gpt-4o-mini", "claude-sonnet-4-6"];
 
 const CSS = `
 @keyframes oo-in { 0%,4% { opacity:0; transform:translateX(0); } 6% { opacity:1; } 21% { opacity:1; transform:translateX(150px); } 23%,100% { opacity:0; transform:translateX(150px); } }
@@ -171,7 +167,7 @@ export default function Hero() {
                     opacity={0}
                   />
                   <rect x={i === 1 ? 318 : 288} y={i === 0 ? 59 : i === 1 ? 139 : 219} width={i === 1 ? 64 : 76} height="22" rx="6" fill="#1D1C19" stroke="#34322D" />
-                  <text x={i === 1 ? 350 : 326} y={i === 0 ? 74 : i === 1 ? 154 : 234} textAnchor="middle" fill="#A6A197" fontSize="7.5" fontFamily="ui-monospace, monospace" letterSpacing="0.5">
+                  <text x={i === 1 ? 350 : 326} y={i === 0 ? 74 : i === 1 ? 154 : 234} textAnchor="middle" fill="#D8D3C6" fontSize="7.5" fontFamily="ui-monospace, monospace" letterSpacing="0.5">
                     {n.name}
                   </text>
                 </g>
@@ -185,21 +181,15 @@ export default function Hero() {
                 FALLBACK CATALOG · ILLUSTRATIVE ESTIMATES
               </p>
               <div className="mt-1.5 space-y-1">
-                {CANDIDATES.map((c) => (
-                  <div
-                    key={c.model}
-                    className="flex items-baseline justify-between font-mono text-[10px] text-[var(--color-silver)]"
+                {CANDIDATES.map((model) => (
+                  <p
+                    key={model}
+                    className="font-mono text-[10.5px] text-[var(--color-ice)]"
                   >
-                    <p className="text-[var(--color-ice)]">{c.model}</p>
-                    <p>
-                      {c.cost} · {c.lat}
-                    </p>
-                  </div>
+                    {model}
+                  </p>
                 ))}
               </div>
-              <p className="mt-1.5 font-mono text-[8.5px] text-[var(--color-silver)]/80">
-                per 1M tokens · static fallback catalog
-              </p>
             </div>
           </div>
         </div>

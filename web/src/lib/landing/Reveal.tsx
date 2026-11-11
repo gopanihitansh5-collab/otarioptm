@@ -150,6 +150,7 @@ type BudgetSnapshot = {
 };
 
 type ActivityEvent = {
+  costSource?: string;
   id?: number | string;
   event?: string;
   nodeId?: string;

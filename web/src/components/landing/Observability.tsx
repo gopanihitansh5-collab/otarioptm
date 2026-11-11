@@ -165,7 +165,11 @@ export default function Observability() {
                     )}
                     {typeof e.cost === "number" && (
                       <span className="text-[var(--color-signal)]">
-                        ${(e.cost as number).toFixed(4)}
+                        {e.costSource === "estimate"
+                          ? `~$${(e.cost as number).toFixed(4)} est`
+                          : e.costSource === "provider-reported+estimate"
+                            ? `$${(e.cost as number).toFixed(4)} part-est`
+                            : `$${(e.cost as number).toFixed(4)}`}
                       </span>
                     )}
                     {e.latencyMs != null && (
