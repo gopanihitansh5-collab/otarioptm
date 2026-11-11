@@ -285,7 +285,8 @@ def test_code_exec_blocks_imports():
     assert r.status_code == 200
     step = r.json()["steps"][0]
     assert step["status"] == "failed"
-    assert "import" in step["error"].lower()
+    # Fail-closed while the hardened sandbox lands: refusal precedes AST checks.
+    assert step["error"]
 
 
 def test_code_exec_cannot_reach_subprocess_or_os(tmp_path):
@@ -318,9 +319,10 @@ def test_code_exec_runs_benign_code():
     )
     assert r.status_code == 200
     step = r.json()["steps"][0]
-    assert step["status"] == "completed"
-    assert "hello sandbox" in step["output"]
-    assert "5" in step["output"]
+    # Fail-closed while the hardened sandbox lands (see CODE_EXEC_DISABLED).
+    assert step["status"] == "failed"
+    assert "unavailable" in step["output"]
+    assert step["error"]
 
 
 # --- P0-5: activity payloads ---------------------------------------------------

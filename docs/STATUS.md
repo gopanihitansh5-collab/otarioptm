@@ -67,6 +67,11 @@ Security and correctness hardening pass:
   (`https://.*\.vercel\.app`) instead of a literal `*` inside a string,
   which Starlette matches exactly. Extra origins come from
   `ALLOWED_ORIGINS`.
+- **Code-exec temporarily fail-closed** (2026-11-11): a confirmed sandbox
+  escape (`str.format` attribute bypass leaking the module namespace) and a
+  CPU/thread DoS were reported against the in-process sandbox. The code-exec
+  node refuses every program with an explicit unavailable error until the
+  hardened forked-child sandbox lands. All other workflow nodes stay public.
 - Code execution sandbox: AST validation before `exec`, imports refused,
   dunder attribute access refused (tiny allowlist), interpreter-internals
   builtins refused by name, 5 second timeout, non-root container user.

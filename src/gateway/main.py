@@ -841,12 +841,25 @@ def _sandbox_violation(code: str) -> Optional[str]:
     return None
 
 
+# Fail-closed kill switch: a confirmed sandbox escape (str.format attribute
+# bypass leaking the module namespace) and CPU/thread DoS were reported in the
+# in-process sandbox. Code-exec refuses every program until the hardened
+# forked-child sandbox lands. NEVER fall back to in-process exec.
+CODE_EXEC_DISABLED = True
+
+
 async def _run_code(code: str) -> Dict[str, Any]:
     """Run untrusted code in a restricted namespace after AST validation.
 
     Returns ``{"output", "ok", "error"}``. A rejected program never raises,
     never returns a traceback and never reaches ``exec``.
     """
+    if CODE_EXEC_DISABLED:
+        return {
+            "output": "code-exec unavailable: sandbox hardening in progress",
+            "ok": False,
+            "error": "code-exec temporarily disabled (sandbox hardening in progress)",
+        }
     violation = _sandbox_violation(code)
     if violation:
         return {"output": f"sandbox rejected: {violation}", "ok": False, "error": violation}

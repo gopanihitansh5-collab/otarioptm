@@ -146,6 +146,10 @@ def test_every_template_runs_to_completion_in_demo_mode(monkeypatch):
             assert body["aborted"] is None, f"{tpl['id']} aborted at {body.get('aborted')}"
             assert len(body["steps"]) == tpl["nodeCount"], tpl["id"]
             for step in body["steps"]:
+                if step.get("type") == "code-exec":
+                    # Code-exec is fail-closed while the hardened sandbox lands.
+                    assert "unavailable" in step.get("error", "") or "unavailable" in step.get("output", ""), step
+                    continue
                 assert "error" not in step, f"{tpl['id']} step failed: {step}"
             assert body["budget"]["spent"] <= body["budget"]["cap"]
 
