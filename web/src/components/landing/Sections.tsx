@@ -53,7 +53,7 @@ export function UseCases() {
 export function ClosingCTA() {
   return (
     <section>
-      <div className="mx-auto max-w-6xl px-4 py-20 md:px-6 md:py-28">
+      <div className="mx-auto max-w-6xl px-4 py-14 md:px-6 md:py-20">
         <Reveal>
           <div className="relative overflow-hidden rounded-2xl border border-[var(--color-steel)] bg-[var(--color-graphite)] px-6 py-14 text-center md:px-16 md:py-20">
             <div
@@ -65,8 +65,8 @@ export function ClosingCTA() {
               your prompt engineering.
             </h2>
             <p className="mx-auto mt-4 max-w-md text-base text-[var(--color-silver)]">
-              Open the studio, wire a workflow, and let the gateway account for
-              every token.
+              Open the studio, wire a workflow, and watch each run report its
+              provider, tokens and cost.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <a

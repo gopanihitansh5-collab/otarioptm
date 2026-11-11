@@ -81,7 +81,7 @@ export default function Pricing() {
             <ul className="mt-6 space-y-2.5 text-sm leading-relaxed text-[var(--color-silver)]">
               {[
                 "Same engine: reserve, route, record",
-                "Per-project and per-user caps",
+                "Per-project caps; per-user caps need a service key and are not built",
                 "Alert policies stay readable in config",
                 "No fabricated tiers to inflate the table",
               ].map((t) => (

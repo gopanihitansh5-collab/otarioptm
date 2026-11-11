@@ -167,7 +167,7 @@ export default function Hero() {
                     opacity={0}
                   />
                   <rect x={i === 1 ? 318 : 288} y={i === 0 ? 59 : i === 1 ? 139 : 219} width={i === 1 ? 64 : 76} height="22" rx="6" fill="#1D1C19" stroke="#34322D" />
-                  <text x={i === 1 ? 350 : 326} y={i === 0 ? 74 : i === 1 ? 154 : 234} textAnchor="middle" fill="#D8D3C6" fontSize="7.5" fontFamily="ui-monospace, monospace" letterSpacing="0.5">
+                  <text x={i === 1 ? 350 : 326} y={i === 0 ? 74 : i === 1 ? 154 : 234} textAnchor="middle" fill="#E9E4DA" fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="0.5">
                     {n.name}
                   </text>
                 </g>
