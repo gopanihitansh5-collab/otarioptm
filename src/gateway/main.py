@@ -41,6 +41,11 @@ budget = BudgetManager()
 otari_client: Optional[OTARIClient] = None
 groq_client: Optional[httpx.AsyncClient] = None
 
+# Free-only mode (OTARIOPTM_FREE_ONLY=1): never create the Otari client even
+# when OTARI_API_KEY is present, so chat steps route to the free Groq tier
+# and then to the explicitly labeled demo tier. No paid provider is called.
+FREE_ONLY = os.environ.get("OTARIOPTM_FREE_ONLY", "").strip().lower() in ("1", "true", "yes")
+
 DEMO_COMPLETION_COST = 0.0
 
 # Smallest reservation the gateway takes when nothing is left in the budget.
@@ -92,9 +97,11 @@ hub = ActivityHub()
 async def startup() -> None:
     global otari_client, groq_client
     api_key = os.environ.get("OTARI_API_KEY")
-    if api_key:
+    if api_key and not FREE_ONLY:
         otari_client = OTARIClient(api_key)
         print("OtariOptm: OTARI gateway enabled")
+    elif api_key and FREE_ONLY:
+        print("OtariOptm: free-only mode - OTARI_API_KEY present but paid Otari routing disabled")
     else:
         print("OtariOptm: OTARI_API_KEY not set (fallback/demo mode)")
     groq_key = os.environ.get("GROQ_API_KEY")
@@ -666,6 +673,9 @@ async def execute_chat_step(
         "latencyMs": round(latency_ms),
         "routing": reason,
         "demo": result.get("demo", False),
+        # A simulated demo-tier answer is never real inference, even when the
+        # node completed: realInference is the field to count, not status.
+        "realInference": not bool(result.get("demo", False)),
         "note": fallback_note,
         "overBudget": over_budget,
     }
@@ -914,6 +924,7 @@ async def health() -> Dict[str, Any]:
         "status": "ok",
         "otari": otari_client is not None,
         "groq": groq_client is not None,
+        "free_only": FREE_ONLY,
         "budget": snap,
         **_runtime_info(),
     }
@@ -934,7 +945,9 @@ FALLBACK_CATALOG = [
 # Model ids that must never serve a chat step: classifiers, guardrails,
 # embeddings, audio. Their ids are stable markers across providers.
 _NON_CHAT_ID = re.compile(
-    r"guard|safeguard|embed|moderation|whisper|tts|transcri|ocr|image",
+    # orpheus = TTS voice family; without it the Groq picker can select a
+    # speech model for chat and every run 400s into the demo fallback.
+    r"guard|safeguard|embed|moderation|whisper|tts|orpheus|transcri|ocr|image",
     re.IGNORECASE,
 )
 
@@ -1161,6 +1174,10 @@ async def workflow_run(request: Request) -> Dict[str, Any]:
         "budget": snap,
         "aborted": aborted,
         "overBudget": any(bool(r.get("overBudget")) for r in results),
+        # Nodes whose answer came from the simulated demo tier. These never
+        # count as successful real inference; they are labeled, not hidden.
+        "demoNodes": [str(r.get("nodeId")) for r in results if r.get("demo")],
+        "freeOnly": FREE_ONLY,
         "source": "otarioptm-gateway",
     }
 
