@@ -219,7 +219,7 @@ export default async function OpengraphImage() {
                 textTransform: "uppercase",
               }}
             >
-              Every token accounted for, before it is spent
+              Cost-aware workflows. Visible billing limits.
             </div>
             <div
               style={{

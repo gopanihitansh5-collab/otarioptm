@@ -14,7 +14,7 @@ const CHAIN = [
   },
   {
     step: "RESERVE",
-    body: "Estimated cost is reserved atomically against the project cap before any provider call.",
+    body: "A catalog-based estimate is reserved atomically against the app cap. The bound depends on available pricing.",
   },
   {
     step: "ROUTE",
@@ -22,11 +22,11 @@ const CHAIN = [
   },
   {
     step: "RECORD",
-    body: "Actual spend replaces the estimate, latency and tokens are logged to the activity feed.",
+    body: "Reported USD cost replaces the estimate when available. Latency and tokens are logged; missing prices remain unverified.",
   },
   {
     step: "BLOCK OR ALERT",
-    body: "Over-budget calls return HTTP 402 before a token is spent, and an alert email leaves via Resend.",
+    body: "A reservation that exceeds the app cap is refused with HTTP 402. Alerts depend on configured delivery.",
   },
 ];
 
@@ -43,14 +43,15 @@ export default function BudgetGovernance() {
                 BUDGET GOVERNANCE
               </p>
               <h2 className="mt-3 text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[var(--color-ice)]">
-                Every token accounted for before it is spent.
+                Reserve priced steps. Keep billing limits visible.
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-[var(--color-silver)]">
                 A project cap sits in front of every model call. The gateway
-                reserves the estimated cost, commits actual spend after the
-                response, and refuses the call outright when the reservation no
-                longer fits. There is no invoice surprise because nothing bills
-                outside the reservation.
+                reserves a catalog-based estimate and records reported cost when
+                available. Calls are refused when the reservation does not fit
+                the app cap. Missing prices, zero catalog rates, and timeout
+                charges can leave actual billing unverified. The provider wallet
+                remains the billing source of truth.
               </p>
             </Reveal>
 
