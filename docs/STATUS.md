@@ -80,9 +80,12 @@ Security and correctness hardening pass:
   Fail closed: if the isolated process cannot start or dies without a
   well-formed result, the step fails with an explanatory error - there is
   no in-process fallback. Non-root container user.
-  **Gate:** the code-exec node stays REFUSED (CODE_EXEC_DISABLED) until the
-  isolated runner is proven with a benign spawn on the production runtime.
-  All other workflow nodes stay public.
+  **Gate:** the code-exec node stays REFUSED (CODE_EXEC_DISABLED) until
+  untrusted execution runs behind a genuine isolation boundary (separate
+  container/user, no shared filesystem or network). The isolated-runner
+  mitigation does not stop same-UID filesystem/network escapes, so a benign
+  spawn smoke test is NOT a re-enable criterion. All other workflow nodes
+  stay public.
 - Budget reservations are settled exactly once: `record` charges and closes,
   `release` closes without charging, and a failed step releases what it
   reserved.

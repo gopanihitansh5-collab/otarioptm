@@ -10,8 +10,8 @@ const Items = [
   },
   {
     title: "Sandbox isolation",
-    body: "The code-exec node runs with imports blocked and a 5 second timeout. It is a best-effort MVP sandbox, labeled as such in source, not a hardened boundary.",
-    status: "IMPLEMENTED, MVP GRADE",
+    body: "The code-exec node currently refuses every program: a confirmed escape in the previous in-process sandbox means it stays off until execution runs behind a genuine isolation boundary (separate container and user, no shared filesystem). Chat, web-search and guardrails nodes are unaffected.",
+    status: "TEMPORARILY UNAVAILABLE",
   },
   {
     title: "Failure handling",

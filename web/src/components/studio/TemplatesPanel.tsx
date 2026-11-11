@@ -83,6 +83,7 @@ function TemplateCard({
   const confirmReplace = () =>
     canvasEmpty ||
     window.confirm(`Replace the current canvas with "${template.name}"?`);
+  const usesCodeExec = template.graph.nodes.some((n) => n.type === "code-exec");
 
   return (
     <article className="rounded-lg border border-steel bg-elevated p-3">
@@ -91,6 +92,12 @@ function TemplateCard({
       <div className="mt-2 font-mono text-[10px] tracking-wider text-silver">
         {template.graph.nodes.length} nodes · {template.graph.edges.length} edges
       </div>
+      {usesCodeExec && (
+        <p className="mt-2 font-mono text-[9px] leading-snug tracking-wide text-amber">
+          Contains a code-exec step: temporarily unavailable, that step will
+          fail with an explicit error while the node is disabled.
+        </p>
+      )}
       <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
@@ -106,12 +113,14 @@ function TemplateCard({
         <button
           type="button"
           onClick={() => {
-            if (confirmReplace()) {
+            if (!usesCodeExec && confirmReplace()) {
               onLoadAndRun(template);
             }
           }}
+          disabled={usesCodeExec}
+          title={usesCodeExec ? "Contains a temporarily unavailable code-exec step" : undefined}
           aria-label={`Load ${template.name} and run it immediately`}
-          className={`flex h-11 items-center justify-center rounded-lg border border-steel text-xs font-medium text-silver transition-colors duration-150 hover:border-lime/40 hover:text-lime active:scale-[0.98] ${FOCUS_RING}`}
+          className={`flex h-11 items-center justify-center rounded-lg border border-steel text-xs font-medium text-silver transition-colors duration-150 hover:border-lime/40 hover:text-lime active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-steel disabled:hover:text-silver ${FOCUS_RING}`}
         >
           Load and run
         </button>

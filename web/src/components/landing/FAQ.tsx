@@ -34,7 +34,7 @@ const QA = [
   },
   {
     q: "Is the code-exec node safe to run untrusted code?",
-    a: "It is a best-effort MVP sandbox: imports blocked, five-second timeout, exec isolated in-process. The source labels it honestly as not a security boundary. For untrusted multi-tenant code you would run it in a proper container.",
+    a: "Not right now: the code-exec node is temporarily unavailable and refuses every program. A confirmed escape in the previous in-process sandbox means it returns only behind a genuine isolation boundary (separate container and user, no shared filesystem), not another best-effort filter.",
   },
 ];
 

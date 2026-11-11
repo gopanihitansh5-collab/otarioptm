@@ -791,15 +791,12 @@ from src.gateway.sandbox_runner import sandbox_violation as _sandbox_violation
 _SANDBOX_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sandbox_runner.py")
 _SANDBOX_WALL_TIMEOUT = 15.0
 
-# Fail-closed kill switch: stays True until the isolated runner is proven
-# with a benign spawn on the production runtime. NEVER an in-process fallback.
-CODE_EXEC_DISABLED = True
-
-
-# Fail-closed kill switch: a confirmed sandbox escape (str.format attribute
-# bypass leaking the module namespace) and CPU/thread DoS were reported in the
-# in-process sandbox. Code-exec refuses every program until the hardened
-# forked-child sandbox lands. NEVER fall back to in-process exec.
+# Fail-closed kill switch. The code-exec node refuses every program until
+# untrusted execution runs behind a genuine isolation boundary (separate
+# container/user, no shared filesystem or network with the gateway). The
+# fresh-interpreter runner below is a mitigation, NOT that boundary: same-UID
+# filesystem/network escapes remain possible, so a benign spawn smoke test is
+# NOT a re-enable criterion. There is never an in-process fallback.
 CODE_EXEC_DISABLED = True
 
 

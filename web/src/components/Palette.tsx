@@ -6,10 +6,15 @@ type PaletteProps = {
   addNode: (type: NodeType) => string;
 };
 
-const ITEMS: { type: NodeType; desc: string; dot: string }[] = [
+const ITEMS: { type: NodeType; desc: string; dot: string; unavailable?: boolean }[] = [
   { type: "chat", desc: "LLM chain step: prompt + system", dot: TYPE_DOT.chat },
   { type: "web-search", desc: "Fetch live web context", dot: TYPE_DOT["web-search"] },
-  { type: "code-exec", desc: "Sandboxed code snippet", dot: TYPE_DOT["code-exec"] },
+  {
+    type: "code-exec",
+    desc: "Sandboxed code snippet. Temporarily unavailable: refuses every program until execution runs behind a genuine isolation boundary.",
+    dot: TYPE_DOT["code-exec"],
+    unavailable: true,
+  },
   { type: "guardrails", desc: "Block banned terms", dot: TYPE_DOT.guardrails },
 ];
 
@@ -31,11 +36,18 @@ export function Palette({ addNode }: PaletteProps) {
                 type="button"
                 aria-label={`Add ${NODE_LABELS[item.type]}`}
                 onClick={() => addNode(item.type)}
-                className={ADD_BTN}
+                disabled={item.unavailable}
+                title={item.unavailable ? "Temporarily unavailable" : undefined}
+                className={`${ADD_BTN} disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-steel disabled:hover:text-silver`}
               >
                 +
               </button>
             </div>
+            {item.unavailable && (
+              <div className="mt-1.5 inline-block rounded border border-amber/50 px-1.5 py-0.5 font-mono text-[8.5px] tracking-widest text-amber">
+                TEMPORARILY UNAVAILABLE
+              </div>
+            )}
             <div className="mt-1 text-[10px] leading-snug text-silver">{item.desc}</div>
           </div>
         ))}

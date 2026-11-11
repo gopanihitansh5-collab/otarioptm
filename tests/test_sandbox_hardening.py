@@ -22,8 +22,8 @@ from src.gateway import main as gw
 def _sandbox_enabled(monkeypatch):
     """Exercise the sandbox with the production kill switch lifted LOCALLY.
 
-    CODE_EXEC_DISABLED stays True in production until the isolated runner is
-    proven on the live runtime; these tests verify the isolation itself.
+    CODE_EXEC_DISABLED stays True in production until a genuine isolation
+    boundary exists; these tests verify the mitigation itself.
     """
     monkeypatch.setattr(gw, "CODE_EXEC_DISABLED", False)
 
