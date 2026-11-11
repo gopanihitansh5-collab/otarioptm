@@ -1514,7 +1514,7 @@ WORKFLOW_TEMPLATES: List[Dict[str, Any]] = [
         "Web search feeds a chat step that condenses the findings into a short brief.",
         [
             {"id": "search-1", "type": "web-search", "data": {"query": "Mozilla Otari gateway"}, "position": {"x": 0, "y": 0}},
-            {"id": "summarize-1", "type": "chat", "data": {"system": "You are a concise research assistant.", "prompt": "Summarize the key points from this research:\n\n{{search-1}}"}, "position": {"x": 240, "y": 0}},
+            {"id": "summarize-1", "type": "chat", "data": {"system": "You are a concise research assistant.", "prompt": "Summarize the key points from this research:\n\n{{search-1}}"}, "position": {"x": 360, "y": 0}},
         ],
         [{"id": "e1", "source": "search-1", "target": "summarize-1"}],
     ),
@@ -1524,7 +1524,7 @@ WORKFLOW_TEMPLATES: List[Dict[str, Any]] = [
         "A chat step whose output is screened by guardrails before it can continue downstream.",
         [
             {"id": "chat-1", "type": "chat", "data": {"system": "You are a helpful assistant.", "prompt": "Tell me about your weekend plans."}, "position": {"x": 0, "y": 0}},
-            {"id": "guard-1", "type": "guardrails", "data": {"banned": [], "stop_on_block": True}, "position": {"x": 240, "y": 0}},
+            {"id": "guard-1", "type": "guardrails", "data": {"banned": [], "stop_on_block": True}, "position": {"x": 360, "y": 0}},
         ],
         [{"id": "e1", "source": "chat-1", "target": "guard-1"}],
     ),
@@ -1534,7 +1534,7 @@ WORKFLOW_TEMPLATES: List[Dict[str, Any]] = [
         "A sandboxed static check runs first, then a chat step reviews the snippet with that context.",
         [
             {"id": "prepare-1", "type": "code-exec", "data": {"code": "sample = \"def add(a, b):\\n    return a + b\"\nprint(\"functions:\", sample.count(\"def\"))\nprint(\"lines:\", len(sample.splitlines()))"}, "position": {"x": 0, "y": 0}},
-            {"id": "review-1", "type": "chat", "data": {"system": "You are a senior code reviewer.", "prompt": "Review this Python snippet for bugs and style:\n\ndef add(a, b):\n    return a + b\n\nStatic check output:\n{{prepare-1}}"}, "position": {"x": 240, "y": 0}},
+            {"id": "review-1", "type": "chat", "data": {"system": "You are a senior code reviewer.", "prompt": "Review this Python snippet for bugs and style:\n\ndef add(a, b):\n    return a + b\n\nStatic check output:\n{{prepare-1}}"}, "position": {"x": 360, "y": 0}},
         ],
         [{"id": "e1", "source": "prepare-1", "target": "review-1"}],
     ),
@@ -1544,8 +1544,8 @@ WORKFLOW_TEMPLATES: List[Dict[str, Any]] = [
         "Search results are fact-checked by a chat step, then screened by guardrails.",
         [
             {"id": "search-1", "type": "web-search", "data": {"query": "OtariOptm cost-aware model routing"}, "position": {"x": 0, "y": 0}},
-            {"id": "check-1", "type": "chat", "data": {"system": "You are a careful fact-checker.", "prompt": "Fact-check the claims in these search results and flag anything unverified:\n\n{{search-1}}"}, "position": {"x": 240, "y": 0}},
-            {"id": "guard-1", "type": "guardrails", "data": {"banned": [], "stop_on_block": False}, "position": {"x": 480, "y": 0}},
+            {"id": "check-1", "type": "chat", "data": {"system": "You are a careful fact-checker.", "prompt": "Fact-check the claims in these search results and flag anything unverified:\n\n{{search-1}}"}, "position": {"x": 360, "y": 0}},
+            {"id": "guard-1", "type": "guardrails", "data": {"banned": [], "stop_on_block": False}, "position": {"x": 720, "y": 0}},
         ],
         [{"id": "e1", "source": "search-1", "target": "check-1"}, {"id": "e2", "source": "check-1", "target": "guard-1"}],
     ),
