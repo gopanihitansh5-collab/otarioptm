@@ -10,6 +10,8 @@ types and fields survive validation, and cycles/unknown references are
 rejected.
 """
 
+import ast
+import builtins
 import json
 import re
 from typing import Any, Dict, List, Tuple
@@ -27,6 +29,8 @@ Node types (the ONLY types), with their fields:
 - {"id": "...", "type": "web-search", "query": "<real-time web search query>"}
 - {"id": "...", "type": "chat", "prompt": "<instruction>", "system": "<optional role>"}
 - {"id": "...", "type": "code-exec", "code": "<python program; print() the result>"}
+  Code rules: plain stdlib Python, define every variable before use and keep
+  names consistent - generated code is statically checked and run as-is.
 Edges: {"source": "<node id>", "target": "<node id>"} - source output feeds target.
 Inside any prompt/query/code, {{node-id}} inserts that node's output.
 
@@ -37,6 +41,9 @@ Rules:
   result into the final deliverable.
 - The final chat node's prompt must name the expected deliverable (report,
   comparison table, plan...) and reference its inputs with {{node-id}}.
+- NEVER use a chat node to restate, reformat, or extract task data - chat
+  models can invent values. Numbers and facts from the task go directly
+  into code-exec / downstream prompts via {{node-id}} only when computed.
 - Node ids: lowercase letters/digits/dashes, unique, meaningful.
 - No cycles. Every node except the final one feeds at least one other node.
 """
@@ -74,6 +81,42 @@ _ALLOWED_NODE_FIELDS = {
     "code-exec": {"id", "type", "code"},
     "guardrails": {"id", "type", "banned"},
 }
+
+
+def _code_warnings(node_id: str, code: str) -> List[str]:
+    """Static, inspectable checks on generated code. NEVER edits the code:
+    problems surface as plan warnings so a human can inspect and decide.
+
+    Catches the failure mode observed live: the model defined `requests`
+    then referenced `reqs`, and the node only failed at run time.
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError as exc:
+        return [f"node '{node_id}': code has a syntax error at line {exc.lineno} ({exc.msg}) - it will fail at run time"]
+    assigned = set(dir(builtins)) | {"__name__", "__file__"}
+    loaded: List[str] = []
+    for item in ast.walk(tree):
+        if isinstance(item, ast.Name):
+            if isinstance(item.ctx, ast.Load):
+                loaded.append(item.id)
+            else:
+                assigned.add(item.id)
+        elif isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            assigned.add(item.name)
+        elif isinstance(item, (ast.Import, ast.ImportFrom)):
+            for alias in item.names:
+                assigned.add((alias.asname or alias.name).split(".")[0])
+        elif isinstance(item, ast.arg):
+            assigned.add(item.arg)
+        elif isinstance(item, ast.ExceptHandler) and item.name:
+            assigned.add(item.name)
+        elif isinstance(item, (ast.Global, ast.Nonlocal)):
+            assigned.update(item.names)
+    undefined = sorted({n for n in loaded if n not in assigned})
+    if undefined:
+        return [f"node '{node_id}': code may use undefined name(s) {', '.join(undefined[:5])} - inspect before running (static check, code unchanged)"]
+    return []
 
 
 def validate_plan(obj: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[str]]:
@@ -120,6 +163,7 @@ def validate_plan(obj: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[Dict[
             data = {"query": _require_str(raw, "query", node_id)}
         elif ntype == "code-exec":
             data = {"code": _require_str(raw, "code", node_id)}
+            warnings.extend(_code_warnings(node_id, data["code"]))
         else:  # guardrails
             data = {}
             banned = raw.get("banned")

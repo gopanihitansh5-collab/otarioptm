@@ -33,6 +33,7 @@ export type GuardViolation = { rule: string; sample: string };
 export type StepResult = {
   status?: string;
   provider?: string;
+  consistency?: { status: string; missing?: string[]; note?: string };
   nodeId: string;
   type?: NodeType;
   output?: string;

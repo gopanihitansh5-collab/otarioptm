@@ -30,6 +30,7 @@ function reportMarkdown(run: RunDeliverable): string {
   if (run.stages) sections.push(`## Planning stages\n\n${JSON.stringify(run.stages, null, 2)}`);
   for (const s of run.steps) {
     sections.push(`## ${s.nodeId} (${s.type ?? "step"})`, `Provider/model: ${s.model ?? s.provider ?? "not reported"}\n\nRoute: ${s.chain?.join(" -> ") || "not reported"}\n\nRecorded cost: ${costLabel(s)}\n\nTokens: ${s.tokens ?? "not reported"} | Latency: ${s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}`);
+    if (s.consistency) sections.push(`Numeric citation check: ${s.consistency.status}. ${s.consistency.note || ""} This is not a factual correctness guarantee.`);
     if (s.demo) sections.push("DEMO OUTPUT - not live model inference.");
     if (s.error) sections.push(`Error: ${s.error}`);
     if (s.status === "failed" || s.status === "skipped") sections.push(`Step status: ${s.status}`);
@@ -71,6 +72,7 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
           {terminals.length === 0 && <p className="text-sm text-silver">No terminal-node output was returned. Inspect the trace below.</p>}
           {terminals.map(s => <section key={s.nodeId} className="rounded-xl border border-steel bg-elevated p-5">
             <div className="mb-3 flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-ice">{s.nodeId}</h3><span className="font-mono text-[10px] text-silver">{s.model || s.provider || s.type || "terminal output"}</span>{s.demo && <span className="text-xs text-amber">DEMO</span>}{stepFailed(s) && <span className="text-xs text-fail">{s.status === "skipped" ? "SKIPPED" : "FAILED / BLOCKED"}</span>}</div>
+            {s.consistency && <p className="mb-3 rounded-lg border border-amber/40 p-3 text-xs leading-6 text-amber">{s.consistency.status === "mismatch" ? "UNVERIFIED: this output does not match all computed inputs. Do not treat it as a trusted report." : "Numeric citation check only. Numbers cited does not verify the facts, sources, assumptions or recommendation."} {s.consistency.note}</p>}
             <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-ice">{s.output || s.error || "No output returned."}</pre>
           </section>)}
         </div>
@@ -78,6 +80,7 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
         <div className="space-y-2">{run.steps.map(s => <details key={s.nodeId} className="rounded-xl border border-steel-dim bg-obsidian p-3">
           <summary className="cursor-pointer text-xs text-ice"><span className="font-medium">{s.nodeId}</span> · {s.chain?.join(" → ") || s.model || s.type || "step"} · {stepFailed(s) ? "failed / blocked" : s.demo ? "demo" : "response received"}</summary>
           <p className="mt-3 font-mono text-[10px] leading-5 text-silver">Model: {s.model || s.provider || "not reported"} · Cost: {costLabel(s)} · Tokens: {s.tokens ?? "not reported"} · Latency: {s.latencyMs === undefined ? "not reported" : `${s.latencyMs} ms`}</p>
+          {s.consistency && <p className="mt-2 text-xs text-amber">Numeric check: {s.consistency.status}. {s.consistency.note} Not a factual correctness guarantee.</p>}
           {s.note && <p className="mt-2 text-xs text-amber">{s.note}</p>}{s.error && <p className="mt-2 text-xs text-fail">{s.error}</p>}
           <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-silver">{s.output || "No output returned."}</pre>
         </details>)}</div>

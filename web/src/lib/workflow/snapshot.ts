@@ -88,6 +88,7 @@ function sanitizeStep(raw: unknown): StepResult | null {
   const step: StepResult = {
     nodeId: typeof raw.nodeId === "string" ? raw.nodeId : "",
   };
+  if (isRecord(raw.consistency) && typeof raw.consistency.status === "string") step.consistency = { status: raw.consistency.status, note: typeof raw.consistency.note === "string" ? raw.consistency.note : undefined };
   if (typeof raw.status === "string") step.status = raw.status;
   if (typeof raw.provider === "string") step.provider = raw.provider;
   if (typeof raw.output === "string") step.output = raw.output;

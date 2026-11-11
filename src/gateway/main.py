@@ -759,6 +759,48 @@ def _substitute(text: str, outputs: Dict[str, Dict[str, Any]]) -> str:
     return _TEMPLATE_RE.sub(repl, text)
 
 
+_NUMBER_RE = re.compile(r"-?\d+(?:,\d{3})*(?:\.\d+)?")
+
+
+def _numbers_in(text: str) -> List[float]:
+    out: List[float] = []
+    for m in _NUMBER_RE.finditer(text):
+        try:
+            out.append(float(m.group(0).replace(",", "")))
+        except ValueError:
+            continue
+    return out
+
+
+def _consistency_check(output_text: str, parents: List[str], outputs: Dict[str, Dict[str, Any]], failed: set) -> Optional[Dict[str, Any]]:
+    """Label a chat answer that does not cite its computed inputs.
+
+    Deterministic, no provider call: numbers from successful upstream
+    code-exec parents must appear in the chat output. A missing citation
+    means the synthesis invented or dropped data (observed live: a
+    recommendation cited hallucinated prices instead of the computed ones).
+    Label only - the output is never edited or hidden.
+    """
+    expected: List[float] = []
+    for pid in parents:
+        if pid in failed:
+            continue
+        pout = str(outputs.get(pid, {}).get("output", ""))
+        if pout:
+            expected.extend(_numbers_in(pout))
+    # Only meaningful when upstream actually computed numbers.
+    expected = [e for e in expected if e != 0]
+    if not expected:
+        return None
+    cited = _numbers_in(output_text)
+    missing = [e for e in expected if not any(abs(e - c) < 1e-6 for c in cited)]
+    if not missing:
+        return {"status": "cited", "checked": len(expected)}
+    return {"status": "mismatch", "checked": len(expected),
+            "missing": missing[:10],
+            "note": "answer does not cite these upstream-computed numbers; treat content as unverified"}
+
+
 def _topo_order(nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Order nodes parents-first, rejecting malformed or cyclic graphs.
 
@@ -1392,7 +1434,11 @@ async def _execute_graph(
                 prompt_text = _substitute(prompt_text, outputs)
                 if not prompt_text.strip():
                     prompt_text = upstream
-                messages = [{"role": "system", "content": str(node_data.get("system", ""))}] if node_data.get("system") else []
+                # Substitute the system message too: enhanced prompts reference
+                # upstream {{node-id}} outputs there as well, and leaving them
+                # literal made the model echo placeholders.
+                system_text = _substitute(str(node_data.get("system", "")), outputs)
+                messages = [{"role": "system", "content": system_text}] if system_text else []
                 messages.append({"role": "user", "content": prompt_text or "Hello"})
                 # Per-node model assignment from the planning stage: narrow
                 # routing to the assigned catalog model when present.
@@ -1406,6 +1452,11 @@ async def _execute_graph(
                         step_models = [chosen_model]
                 res = await execute_chat_step(node, messages, step_models, max_tokens)
                 res["type"] = ntype
+                if not res.get("error"):
+                    consistency = _consistency_check(
+                        str(res.get("output", "")), sorted(parents.get(nid, ())), outputs, failed)
+                    if consistency is not None:
+                        res["consistency"] = consistency
                 results.append(res)
                 outputs[nid] = res
                 if res.get("error"):
