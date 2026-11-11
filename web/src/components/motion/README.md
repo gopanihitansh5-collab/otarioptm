@@ -13,9 +13,10 @@ wires the insertion points below.
 | `Reveal.tsx` | One-shot IntersectionObserver reveals: `fade-up`, `mask`, or `word` (word-by-word; children must be a plain string). |
 | `WordmarkSignature.tsx` | OTARIOPTM wordmark: letters blur-to-focus in sequence, then a champagne underline draws. |
 | `motion.module.css` | Scoped styles incl. `gradientText` (champagne material gradient phrase). |
+| `RoutingVisualizer.tsx` | Sculptural champagne-titanium routing engine (R3F): metallic core, provider nodes assembling into orbit, route pulse. Static SVG fallback for reduced-motion/no-WebGL/small screens; render loop pauses offscreen; self-rendered "Illustrative" caption. Use via `next/dynamic` with `ssr: false`. |
 | `../hooks/usePrefersReducedMotion.ts` | Shared reactive reduced-motion hook. |
 
-`RoutingVisualizer.tsx` was optional and is not included in this pass.
+`RoutingVisualizer.tsx` verified by pixel screenshots in both modes.
 
 ## Guarantees
 
@@ -69,3 +70,6 @@ as live product initialization.
 - `npx tsc --noEmit` clean.
 - `npm run lint` clean.
 - `npm run build` clean.
+- RoutingVisualizer pixel-verified in headless Chrome (SwiftShader WebGL):
+  3D mode shows the assembled metallic scene with no console errors;
+  forced reduced-motion shows the labelled static SVG diagram.
