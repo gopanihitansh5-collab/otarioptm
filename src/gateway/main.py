@@ -1519,7 +1519,11 @@ async def _execute_graph(
         "partial": bool(failed),
         "failedNodes": sorted(failed),
         "unverifiedNodes": unverified_nodes,
-        "reportStatus": "incomplete" if incomplete else "complete",
+        # "mechanically-complete" = every node ran; it says NOTHING about
+        # whether the analysis is correct. Any LLM prose in the report is
+        # unverified commentary unless a human checks it against
+        # computedData/sources. Never render this as "verified".
+        "reportStatus": "incomplete" if incomplete else "mechanically-complete",
         "computedData": computed_data,
         "sources": sorted(set(source_urls))[:20],
         "overBudget": any(bool(r.get("overBudget")) for r in results),

@@ -215,5 +215,5 @@ def test_report_complete_when_all_cited():
          mock.patch.object(gw, "execute_chat_step", fake_chat), \
          mock.patch.object(gw, "_log_activity", fake_log):
         payload = _run(nodes, [{"source": "calc", "target": "rec"}])
-    assert payload["reportStatus"] == "complete"
+    assert payload["reportStatus"] == "mechanically-complete"
     assert payload["unverifiedNodes"] == []
