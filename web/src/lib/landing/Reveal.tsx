@@ -114,10 +114,13 @@ export function CountUp({
 
     // If the observer never fires (headless reader, print view, odd
     // viewport), still land on the real value instead of a stale zero.
+    // Snap directly - never depend on rAF for the final displayed value.
     const fallback = window.setTimeout(() => {
       if (!visible.current) {
         visible.current = true;
-        render(value);
+        if (frame.current !== null) cancelAnimationFrame(frame.current);
+        shown.current = value;
+        setDisplay(value);
       }
     }, 1500);
 
