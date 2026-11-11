@@ -113,7 +113,7 @@ export default function Observability() {
             </p>
             <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-[var(--color-silver)]">
               {[
-                "WebSocket activity feed as executions happen.",
+                "Live activity snapshots as executions happen.",
                 "Chain, model, tokens and cost per completed node.",
                 "CSV export with totals for finance review.",
               ].map((t) => (

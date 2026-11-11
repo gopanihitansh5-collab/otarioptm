@@ -15,12 +15,12 @@ const Items = [
   },
   {
     title: "Failure handling",
-    body: "Every chat call falls through Otari to Groq to the local demo tier, and the activity feed carries a diagnostic note with each provider's raw failure reason.",
+    body: "Chat requests try Otari first, then Groq. If no live provider answers, any deterministic demo response is labeled as demo. The activity feed records the fallback path and a diagnostic note.",
     status: "IMPLEMENTED",
   },
   {
     title: "Budget as rate control",
-    body: "The project cap refuses an over-budget run with HTTP 402 before a token leaves. It is tracked in memory per server instance, so it is not a durable cross-instance guarantee on serverless deploys; a call that fails after dispatch can still be billed by the provider. Per-run spend is labeled by source: provider-reported or estimate.",
+    body: "The app run budget uses a shared Redis ledger to reserve funds before dispatch and settle recorded spend across instances. Reservations depend on configured prices and token allowances, so they are not a guarantee of the provider charge. A dispatched call may still be billed if its response is lost. The app budget is separate from the Otari wallet.",
     status: "IMPLEMENTED",
   },
   {

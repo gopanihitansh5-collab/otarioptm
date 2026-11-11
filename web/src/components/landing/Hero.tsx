@@ -15,34 +15,6 @@ const NODES = [
 
 const CANDIDATES = ["qwen-3.5-35b", "gpt-4o-mini", "claude-sonnet-4-6"];
 
-const CSS = `
-@keyframes oo-in { 0%,4% { opacity:0; transform:translateX(0); } 6% { opacity:1; } 21% { opacity:1; transform:translateX(150px); } 23%,100% { opacity:0; transform:translateX(150px); } }
-@keyframes oo-scan { 0%,21% { opacity:0; transform:scale(0.4); } 24% { opacity:0.9; } 38% { opacity:0; transform:scale(1.9); } 100% { opacity:0; transform:scale(1.9); } }
-@keyframes oo-fillh { 0%,21% { opacity:0.12; } 24% { opacity:0.55; } 40% { opacity:0.12; } 100% { opacity:0.12; } }
-@keyframes oo-out { 0%,9% { opacity:0; transform:translate(0,0); } 9.5% { opacity:1; } 16% { opacity:1; transform:translate(var(--dx),var(--dy)); } 30%,100% { opacity:0; transform:translate(var(--dx),var(--dy)); } }
-@keyframes oo-line { 0%,9.5% { opacity:0; } 13% { opacity:1; } 16% { opacity:0.5; } 30%,100% { opacity:0; } }
-@keyframes oo-chip { 0%,15.9% { opacity:0; } 16% { opacity:1; } 30%,100% { opacity:0; } }
-@keyframes oo-read { 0%,17% { opacity:0.35; } 18.5% { opacity:1; } 30%,100% { opacity:0.35; } }
-.oo-in { animation: oo-in 4.2s linear infinite; }
-.oo-scan { animation: oo-scan 4.2s linear infinite; }
-.oo-fillh { animation: oo-fillh 4.2s linear infinite; }
-.oo-out { animation: oo-out 12.6s linear infinite; }
-.oo-line { animation: oo-line 12.6s linear infinite; }
-.oo-chip { animation: oo-chip 12.6s linear infinite; }
-.oo-read { animation: oo-read 12.6s linear infinite; }
-.oo-p1 { animation-delay: 4.2s; }
-.oo-p2 { animation-delay: 8.4s; }
-@media (prefers-reduced-motion: reduce) { .oo-anim, .oo-anim * { animation: none !important; } }
-@keyframes oo-stage { 0%,100% { opacity: 0.35; } }
-.oo-stage { animation: oo-stage 6s linear infinite; }
-.oo-st0 { animation-name: oo-st0; } @keyframes oo-st0 { 0%,23% { opacity: 1; color: #B8A98F; } 23.1%,100% { opacity: 0.35; } }
-.oo-st1 { animation-name: oo-st1; } @keyframes oo-st1 { 0%,23% { opacity: 0.35; } 23%,40% { opacity: 1; color: #B8A98F; } 40.1%,100% { opacity: 0.35; } }
-.oo-st2 { animation-name: oo-st2; } @keyframes oo-st2 { 0%,40% { opacity: 0.35; } 40%,67% { opacity: 1; color: #B8A98F; } 67.1%,100% { opacity: 0.35; } }
-.oo-st3 { animation-name: oo-st3; } @keyframes oo-st3 { 0%,67% { opacity: 0.35; } 67%,93% { opacity: 1; color: #B8A98F; } 93.1%,100% { opacity: 0.35; } }
-`;
-
-type DotStyle = React.CSSProperties & Record<"--dx" | "--dy", string>;
-
 const PATHS = [70, 150, 230];
 
 export default function Hero() {
@@ -59,7 +31,6 @@ export default function Hero() {
 
   return (
     <section id="top" className="relative overflow-hidden pt-6">
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div
         aria-hidden
         className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[720px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(184,169,143,0.07),transparent)]"
@@ -113,7 +84,7 @@ export default function Hero() {
               </span>
               {live.budget && (
                 <span>
-                  RUN BUDGET ${" "}
+                  APP RUN BUDGET ${" "}
                   <CountUp value={live.budget.cap} className="text-[var(--color-ice)]" />
                 </span>
               )}
@@ -148,30 +119,18 @@ export default function Hero() {
               <text x="43" y="153.5" textAnchor="middle" fill="var(--color-silver)" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="1.5">REQUEST</text>
 
               <path d="M76,150 C110,150 130,150 172,150" fill="none" stroke="var(--color-steel)" strokeWidth="1.5" strokeLinecap="round" />
-              <circle cx="80" cy="150" r="3.5" fill="var(--color-lime)" className="oo-in" opacity={0} />
 
               <rect x="172" y="122" width="56" height="56" rx="16" fill="var(--color-elevated)" stroke="var(--color-steel)" strokeWidth="1.5" />
               <rect x="172" y="122" width="56" height="56" rx="16" fill="var(--color-lime)" className="oo-fillh" opacity={0.1} />
-              <circle cx="200" cy="150" r="44" fill="none" stroke="var(--color-lime)" strokeWidth="1" className="oo-scan" opacity={0} />
               <text x="200" y="154" textAnchor="middle" fill="var(--color-lime)" fontSize="10" fontFamily="ui-monospace, monospace" letterSpacing="2">OPTM</text>
 
               {NODES.map((n, i) => {
                 const cy = PATHS[i];
-                const cls = i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : "";
                 const d = `M228,150 C262,150 268,${cy} 300,${cy}`;
                 return (
                   <g key={n.name}>
                     <path d={d} fill="none" stroke="var(--color-steel)" strokeWidth="1.5" strokeLinecap="round" />
-                    <path d={d} fill="none" stroke="url(#ht-hot)" strokeWidth="2" strokeLinecap="round" className={`oo-line${cls}`} opacity={0} />
-                    <circle
-                      cx="228"
-                      cy="150"
-                      r="3.5"
-                      fill="var(--color-lime)"
-                      className={`oo-out${cls}`}
-                      style={{ "--dx": n.dx, "--dy": n.dy, opacity: 0 } as DotStyle}
-                    />
-                    <circle cx="300" cy={cy} r="6" fill="none" stroke="var(--color-lime)" className={`oo-chip${cls}`} opacity={0} />
+                    <path d={d} fill="none" stroke="url(#ht-hot)" strokeWidth="2" strokeLinecap="round" opacity={0.45} />
                     <rect x="300" y={cy - 13} width="92" height="26" rx="13" fill="var(--color-elevated)" stroke="var(--color-steel)" />
                     <circle cx="313" cy={cy} r="3" fill="var(--color-lime)" opacity={0.85} />
                     <text x="323" y={cy + 3.5} fill="var(--color-ice)" fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="0.5">
