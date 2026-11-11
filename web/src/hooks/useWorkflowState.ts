@@ -48,6 +48,10 @@ export function useWorkflowState(options?: { persist?: boolean }): {
   saveStatus: AutosaveStatus;
   saveNow: () => void;
   loadNotice: string | null;
+  /** True once the localStorage snapshot check has completed. */
+  hydrated: boolean;
+  /** True when a non-empty saved draft was restored (skip demo autoload). */
+  draftRestored: boolean;
 } {
   const persist = options?.persist !== false;
   // Start empty so SSR and first client render match; hydrate from
@@ -56,6 +60,7 @@ export function useWorkflowState(options?: { persist?: boolean }): {
   const [nodes, setNodes] = useState<WorkflowNode[]>([]);
   const [edges, setEdges] = useState<WorkflowEdge[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
   const [loadNotice, setLoadNotice] = useState<string | null>(null);
   const counterRef = useRef(0);
 
@@ -70,6 +75,7 @@ export function useWorkflowState(options?: { persist?: boolean }): {
         if (result.nodes.length > 0 || result.edges.length > 0) {
           setNodes(result.nodes);
           setEdges(result.edges);
+          setDraftRestored(true);
         }
         if (result.migrated) {
           setLoadNotice(
@@ -212,5 +218,7 @@ export function useWorkflowState(options?: { persist?: boolean }): {
     saveStatus,
     saveNow,
     loadNotice,
+    hydrated,
+    draftRestored,
   };
 }

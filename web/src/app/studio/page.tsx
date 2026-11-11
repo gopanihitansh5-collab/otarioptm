@@ -53,6 +53,13 @@ function isNarrowViewport(): boolean {
   return window.matchMedia("(max-width: 767px)").matches;
 }
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 function StudioInner() {
   const state = useWorkflowState();
   const {
@@ -69,6 +76,8 @@ function StudioInner() {
     saveNow,
     saveStatus,
     loadNotice,
+    hydrated,
+    draftRestored,
   } = state;
 
   const restoreGraph = useCallback(
@@ -116,6 +125,28 @@ function StudioInner() {
       mounted = false;
     };
   }, []);
+
+  // First-visit demo: an empty canvas shows nothing, so load the first
+  // starter template once the draft check has run and none was restored.
+  // One-shot per session; a user who clears the canvas keeps it cleared.
+  const autoLoadedRef = useRef(false);
+  useEffect(() => {
+    if (autoLoadedRef.current) return;
+    if (!hydrated || draftRestored) return;
+    if (!templates || templates.length === 0) return;
+    if (nodes.length > 0 || edges.length > 0) return;
+    autoLoadedRef.current = true;
+    // Deferred out of the effect body: setState synchronously inside an
+    // effect triggers cascading-render lint and a double paint.
+    const t = window.setTimeout(() => {
+      const result = validateWorkflowInput(templates[0].graph);
+      if (!result.ok) return;
+      setGraph(result.graph.nodes, result.graph.edges);
+      setFitKey((k) => k + 1);
+    }, 0);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, draftRestored, templates, nodes.length, edges.length]);
 
   useEffect(
     () => () => {
@@ -243,16 +274,30 @@ function StudioInner() {
       try {
         const response = await runWorkflow(runNodes, runEdges);
         const byId = new Map(response.steps.map((s) => [s.nodeId, s]));
+        // Reveal the real gateway step results in execution order with a
+        // short stagger so each node is seen finishing; data and order are
+        // the gateway's, only the pacing is presentational. Reduced-motion
+        // users get the same results with no stagger.
+        const stagger = prefersReducedMotion() ? 0 : 550;
+        for (const step of response.steps) {
+          if (stagger > 0) await sleep(stagger);
+          updateNodeData(step.nodeId, {
+            status: step.error || step.blocked ? "error" : "done",
+            statusInfo: step,
+          });
+        }
         for (const node of runNodes as WorkflowNode[]) {
-          const step = byId.get(node.id);
-          if (step) {
-            updateNodeData(node.id, {
-              status: step.error || step.blocked ? "error" : "done",
-              statusInfo: step,
-            });
-          } else {
+          if (!byId.has(node.id)) {
             updateNodeData(node.id, { status: "skipped", statusInfo: null });
           }
+        }
+        // Bring the final step's output into view: select it (and open the
+        // inspector drawer on small screens) so the answer is on screen
+        // without hunting for it.
+        const finalStep = response.steps[response.steps.length - 1];
+        if (finalStep) {
+          setSelectedId(finalStep.nodeId);
+          if (isNarrowViewport()) setInspectorOpen(true);
         }
         recordRun(
           buildRunRecord({
