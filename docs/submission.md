@@ -1,7 +1,10 @@
 # OtariOptm Submission Checklist
 
 Hackathon: DoraHacks "Devs Wilding Online!" (Mozilla Otari). Deadline:
-**Nov 11, 2026, 22:29 IST**. Submit well before the cutoff.
+**Conservative cutoff: Nov 11, 2026, 22:29 IST.** The official page also
+shows an extended time, Nov 12 at 10:29 IST; do not rely on that buffer.
+[Official event](https://dorahacks.io/hackathon/mozilla-devs-wilding/detail).
+This is a preparation draft, not a submitted entry.
 
 ## Required Items (Hackathon Rules)
 
@@ -9,41 +12,79 @@ Hackathon: DoraHacks "Devs Wilding Online!" (Mozilla Otari). Deadline:
 |---|---|---|
 | **Project name** | ✅ | `OtariOptm: AI workflow builder with auto-cost optimization` |
 | **Email address** | ✅ | `gopanihitansh5@gmail.com` |
-| **One-line description** | ✅ | `OtariOptm: Visual workflow engine with auto-model routing, budget enforcement, and activity analytics` |
+| **One-line description** | ✅ | `Visual AI workflows with Otari-first chat, explicit fallback traces, and inspectable cost-only results` |
 | **Public GitHub repo** | ✅ | https://github.com/gopanihitansh5-collab/otarioptm (branch: `main`) |
 | **First commit using Otari** | ✅ | [`745cc90`](https://github.com/gopanihitansh5-collab/otarioptm/commit/745cc90cacd7b466d236aae27e8d43edd5ec2124) - OTARI client, budget service, router, FastAPI gateway |
-| **Otari features used (7+)** | ✅ | see checklist below |
-| **Demo video (3-5 min)** | ☐ | record with the script below (target 4:00), host on YouTube/Loom |
-| **Feedback recording** | ☐ | talking-head or narrated screen recording |
-| **PRs/issues on mozilla-ai/otari** | ☐ | 1-2 bug reports or feature requests |
+| **Otari features used** | ✅ | see the honest map below (Otari-native vs app-side) |
+| **Demo video (3-5 min)** | ☐ | participant-voice recording in progress; final link pending |
+| **Feedback (written or screen recording)** | ☐ | written draft prepared for review; official page allows written, recording, or both |
+| **PRs/issues on mozilla-ai/otari** | ☐ | none recorded in this draft; verify before submission |
 | **DoraHacks form submitted** | ☐ | paste from the template below |
 
-## Otari Features Checklist for Submission
+## Otari-Native vs App-Side: an honest map
 
-- [x] **Model routing** - auto-selection per step from the catalogue served
-      by `/api/v1/models`, scored
-      `cost_w * cost_norm + lat_w * latency_norm + health_w * (health - 0.5)`
-      with per-step weights (chat 0.45 cost / 0.35 latency / 0.20 health,
-      code 0.30 / 0.25 / 0.45, search 0.40 / 0.45 / 0.15)
-      (`src/services/router.py`)
-- [x] **Budget enforcement** - atomic reserve/record, HTTP 402 pre-spend
-      block at the project cap (`src/services/budget.py`)
-- [x] **Code execution** - sandboxed Python node, imports blocked,
-      5s timeout, labeled MVP-grade
-- [x] **Web search** - Exa `/search` with objective + highlights,
-      DuckDuckGo fallback, real cost recorded to budget
-- [x] **Guardrails** - banned-term node that can abort a run
-- [x] **Activity tracking** - WebSocket `/api/v1/activity` live feed +
-      CSV export with totals row
-- [x] **Fallback/reselection** - Otari -> Groq -> local demo chain with
-      per-provider diagnostic notes
+The rubric scores Otari features "actually used in the application, not simply
+enabled in the dashboard". This section separates what the hosted Otari
+gateway itself does in this project from what the app implements on its own,
+so no app-side feature is presented as an Otari capability.
 
-Landing with the final build (all documented in `docs/api.md`): SSE streaming
-(`POST /api/v1/chat/completions/stream`), templates gallery
-(`GET /api/v1/templates` + `/{id}`), per-IP rate limiting (HTTP 429),
-background model-health probes, plus the studio's templates gallery, run
-history, workflow JSON export/import and a clearly labeled local overspend
-demo.
+**Hosted Otari use:**
+
+- Chat execution attempts the hosted gateway first through
+  `src/services/otari_client.py`. A separate saved proof shows
+  `alibaba/qwen3.8-flash` completing through Otari alone (108 tokens, 3018 ms);
+  see [the README proof](../README.md#-verified-live-otari-execution) and the saved Otari
+  activity images under `docs/evidence/`.
+- Run5 is not proof of an Otari-served completion: its Otari attempt timed
+  out and `openai/gpt-oss-20b` completed through Groq fallback. The exact chain
+  and timeout are preserved in the [execution evidence](evidence/run5-execution-stream.txt).
+- We do not claim Otari-native routing policies, budgets, guardrails,
+  web-search tools, or code-execution tools from this app-side workflow.
+
+**Implemented app-side (ours, not Otari):**
+
+- Visual studio, workflow engine (topological execution, template refs)
+- Routing scorer (`cost/latency/health` fitness per step type,
+  `src/services/router.py`) and the Otari -> Groq -> demo fallback chain logic
+- Budget manager: atomic reserve/record, HTTP 402 pre-spend block at the
+  project accounting cap (`src/services/budget.py`); reservations are
+  conditional on the catalog bound. Missing or zero catalog prices and timeout
+  charges mean this is not a verified cap on actual provider charges. The
+  provider wallet remains the billing source of truth
+- Web search node (Exa + DuckDuckGo fallback) and code-exec node
+  (Vercel Sandbox microVM; formerly in-process, AST-checked)
+- Guardrails node (banned-term abort), activity feed + CSV export,
+  deterministic cost analysis (`computedJson` / `costAnalysis`) with
+  "mechanically-complete" status labeling and NOT-ENDORSED commentary handling
+
+**Open-weight models:** the separate Otari-only proof completed with Qwen.
+Run5 completed one model step with `openai/gpt-oss-20b` via Groq fallback.
+`openai/gpt-oss-120b` and `qwen/qwen3.8-27b` are comparison inputs, not
+executed model roles. This evidence does not establish multiple models in
+distinct roles served through Otari.
+
+## DoraHacks BUIDL Draft (numbered, mirrors the official fields)
+
+1. **Project name, email, one-liner** - OtariOptm;
+   gopanihitansh5@gmail.com; "Visual AI workflows with Otari-first chat, explicit fallback traces,
+   sandboxed computation, and inspectable cost-only results."
+2. **Public repo + branch** -
+   https://github.com/gopanihitansh5-collab/otarioptm (public, branch `main`)
+3. **First commit using Otari** -
+   https://github.com/gopanihitansh5-collab/otarioptm/commit/745cc90cacd7b466d236aae27e8d43edd5ec2124
+   ("feat: add OTARI client, budget service, router algorithm, and FastAPI
+   gateway", 2026-11-09 - verified via the GitHub API on 2026-11-11)
+4. **Otari features used** - hosted-gateway chat completions and open-weight
+   model access, with the evidence limits above. Fallback disclosure and
+   catalog-based accounting are app-side, not claimed as hosted Otari features.
+5. **PRs/issues on mozilla-ai/otari** - none recorded in this draft; verify before submission.
+6. **Demo video (3-5 min, real voice, screen recording)** - link TBD.
+7. **Feedback** - written draft prepared for the owner's review; submission
+   is his call. (Official page: written, screen recording, or both; video
+   feedback must be the participant's own voice, no AI.)
+
+Raw run evidence for judges: `docs/evidence/` (real run, inspectable offline,
+no keys or spend needed).
 
 ## Submission Template
 
@@ -52,7 +93,7 @@ demo.
 OtariOptm: AI workflow builder with auto-cost optimization
 
 # One-line Description
-OtariOptm: Visual workflow engine with auto-model routing, budget enforcement, and activity analytics
+Visual AI workflows with Otari-first chat, explicit fallback traces, and inspectable cost-only results
 
 # GitHub Link
 https://github.com/gopanihitansh5-collab/otarioptm (branch: main)
@@ -60,12 +101,14 @@ https://github.com/gopanihitansh5-collab/otarioptm (branch: main)
 # Demo Video
 [YouTube/Loom link, 3-5 min]
 
-# Feedback Recording
-[link]
+# Feedback (written or screen recording)
+[owner-reviewed text or link]
 
 # Otari Features Used
-Model routing, budget enforcement, code execution, web search, guardrails,
-activity tracking, fallback/reselection
+Hosted-gateway chat completions and open-weight model access, supported by
+the separate Otari-only proof. Run5 completed via Groq fallback. App-side
+features (fallback tracing, routing scorer, budget manager, Exa search,
+sandbox code exec, guardrails, activity) are not claimed as hosted Otari capabilities.
 
 # How to Run
 1. git clone https://github.com/gopanihitansh5-collab/otarioptm.git
@@ -78,11 +121,13 @@ activity tracking, fallback/reselection
    tier (responses labeled demo).
 ```
 
-## Judge Kit (30 seconds, 4 copy-paste commands)
+## Optional local API smoke check (not the full live workflow)
 
 Start the gateway (`python run_server.py`, port 8000). No API key is needed:
 with none set the gateway answers from the zero-cost demo tier and labels the
-output `demo`. These four commands exercise the whole product.
+output `demo`. These commands exercise a small local API path, not live planning, search,
+sandbox execution, or verified provider billing. Inspect the saved run evidence
+without making any new API calls.
 
 ```bash
 # 1. Health: gateway up, budget snapshot, provider tiers configured
@@ -100,59 +145,39 @@ curl -s -X POST http://localhost:8000/api/v1/workflow/run \
   -d '{"nodes":[{"id":"n1","type":"chat","data":{"prompt":"Say hello in one word."}},{"id":"n2","type":"chat","data":{"prompt":"Repeat this back: {{n1}}"}}],"edges":[{"source":"n1","target":"n2"}]}'
 ```
 
-Command 4 answers with the per-step results (model chosen, routing reason,
-tokens, cost, latency), the budget snapshot, and `aborted: null`. To see the
-HTTP 402 pre-spend block: set `budget.project_cap: 0.005` in
-`config/config.yml`, restart the gateway (the file is read at startup) and
-run command 4 again. Every chat step reserves a $0.01 floor before the
-provider is called, so the run is refused up front.
+Command 4 returns per-step results and the budget snapshot. No-key results
+are labeled demo and do not establish hosted inference.
+
+The app-side budget manager can refuse calls when a reservation exceeds its
+accounting cap. This is conditional on the configured bound, not proof that
+all actual provider charges are tracked or capped.
 
 The API reference for every field, status code and error is `docs/api.md`.
 
-## Demo Video Script (target 4:00, rubric window 3-5 min)
+## Demo recording scope (participant voice, 3-5 minutes)
 
-1. **0:00-0:30 - Problem.** "AI workloads leak money: every request someone
-   guesses a model, and nothing stops spend before the invoice." Show the
-   landing page hero and the problem section.
-2. **0:30-1:05 - Templates gallery.** Open `/studio` and open the **Templates**
-   panel. Four starters are listed; pick "Research then summarize" and hit
-   **Load and run**. Say: "these are not screenshots, each one is a runnable
-   graph served by the gateway."
-3. **1:05-2:00 - Build.** In the studio, adapt the loaded graph live: add a
-   Guardrails node, wire it, and show `{{nodeId}}` pulling the search result
-   into the chat prompt.
-4. **2:00-2:45 - Run + routing.** Press Run Workflow. Point at the activity
-   feed: model chosen per step, the routing score line, and the fallback
-   note when a provider is down.
-5. **2:45-3:25 - Budget, including the 402 block.** Show the budget meter
-   before/after the run, then `GET /api/v1/budget`. Explain the atomic
-   reserve -> record flow, then trigger the **Try overspend demo** control in
-   the studio: it applies a local, labeled DEMO CAP and the next run is
-   refused before the provider is called (HTTP 402 pre-spend block).
-6. **3:25-4:00 - Export + close.** Click Export CSV, show the totals row.
-   Close on the landing observability section reading the same live
-   gateway. "Every token accounted for, before it is spent."
+The current recording shows the task, generated graph inspection, approval,
+real execution events, computed results, source links, and report download.
+A separate Otari-only proof is labeled separately from the workflow fallback.
+Show app-side budget accounting as incomplete billing evidence, not a provider
+spend guarantee. Model commentary may contradict computed numbers and remains
+NOT ENDORSED. Do not treat a demo-tier or saved replay as fresh inference.
 
 ## Remaining Human Actions
 
-- [ ] Record demo video per script above, upload, paste link into the form
-- [ ] Record feedback recording
-- [ ] Open 1-2 issues/PRs on https://github.com/mozilla-ai/otari (drafts below)
+- [ ] Finish and approve the participant-voice demo, upload, paste link into the form
+- [ ] Finalize feedback (written draft prepared for review, or record a screen recording - both allowed)
+- [ ] Report any existing Otari PRs/issues, or state none. New posts are optional and require approval.
 - [ ] Submit the DoraHacks form before Nov 11, 22:29 IST
 
-## Draft Issues for mozilla-ai/otari (review, then post yourself)
+## Unsubmitted feedback ideas (verify before proposing a public issue)
 
-**Draft 1 - feature request: normalized per-request cost in responses**
-> A normalized `usage.cost_usd` field (even estimated from catalogue
-> prices) on every completion response would let downstream tools enforce
-> budgets without maintaining their own price tables. Context: we built a
-> budget-enforcing workflow gateway on Otari and currently estimate cost
-> from catalogue pricing fields, which vary in shape between models.
+Our integration did not consistently settle actual chat cost from the responses
+it used. Check the existing Otari response fields and our parser before
+attributing this to a missing product feature: `usage.cost_usd` is documented
+in other public integrations. Catalog zero is not proof of no wallet charge.
 
-**Draft 2 - feature request: latency + health signals in the model catalogue**
-> Client-side routers need recency signals beyond ids and prices: measured
-> latency percentiles and a health indicator per model. Even a coarse
-> `status: ok|degraded|down` plus rolling p50 latency would make routing
-> far more accurate than static tables; today clients must fall back to
-> defaults when these fields are absent. Happy to share the scoring
-> weights we use (0.45 cost, 0.35 latency, 0.20 health) as a reference.
+Our app uses its own latency/health defaults for routing. Check the current
+Otari catalog and routing-policy API before proposing new fields. These notes
+are technical review material, not the participant's personal opinion and not
+an instruction or approval to publish an issue.

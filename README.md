@@ -378,7 +378,7 @@ The repository ships its own operating kit under `.opencode/`: eight specialist 
 
 ## 📚 Documentation
 
-[API reference](docs/api.md) · [Architecture](docs/architecture.md) · [Quickstart](docs/quickstart.md) · [Features](docs/features.md) · [Status](docs/STATUS.md) · [Submission](docs/submission.md) · [Audits](docs/audits/README.md) · [Design system](MASTER.md)
+[API reference](docs/api.md) · [Architecture](docs/architecture.md) · [Quickstart](docs/quickstart.md) · [Features](docs/features.md) · [Status](docs/STATUS.md) · [Submission](docs/submission.md) · [Run evidence](docs/evidence/README.md) · [Audits](docs/audits/README.md) · [Design system](MASTER.md)
 
 ## Honest limits
 
