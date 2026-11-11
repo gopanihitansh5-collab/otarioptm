@@ -105,7 +105,7 @@ function StudioInner() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [fitKey, setFitKey] = useState(0);
-  const [searchProvider, setSearchProvider] = useState<"duckduckgo" | "exa">("duckduckgo");
+  const [searchProvider, setSearchProvider] = useState<"duckduckgo" | "exa">("exa");
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [planStages, setPlanStages] = useState<PlanResponse["stages"]>();
   const [planProvenance, setPlanProvenance] = useState<PlanResponse["planner"] | undefined>();
