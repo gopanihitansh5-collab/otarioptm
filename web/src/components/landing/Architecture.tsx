@@ -80,31 +80,31 @@ export default function Architecture() {
       <div className="mx-auto max-w-6xl px-4 py-20 md:px-6 md:py-24">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="font-mono text-[10px] tracking-[0.25em] text-[#C6F36B]">
+            <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
               ARCHITECTURE
             </p>
-            <h2 className="mt-3 text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#F3F5F2]">
+            <h2 className="mt-3 text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#E9E4DA]">
               One request, six layers, zero blind spots.
             </h2>
           </div>
           <div className="flex items-center gap-3">
             {tracing && (
-              <span className="rounded-md border border-[#C6F36B]/40 px-2.5 py-1.5 font-mono text-[10px] tracking-widest text-[#C6F36B]">
+              <span className="rounded-md border border-[#B8A98F]/40 px-2.5 py-1.5 font-mono text-[10px] tracking-widest text-[#B8A98F]">
                 {staticAll ? "TRACED: STATIC" : `TRACING: STEP ${step + 1}/${LAYERS.length}`}
               </span>
             )}
             <button
               type="button"
               onClick={toggle}
-              className={`inline-flex h-11 items-center gap-2 rounded-lg border px-4 font-mono text-[11px] tracking-widest transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50 ${
+              className={`inline-flex h-11 items-center gap-2 rounded-lg border px-4 font-mono text-[11px] tracking-widest transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50 ${
                 tracing
-                  ? "border-[#C6F36B] text-[#C6F36B]"
-                  : "border-[#293239] text-[#929DA5] hover:border-[#C6F36B]/40 hover:text-[#C6F36B]"
+                  ? "border-[#B8A98F] text-[#B8A98F]"
+                  : "border-[#34322D] text-[#A6A197] hover:border-[#B8A98F]/40 hover:text-[#B8A98F]"
               }`}
             >
               {tracing && (
                 <span
-                  className="h-1.5 w-1.5 rounded-full bg-[#C6F36B] motion-safe:animate-pulse"
+                  className="h-1.5 w-1.5 rounded-full bg-[#B8A98F] motion-safe:animate-pulse"
                   aria-hidden
                 />
               )}
@@ -120,23 +120,23 @@ export default function Architecture() {
             return (
               <div key={layer.name}>
                 <div
-                  className={`group relative flex items-start gap-4 rounded-xl border bg-[#171D22] p-4 transition-colors duration-200 md:p-5 ${
+                  className={`group relative flex items-start gap-4 rounded-xl border bg-[#1D1C19] p-4 transition-colors duration-200 md:p-5 ${
                     active
-                      ? "border-[#C6F36B]"
-                      : "border-[#293239] hover:border-[#C6F36B]/40"
+                      ? "border-[#B8A98F]"
+                      : "border-[#34322D] hover:border-[#B8A98F]/40"
                   }`}
                 >
                   {active && (
                     <span
                       aria-hidden
-                      className="absolute right-4 top-1/2 -mt-1 h-2 w-2 motion-safe:animate-ping rounded-full bg-[#C6F36B]"
+                      className="absolute right-4 top-1/2 -mt-1 h-2 w-2 motion-safe:animate-ping rounded-full bg-[#B8A98F]"
                     />
                   )}
                   <span
                     className={`shrink-0 rounded-md border px-2 py-1 font-mono text-[10px] tracking-widest transition-colors duration-200 ${
                       active
-                        ? "border-[#C6F36B] text-[#C6F36B]"
-                        : "border-[#293239] text-[#929DA5] group-hover:border-[#C6F36B]/40 group-hover:text-[#C6F36B]"
+                        ? "border-[#B8A98F] text-[#B8A98F]"
+                        : "border-[#34322D] text-[#A6A197] group-hover:border-[#B8A98F]/40 group-hover:text-[#B8A98F]"
                     }`}
                   >
                     {layer.glyph}
@@ -145,17 +145,17 @@ export default function Architecture() {
                     <p
                       className={`text-sm font-medium transition-colors duration-200 ${
                         active
-                          ? "text-[#C6F36B]"
-                          : "text-[#F3F5F2] group-hover:text-[#C6F36B]"
+                          ? "text-[#B8A98F]"
+                          : "text-[#E9E4DA] group-hover:text-[#B8A98F]"
                       }`}
                     >
                       {layer.name}
-                      <span className="ml-3 font-mono text-[9px] tracking-widest text-[#929DA5]">
+                      <span className="ml-3 font-mono text-[9px] tracking-widest text-[#A6A197]">
                         L{i + 1}
                       </span>
                     </p>
                     <p
-                      className={`mt-1 h-5 max-w-xl text-xs text-[#929DA5] transition-opacity duration-200 ${
+                      className={`mt-1 h-5 max-w-xl text-xs text-[#A6A197] transition-opacity duration-200 ${
                         active || "opacity-0 group-hover:opacity-100"
                       }`}
                     >
@@ -166,10 +166,10 @@ export default function Architecture() {
                         {layer.chips.map((c) => (
                           <span
                             key={c}
-                            className={`rounded-md border bg-[#090B0D] px-2 py-1.5 text-center font-mono text-[9px] tracking-widest transition-colors duration-200 ${
+                            className={`rounded-md border bg-[#111110] px-2 py-1.5 text-center font-mono text-[9px] tracking-widest transition-colors duration-200 ${
                               active
-                                ? "border-[#C6F36B]/40 text-[#C6F36B]"
-                                : "border-[#293239] text-[#929DA5]"
+                                ? "border-[#B8A98F]/40 text-[#B8A98F]"
+                                : "border-[#34322D] text-[#A6A197]"
                             }`}
                           >
                             {c}
@@ -179,7 +179,7 @@ export default function Architecture() {
                     )}
                   </div>
                 </div>
-                {next && <div aria-hidden className="mx-auto h-6 w-px bg-[#293239]" />}
+                {next && <div aria-hidden className="mx-auto h-6 w-px bg-[#34322D]" />}
               </div>
             );
           })}

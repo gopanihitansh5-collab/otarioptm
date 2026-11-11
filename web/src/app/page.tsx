@@ -19,7 +19,7 @@ import { ClosingCTA, UseCases } from "../components/landing/Sections";
 
 export default function Page() {
   return (
-    <div className="min-h-screen bg-[#090B0D] text-[#F3F5F2] antialiased selection:bg-[#C6F36B] selection:text-[#10140A]">
+    <div className="min-h-screen bg-[#111110] text-[#E9E4DA] antialiased selection:bg-[#B8A98F] selection:text-[#111110]">
       <AnnouncementBar />
       <Nav />
       <main>
