@@ -40,6 +40,43 @@ def test_normal_sized_body_still_accepted():
     assert resp.status_code == 200
 
 
+def test_chunked_body_without_content_length_is_bounded(monkeypatch):
+    """A chunked (or falsely-declared) body cannot bypass the cap: the
+    accumulated read itself is bounded, not just the declared length."""
+    monkeypatch.setattr(gw, "MAX_BODY_BYTES", 256)
+
+    def big_chunks():
+        yield b'{"messages": [{"role": "user", "content": "'
+        yield b"x" * 512
+        yield b'"}]}'
+
+    resp = client.post(
+        "/api/v1/chat/completions",
+        content=big_chunks(),
+        headers={"Content-Type": "application/json"},
+    )
+    assert resp.status_code == 413
+
+
+def test_vercel_edge_headers_preferred_over_spoofed_xff(monkeypatch):
+    """On Vercel, the edge-set x-vercel-forwarded-for/x-real-ip win over a
+    client-supplied x-forwarded-for chain, so buckets can't be rotated by
+    forging the first XFF entry."""
+    monkeypatch.setenv("VERCEL", "1")
+    gw._limiter._buckets.clear()
+    for _ in range(int(gw._limiter.capacity) + 2):
+        resp = client.post(
+            "/api/v1/chat/completions",
+            json={"messages": [{"role": "user", "content": "hi"}]},
+            headers={"X-Forwarded-For": "203.0.113.99", "X-Real-Ip": "198.51.100.4"},
+        )
+    # Limited on the edge-observed IP, not the spoofed XFF value.
+    assert resp.status_code == 429
+    assert "198.51.100.4" in gw._limiter._buckets
+    assert "203.0.113.99" not in gw._limiter._buckets
+    gw._limiter._buckets.clear()
+
+
 def test_rate_limit_keys_on_forwarded_for_on_vercel(monkeypatch):
     monkeypatch.setenv("VERCEL", "1")
     gw._limiter._buckets.clear()
