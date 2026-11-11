@@ -73,7 +73,7 @@ export function Canvas({
       defaultEdgeOptions={{
         type: "smoothstep",
         animated,
-        style: { stroke: "rgba(198, 243, 107, 0.55)", strokeWidth: 1.5 },
+        style: { stroke: "rgba(184, 169, 143, 0.55)", strokeWidth: 1.5 },
       }}
       onNodeClick={(_: unknown, node: { id: string }) => {
         if (!onNodeClick) return;
@@ -84,13 +84,13 @@ export function Canvas({
     >
       <Background
         color="rgba(255,255,255,0.05)"
-        bgColor="#090B0D"
+        bgColor="#111110"
         gap={24}
         size={1}
         variant={BackgroundVariant.Dots}
       />
       <Controls />
-      <MiniMap pannable zoomable nodeColor="#293239" maskColor="rgba(9, 11, 13, 0.65)" />
+      <MiniMap pannable zoomable nodeColor="#34322D" maskColor="rgba(9, 11, 13, 0.65)" />
     </ReactFlow>
   );
 }

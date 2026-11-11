@@ -10,9 +10,9 @@ import { FOCUS_RING } from "@/components/studio/ui";
  * data and is not used on static node chrome.
  */
 
-export const NODE_ACCENT = "#C6F36B";
-export const NODE_FAIL = "#E05353";
-export const NODE_SURFACE = "#171D22";
+export const NODE_ACCENT = "#B8A98F";
+export const NODE_FAIL = "#C68179";
+export const NODE_SURFACE = "#1D1C19";
 
 export const STATUS_CHIPS: Record<NodeRunStatus, string> = {
   idle: "border-steel-dim bg-graphite text-silver",

@@ -40,10 +40,10 @@ export default function Trust() {
     <section id="trust" className="scroll-mt-24">
       <div className="mx-auto max-w-6xl px-4 py-20 md:px-6 md:py-24">
         <Reveal>
-          <p className="font-mono text-[10px] tracking-[0.25em] text-[#C6F36B]">
+          <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
             TRUST AND LIMITS
           </p>
-          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#F3F5F2]">
+          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#E9E4DA]">
             What is hardened, what is honest about being a beta.
           </h2>
         </Reveal>
@@ -52,14 +52,14 @@ export default function Trust() {
           {Items.map((c, i) => (
             <Reveal key={c.title} className="panel p-6" delay={i * 60}>
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-base font-medium text-[#F3F5F2]">
+                <h3 className="text-base font-medium text-[#E9E4DA]">
                   {c.title}
                 </h3>
-                <span className="shrink-0 rounded border border-[#293239] px-1.5 py-0.5 font-mono text-[8.5px] tracking-widest text-[#929DA5]">
+                <span className="shrink-0 rounded border border-[#34322D] px-1.5 py-0.5 font-mono text-[8.5px] tracking-widest text-[#A6A197]">
                   {c.status}
                 </span>
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-[#929DA5]">
+              <p className="mt-3 text-sm leading-relaxed text-[#A6A197]">
                 {c.body}
               </p>
             </Reveal>

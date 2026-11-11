@@ -59,22 +59,22 @@ const SECTIONS: { title: string; body: string[] }[] = [
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-16 md:px-6">
-      <p className="font-mono text-[11px] uppercase tracking-widest text-[#929DA5]">
+      <p className="font-mono text-[11px] uppercase tracking-widest text-[#A6A197]">
         OtariOptm · Legal
       </p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#F3F5F2]">
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#E9E4DA]">
         Privacy &amp; data retention
       </h1>
-      <p className="mt-3 text-sm leading-6 text-[#929DA5]">
+      <p className="mt-3 text-sm leading-6 text-[#A6A197]">
         Draft for the current beta, pending owner review. Last updated
         November 10, 2026.
       </p>
       <div className="mt-10 space-y-8">
         {SECTIONS.map((s) => (
           <section key={s.title}>
-            <h2 className="text-base font-medium text-[#C6F36B]">{s.title}</h2>
+            <h2 className="text-base font-medium text-[#B8A98F]">{s.title}</h2>
             {s.body.map((p, i) => (
-              <p key={i} className="mt-2 text-sm leading-6 text-[#929DA5]">
+              <p key={i} className="mt-2 text-sm leading-6 text-[#A6A197]">
                 {p}
               </p>
             ))}
@@ -84,7 +84,7 @@ export default function PrivacyPage() {
       <p className="mt-12 font-mono text-[11px] tracking-wider">
         <Link
           href="/"
-          className="text-[#65C9E8] transition-colors hover:text-[#C6F36B]"
+          className="text-[#8FA6B7] transition-colors hover:text-[#B8A98F]"
         >
           &larr; Back to OtariOptm
         </Link>

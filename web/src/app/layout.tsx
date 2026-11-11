@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, IBM_Plex_Mono } from "next/font/google";
+import { Geist, IBM_Plex_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
+  variable: "--font-geist",
+});
+
+const instrument = Instrument_Serif({
+  weight: ["400"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-instrument",
 });
 
 const plexMono = IBM_Plex_Mono({
@@ -44,7 +51,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#090B0D",
+  themeColor: "#111110",
   width: "device-width",
   initialScale: 1,
 };
@@ -57,7 +64,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${plexMono.variable} bg-obsidian text-ice antialiased`}
+        className={`${geist.variable} ${instrument.variable} ${plexMono.variable} bg-obsidian text-ice antialiased`}
       >
         {children}
       </body>

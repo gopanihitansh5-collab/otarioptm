@@ -96,30 +96,30 @@ export default function RoutingIntelligence() {
       <style dangerouslySetInnerHTML={{ __html: SIM_CSS }} />
       <div className="mx-auto max-w-6xl px-4 py-20 md:px-6 md:py-24">
         <Reveal>
-          <p className="font-mono text-[10px] tracking-[0.25em] text-[#C6F36B]">
+          <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
             INTELLIGENT ROUTING
           </p>
-          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#F3F5F2]">
+          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#E9E4DA]">
             Discovery, comparison and selection, every single call.
           </h2>
         </Reveal>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-3">
           <Reveal className="panel p-6" delay={0}>
-            <p className="font-mono text-[10px] tracking-[0.2em] text-[#C6F36B]">
+            <p className="font-mono text-[10px] tracking-[0.2em] text-[#B8A98F]">
               01 / MODEL DISCOVERY
             </p>
-            <p className="mt-3 text-sm leading-relaxed text-[#929DA5]">
+            <p className="mt-3 text-sm leading-relaxed text-[#A6A197]">
               The gateway lists every available model across Otari, Groq and the
               local tier, with live credentials and health states attached before
               scoring starts.
             </p>
           </Reveal>
           <Reveal className="panel p-6" delay={70}>
-            <p className="font-mono text-[10px] tracking-[0.2em] text-[#C6F36B]">
+            <p className="font-mono text-[10px] tracking-[0.2em] text-[#B8A98F]">
               02 / COST VS QUALITY
             </p>
-            <p className="mt-3 text-sm leading-relaxed text-[#929DA5]">
+            <p className="mt-3 text-sm leading-relaxed text-[#A6A197]">
               Each candidate carries its price per token, measured latency and a
               provider health factor. The score, straight from the router:
               cost, latency and health each normalized to 0-1 across the
@@ -127,10 +127,10 @@ export default function RoutingIntelligence() {
             </p>
           </Reveal>
           <Reveal className="panel p-6" delay={140}>
-            <p className="font-mono text-[10px] tracking-[0.2em] text-[#C6F36B]">
+            <p className="font-mono text-[10px] tracking-[0.2em] text-[#B8A98F]">
               03 / AUTO SELECTION
             </p>
-            <p className="mt-3 text-sm leading-relaxed text-[#929DA5]">
+            <p className="mt-3 text-sm leading-relaxed text-[#A6A197]">
               Lowest score wins. If a provider fails or runs dark, the circuit
               breaker trips and the next tier takes the route automatically.
             </p>
@@ -141,24 +141,24 @@ export default function RoutingIntelligence() {
           <div className="mt-12 panel p-6 md:p-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
-                <p className="font-mono text-[10px] tracking-[0.2em] text-[#929DA5]">
+                <p className="font-mono text-[10px] tracking-[0.2em] text-[#A6A197]">
                   LIVE ROUTING SIMULATOR
                 </p>
-                <span className="rounded border border-[#293239] px-2 py-0.5 font-mono text-[9px] tracking-widest text-[#929DA5]">
+                <span className="rounded border border-[#34322D] px-2 py-0.5 font-mono text-[9px] tracking-widest text-[#A6A197]">
                   DEMO MODE
                 </span>
               </div>
-              <div className="flex rounded-lg border border-[#293239] bg-[#090B0D] p-1">
+              <div className="flex rounded-lg border border-[#34322D] bg-[#111110] p-1">
                 {STEP_TYPES.map((t) => (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => setStepType(t.id)}
                     aria-pressed={stepType === t.id}
-                    className={`min-h-[44px] rounded-md px-4 font-mono text-[11px] tracking-widest transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50 ${
+                    className={`min-h-[44px] rounded-md px-4 font-mono text-[11px] tracking-widest transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50 ${
                       stepType === t.id
-                        ? "bg-[#C6F36B] font-semibold text-[#10140A]"
-                        : "text-[#929DA5] hover:text-[#F3F5F2]"
+                        ? "bg-[#B8A98F] font-semibold text-[#111110]"
+                        : "text-[#A6A197] hover:text-[#E9E4DA]"
                     }`}
                   >
                     {t.id}
@@ -166,26 +166,26 @@ export default function RoutingIntelligence() {
                 ))}
               </div>
             </div>
-            <p className="mt-3 font-mono text-[10px] tracking-[0.2em] text-[#929DA5]">
+            <p className="mt-3 font-mono text-[10px] tracking-[0.2em] text-[#A6A197]">
               {active.hint}
             </p>
 
-            <div className="mt-6 flex items-center gap-3 rounded-lg border border-[#293239] bg-[#090B0D] px-4 py-3">
-              <span className="h-2 w-2 shrink-0 rounded-full bg-[#C6F36B] motion-safe:animate-pulse" />
-              <span className="shrink-0 font-mono text-[10px] tracking-widest text-[#929DA5]">
+            <div className="mt-6 flex items-center gap-3 rounded-lg border border-[#34322D] bg-[#111110] px-4 py-3">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-[#B8A98F] motion-safe:animate-pulse" />
+              <span className="shrink-0 font-mono text-[10px] tracking-widest text-[#A6A197]">
                 REQUEST ADMITTED
               </span>
-              <div className="relative mx-2 h-px min-w-6 flex-1 overflow-visible bg-[#293239]">
+              <div className="relative mx-2 h-px min-w-6 flex-1 overflow-visible bg-[#34322D]">
                 <span
                   key={stepType}
-                  className="oo-sim-dot absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#65C9E8]"
+                  className="oo-sim-dot absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#8FA6B7]"
                   style={{
                     animation:
                       "oo-route 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) 0.05s both",
                   }}
                 />
               </div>
-              <span className="shrink-0 font-mono text-[10px] tracking-widest text-[#C6F36B]">
+              <span className="shrink-0 font-mono text-[10px] tracking-widest text-[#B8A98F]">
                 ROUTED / {winner.name.toUpperCase()}
               </span>
             </div>
@@ -196,57 +196,57 @@ export default function RoutingIntelligence() {
                 return (
                   <div
                     key={m.name}
-                    className={`relative rounded-xl border bg-[#171D22] p-5 transition-all duration-200 ${
+                    className={`relative rounded-xl border bg-[#1D1C19] p-5 transition-all duration-200 ${
                       isWinner
-                        ? "border-[#C6F36B]"
-                        : "border-[#293239] hover:-translate-y-[3px] hover:border-[#C6F36B]/40 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                        ? "border-[#B8A98F]"
+                        : "border-[#34322D] hover:-translate-y-[3px] hover:border-[#B8A98F]/40 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                     }`}
                   >
                     {isWinner && (
-                      <span className="absolute -top-3 right-4 rounded bg-[#C6F36B] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-widest text-[#10140A]">
+                      <span className="absolute -top-3 right-4 rounded bg-[#B8A98F] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-widest text-[#111110]">
                         SELECTED
                       </span>
                     )}
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate text-sm font-medium text-[#F3F5F2]">
+                      <p className="truncate text-sm font-medium text-[#E9E4DA]">
                         {m.name}
                       </p>
-                      <span className="shrink-0 rounded border border-[#293239] px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-[#929DA5]">
+                      <span className="shrink-0 rounded border border-[#34322D] px-1.5 py-0.5 font-mono text-[9px] tracking-widest text-[#A6A197]">
                         {m.tag}
                       </span>
                     </div>
                     <div className="mt-4 grid grid-cols-3 gap-3">
                       <div>
-                        <p className="font-mono text-[9px] tracking-widest text-[#929DA5]">
+                        <p className="font-mono text-[9px] tracking-widest text-[#A6A197]">
                           EST COST
                         </p>
                         <p
                           className={`mt-1 font-mono text-sm ${
-                            isWinner ? "text-[#C6F36B]" : "text-[#F3F5F2]"
+                            isWinner ? "text-[#B8A98F]" : "text-[#E9E4DA]"
                           }`}
                         >
                           ${m.cost.toFixed(4)}
                         </p>
                       </div>
                       <div>
-                        <p className="font-mono text-[9px] tracking-widest text-[#929DA5]">
+                        <p className="font-mono text-[9px] tracking-widest text-[#A6A197]">
                           LATENCY
                         </p>
                         <p
                           className={`mt-1 font-mono text-sm ${
-                            isWinner ? "text-[#C6F36B]" : "text-[#F3F5F2]"
+                            isWinner ? "text-[#B8A98F]" : "text-[#E9E4DA]"
                           }`}
                         >
                           {m.latency} MS
                         </p>
                       </div>
                       <div>
-                        <p className="font-mono text-[9px] tracking-widest text-[#929DA5]">
+                        <p className="font-mono text-[9px] tracking-widest text-[#A6A197]">
                           HEALTH
                         </p>
                         <p
                           className={`mt-1 font-mono text-sm ${
-                            isWinner ? "text-[#C6F36B]" : "text-[#F3F5F2]"
+                            isWinner ? "text-[#B8A98F]" : "text-[#E9E4DA]"
                           }`}
                         >
                           {m.health.toFixed(1)}
@@ -255,12 +255,12 @@ export default function RoutingIntelligence() {
                     </div>
                     <p
                       className={`mt-4 flex items-center gap-2 font-mono text-[9px] tracking-widest transition-colors duration-200 ${
-                        isWinner ? "text-[#C6F36B]" : "text-[#929DA5]"
+                        isWinner ? "text-[#B8A98F]" : "text-[#A6A197]"
                       }`}
                     >
                       <span
                         className={`h-1.5 w-1.5 rounded-full ${
-                          isWinner ? "bg-[#C6F36B]" : "bg-[#293239]"
+                          isWinner ? "bg-[#B8A98F]" : "bg-[#34322D]"
                         }`}
                       />
                       {isWinner ? "ROUTE ACTIVATED" : "CANDIDATE"}
@@ -270,14 +270,14 @@ export default function RoutingIntelligence() {
               })}
             </div>
 
-            <div className="mt-8 border-t border-[#1C2429] pt-6">
-              <p className="font-mono text-[10px] tracking-[0.2em] text-[#929DA5]">
+            <div className="mt-8 border-t border-[#292823] pt-6">
+              <p className="font-mono text-[10px] tracking-[0.2em] text-[#A6A197]">
                 WORKED EXAMPLE / {stepType} STEP
               </p>
               <div className="scroll-thin mt-4 overflow-x-auto">
                 <table className="w-full min-w-[560px] border-collapse font-mono text-xs">
                   <thead>
-                    <tr className="border-y border-[#293239] text-left text-[9px] tracking-[0.2em] text-[#929DA5]">
+                    <tr className="border-y border-[#34322D] text-left text-[9px] tracking-[0.2em] text-[#A6A197]">
                       <th className="py-2 pr-4 font-medium">MODEL</th>
                       <th className="py-2 pr-4 font-medium">COST NORM</th>
                       <th className="py-2 pr-4 font-medium">LATENCY NORM</th>
@@ -291,30 +291,30 @@ export default function RoutingIntelligence() {
                       return (
                         <tr
                           key={m.name}
-                          className="border-b border-[#1C2429] last:border-b-0"
+                          className="border-b border-[#292823] last:border-b-0"
                         >
-                          <td className="py-2.5 pr-4 text-[#F3F5F2]">
-                            <span className={isWinner ? "text-[#C6F36B]" : ""}>
+                          <td className="py-2.5 pr-4 text-[#E9E4DA]">
+                            <span className={isWinner ? "text-[#B8A98F]" : ""}>
                               {m.name}
                             </span>
                             {isWinner && (
-                              <span className="ml-2 text-[9px] tracking-widest text-[#C6F36B]">
+                              <span className="ml-2 text-[9px] tracking-widest text-[#B8A98F]">
                                 LOWEST SCORE
                               </span>
                             )}
                           </td>
-                          <td className="py-2.5 pr-4 text-[#929DA5]">
+                          <td className="py-2.5 pr-4 text-[#A6A197]">
                             {m.costN.toFixed(2)}
                           </td>
-                          <td className="py-2.5 pr-4 text-[#929DA5]">
+                          <td className="py-2.5 pr-4 text-[#A6A197]">
                             {m.latN.toFixed(2)}
                           </td>
-                          <td className="py-2.5 pr-4 text-[#929DA5]">
+                          <td className="py-2.5 pr-4 text-[#A6A197]">
                             {m.health.toFixed(1)}
                           </td>
                           <td
                             className={`py-2.5 pr-4 text-right ${
-                              isWinner ? "text-[#C6F36B]" : "text-[#F3F5F2]"
+                              isWinner ? "text-[#B8A98F]" : "text-[#E9E4DA]"
                             }`}
                           >
                             {fmtScore(m.score)}
@@ -325,7 +325,7 @@ export default function RoutingIntelligence() {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-4 text-sm leading-relaxed text-[#929DA5]">
+              <p className="mt-4 text-sm leading-relaxed text-[#A6A197]">
                 Health above 0.5 acts as a bonus, below it as a penalty, so a
                 stable mid-priced model can beat a cheaper flaky one. The
                 selected route must also fit the remaining budget, and free
@@ -333,7 +333,7 @@ export default function RoutingIntelligence() {
               </p>
             </div>
 
-            <p className="mt-6 font-mono text-[9px] tracking-[0.2em] text-[#293239]">
+            <p className="mt-6 font-mono text-[9px] tracking-[0.2em] text-[#34322D]">
               WEIGHTS AND FORMULA FROM src/services/router.py. INPUT VALUES ARE
               ILLUSTRATIVE; PRODUCTION ROUTING USES THE LIVE MODEL CATALOGUE,
               REAL PRICES AND MEASURED PERFORMANCE.
@@ -343,30 +343,30 @@ export default function RoutingIntelligence() {
 
         <Reveal delay={140}>
           <div className="mt-8 panel p-6 md:p-8">
-            <p className="font-mono text-[10px] tracking-[0.2em] text-[#929DA5]">
+            <p className="font-mono text-[10px] tracking-[0.2em] text-[#A6A197]">
               FALLBACK AND CIRCUIT BREAKER
             </p>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               {FALLBACK_STEPS.map((s, i) => (
                 <div
                   key={s.name}
-                  className="flex items-center gap-3 rounded-xl border border-[#293239] bg-[#171D22] p-4"
+                  className="flex items-center gap-3 rounded-xl border border-[#34322D] bg-[#1D1C19] p-4"
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[#C6F36B]/40 font-mono text-[10px] text-[#C6F36B]">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[#B8A98F]/40 font-mono text-[10px] text-[#B8A98F]">
                     {i + 1}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[#F3F5F2]">
+                    <p className="truncate text-sm font-medium text-[#E9E4DA]">
                       {s.name}
                     </p>
-                    <p className="font-mono text-[9px] tracking-widest text-[#929DA5]">
+                    <p className="font-mono text-[9px] tracking-widest text-[#A6A197]">
                       {s.state}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-[#929DA5]">
+            <p className="mt-4 text-sm leading-relaxed text-[#A6A197]">
               When a tier fails, the next one takes the call and the response
               carries a diagnostic note with the reason from each failed
               provider, surfaced in the activity feed. Every run returns real

@@ -83,8 +83,8 @@ export default async function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: "72px",
-          backgroundColor: "#090B0D",
-          color: "#F3F5F2",
+          backgroundColor: "#111110",
+          color: "#E9E4DA",
         }}
       >
         {/* steel hairline grid */}
@@ -135,9 +135,9 @@ export default async function OpengraphImage() {
             width: 680,
             height: 440,
             borderRadius: 9999,
-            backgroundColor: "#090B0D",
+            backgroundColor: "#111110",
             backgroundImage:
-              "radial-gradient(circle, rgba(198,243,107,0.10) 0%, rgba(198,243,107,0) 70%)",
+              "radial-gradient(circle, rgba(184,169,143,0.10) 0%, rgba(184,169,143,0) 70%)",
             display: "flex",
           }}
         />
@@ -157,7 +157,7 @@ export default async function OpengraphImage() {
               fontFamily: monoFamily,
               fontSize: 21,
               letterSpacing: 7,
-              color: "#C6F36B",
+              color: "#B8A98F",
               textTransform: "uppercase",
             }}
           >
@@ -178,7 +178,7 @@ export default async function OpengraphImage() {
             <div style={{ display: "flex" }}>Every AI request</div>
             <div style={{ display: "flex" }}>
               <span>deserves a&nbsp;</span>
-              <span style={{ color: "#C6F36B" }}>smarter route</span>
+              <span style={{ color: "#B8A98F" }}>smarter route</span>
               <span>.</span>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default async function OpengraphImage() {
               width: 96,
               height: 6,
               borderRadius: 3,
-              backgroundColor: "#C6F36B",
+              backgroundColor: "#B8A98F",
             }}
           />
           <div
@@ -215,7 +215,7 @@ export default async function OpengraphImage() {
                 fontFamily: monoFamily,
                 fontSize: 17,
                 letterSpacing: 3,
-                color: "#929DA5",
+                color: "#A6A197",
                 textTransform: "uppercase",
               }}
             >
@@ -227,7 +227,7 @@ export default async function OpengraphImage() {
                 fontFamily: monoFamily,
                 fontSize: 17,
                 letterSpacing: 3,
-                color: "#929DA5",
+                color: "#A6A197",
                 textTransform: "uppercase",
               }}
             >

@@ -59,16 +59,16 @@ export default function DX() {
   };
 
   return (
-    <section id="code" className="scroll-mt-24 border-y border-[#293239] bg-[#111519]">
+    <section id="code" className="scroll-mt-24 border-y border-[#34322D] bg-[#171715]">
       <div className="mx-auto max-w-6xl px-4 py-20 md:px-6 md:py-24">
         <Reveal>
-          <p className="font-mono text-[10px] tracking-[0.25em] text-[#C6F36B]">
+          <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
             DEVELOPER EXPERIENCE
           </p>
-          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#F3F5F2]">
+          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#E9E4DA]">
             One base URL. Three headers. Or run your own.
           </h2>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-[#929DA5]">
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-[#A6A197]">
             OtariOptm sits on the hosted Otari gateway, an OpenAI-compatible
             surface. Point any existing OpenAI client at it and routing, metering
             and budgets come along for free.
@@ -76,8 +76,8 @@ export default function DX() {
         </Reveal>
 
         <Reveal delay={100}>
-          <div className="mt-8 overflow-hidden rounded-xl border border-[#293239] bg-[#171D22]">
-            <div className="scroll-thin flex items-center justify-between overflow-x-auto border-b border-[#293239]">
+          <div className="mt-8 overflow-hidden rounded-xl border border-[#34322D] bg-[#1D1C19]">
+            <div className="scroll-thin flex items-center justify-between overflow-x-auto border-b border-[#34322D]">
               <div className="flex">
                 {TABS.map((t, i) => (
                   <button
@@ -85,10 +85,10 @@ export default function DX() {
                     type="button"
                     onClick={() => setTab(i as 0 | 1 | 2 | 3)}
                     aria-pressed={tab === i}
-                    className={`h-11 shrink-0 border-b-2 px-4 font-mono text-[11px] tracking-widest transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C6F36B]/50 ${
+                    className={`h-11 shrink-0 border-b-2 px-4 font-mono text-[11px] tracking-widest transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B8A98F]/50 ${
                       tab === i
-                        ? "border-[#C6F36B] text-[#C6F36B]"
-                        : "border-transparent text-[#929DA5] hover:text-[#F3F5F2]"
+                        ? "border-[#B8A98F] text-[#B8A98F]"
+                        : "border-transparent text-[#A6A197] hover:text-[#E9E4DA]"
                     }`}
                   >
                     {t}
@@ -98,12 +98,12 @@ export default function DX() {
               <button
                 type="button"
                 onClick={copy}
-                className="mr-3 inline-flex h-11 shrink-0 items-center rounded-lg border border-[#293239] px-3 font-mono text-[9px] tracking-widest text-[#929DA5] transition-colors duration-200 hover:border-[#C6F36B]/40 hover:text-[#C6F36B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50"
+                className="mr-3 inline-flex h-11 shrink-0 items-center rounded-lg border border-[#34322D] px-3 font-mono text-[9px] tracking-widest text-[#A6A197] transition-colors duration-200 hover:border-[#B8A98F]/40 hover:text-[#B8A98F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50"
               >
                 {copied ? "COPIED" : "COPY"}
               </button>
             </div>
-            <pre className="scroll-thin overflow-x-auto bg-[#090B0D] p-5 font-mono text-xs leading-6 text-[#929DA5]">
+            <pre className="scroll-thin overflow-x-auto bg-[#111110] p-5 font-mono text-xs leading-6 text-[#A6A197]">
               {textFor()}
             </pre>
           </div>
@@ -111,35 +111,35 @@ export default function DX() {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <Reveal className="panel p-5" delay={140}>
-            <p className="font-mono text-[10px] tracking-[0.2em] text-[#C6F36B]">
+            <p className="font-mono text-[10px] tracking-[0.2em] text-[#B8A98F]">
               QUICKSTART
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-[#929DA5]">
+            <p className="mt-2 text-sm leading-relaxed text-[#A6A197]">
               Open the Studio, drop a Chat node and a Search node, connect them,
               press run. The gateway routes and meters every step.
             </p>
           </Reveal>
           <Reveal className="panel p-5" delay={200}>
-            <p className="font-mono text-[10px] tracking-[0.2em] text-[#C6F36B]">
+            <p className="font-mono text-[10px] tracking-[0.2em] text-[#B8A98F]">
               YOUR GATEWAY, YOUR KEYS
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-[#929DA5]">
+            <p className="mt-2 text-sm leading-relaxed text-[#A6A197]">
               Run against the hosted Otari gateway for the demo, or self-host
               the FastAPI gateway with your own provider credentials in
               config.yml.
             </p>
           </Reveal>
           <Reveal className="panel p-5" delay={260}>
-            <p className="font-mono text-[10px] tracking-[0.2em] text-[#C6F36B]">
+            <p className="font-mono text-[10px] tracking-[0.2em] text-[#B8A98F]">
               SOURCE
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-[#929DA5]">
+            <p className="mt-2 text-sm leading-relaxed text-[#A6A197]">
               Full-stack source is public:{" "}
               <a
                 href={GH}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[#C6F36B] transition-colors duration-200 hover:text-[#E6FF8F]"
+                className="text-[#B8A98F] transition-colors duration-200 hover:text-[#CCBDA5]"
               >
                 otarioptm on GitHub
               </a>

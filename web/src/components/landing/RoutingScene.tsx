@@ -20,9 +20,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * do not pay for full-resolution pixels the panel never shows.
  */
 
-const LIME = "#C6F36B";
-const CYAN = "#65C9E8";
-const STEEL = "#293239";
+const LIME = "#B8A98F";
+const CYAN = "#8FA6B7";
+const STEEL = "#34322D";
 
 const ORBIT_R = 2.55;
 const ORBIT_Y = [0.55, -0.15, -0.75];
@@ -40,7 +40,7 @@ function makeLabel(text: string): THREE.Sprite {
   ctx.font = "600 44px ui-monospace, SFMono-Regular, Menlo, monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#929DA5";
+  ctx.fillStyle = "#A6A197";
   ctx.fillText(text, 256, 48);
   const tex = new THREE.CanvasTexture(c);
   tex.anisotropy = 4;
@@ -150,7 +150,7 @@ function Engine() {
       const mat = line.material as THREE.LineBasicMaterial;
       const active = i === route && loopT >= 2.4 && loopT < 4.6;
       // Lime marks the successfully selected route (brief's usage rule).
-      mat.color.set(active ? LIME : "#3d4a56");
+      mat.color.set(active ? LIME : "#4A463F");
       mat.opacity = active ? 1 : 0.8;
       const label = labelRefs.current[i];
       if (label) label.position.set(tmp.x, tmp.y + 0.34, tmp.z);
@@ -196,7 +196,7 @@ function Engine() {
       {/* routing engine */}
       <mesh ref={wire}>
         <icosahedronGeometry args={[1.15, 1]} />
-        <meshBasicMaterial color="#5a6b78" wireframe transparent opacity={0.95} />
+        <meshBasicMaterial color="#77736B" wireframe transparent opacity={0.95} />
       </mesh>
       <mesh ref={core}>
         <sphereGeometry args={[0.42, 24, 24]} />

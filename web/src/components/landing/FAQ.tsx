@@ -45,15 +45,15 @@ export default function FAQ() {
     <section id="faq" className="scroll-mt-24">
       <div className="mx-auto max-w-4xl px-4 py-20 md:px-6 md:py-24">
         <Reveal>
-          <p className="font-mono text-[10px] tracking-[0.25em] text-[#C6F36B]">
+          <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
             FAQ
           </p>
-          <h2 className="mt-3 text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#F3F5F2]">
+          <h2 className="mt-3 text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#E9E4DA]">
             The questions a technical buyer asks first.
           </h2>
         </Reveal>
 
-        <div className="mt-10 divide-y divide-[#293239] border-y border-[#293239]">
+        <div className="mt-10 divide-y divide-[#34322D] border-y border-[#34322D]">
           {QA.map((item, i) => {
             const isOpen = open === i;
             return (
@@ -63,18 +63,18 @@ export default function FAQ() {
                   onClick={() => setOpen(isOpen ? -1 : i)}
                   aria-expanded={isOpen}
                   aria-controls={`faq-panel-${i}`}
-                  className="flex w-full items-center justify-between gap-4 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C6F36B]/50"
+                  className="flex w-full items-center justify-between gap-4 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B8A98F]/50"
                 >
                   <span
                     className={`text-[15px] font-medium transition-colors duration-200 ${
-                      isOpen ? "text-[#C6F36B]" : "text-[#F3F5F2]"
+                      isOpen ? "text-[#B8A98F]" : "text-[#E9E4DA]"
                     }`}
                   >
                     {item.q}
                   </span>
                   <span
                     aria-hidden
-                    className={`shrink-0 font-mono text-sm text-[#929DA5] transition-transform duration-300 ${
+                    className={`shrink-0 font-mono text-sm text-[#A6A197] transition-transform duration-300 ${
                       isOpen ? "rotate-45" : ""
                     }`}
                   >
@@ -89,7 +89,7 @@ export default function FAQ() {
                       : "grid-rows-[0fr] opacity-0 motion-reduce:opacity-100"
                   }`}
                 >
-                  <p className="overflow-hidden pb-5 text-sm leading-relaxed text-[#929DA5]">
+                  <p className="overflow-hidden pb-5 text-sm leading-relaxed text-[#A6A197]">
                     {item.a}
                   </p>
                 </div>

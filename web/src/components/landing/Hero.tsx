@@ -28,9 +28,9 @@ function useRoutingSphere(): boolean {
 }
 
 const PRIMARY =
-  "group inline-flex h-12 items-center gap-2 rounded-lg bg-[#C6F36B] px-6 text-sm font-semibold text-[#10140A] shadow-[0_0_28px_rgba(198,243,107,0.18)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50";
+  "group inline-flex h-12 items-center gap-2 rounded-lg bg-[#B8A98F] px-6 text-sm font-semibold text-[#111110] shadow-[0_0_28px_rgba(184,169,143,0.18)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50";
 const SECONDARY =
-  "inline-flex h-12 items-center gap-2 rounded-lg border border-[#293239] px-6 text-sm font-medium text-[#F3F5F2] transition-all duration-200 hover:border-[#C6F36B]/40 hover:text-[#C6F36B] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6F36B]/50";
+  "inline-flex h-12 items-center gap-2 rounded-lg border border-[#34322D] px-6 text-sm font-medium text-[#E9E4DA] transition-all duration-200 hover:border-[#B8A98F]/40 hover:text-[#B8A98F] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50";
 
 const NODES = [
   { name: "QWEN", sub: "v3.5", dx: "62px", dy: "-80px", cost: "$0.0008", lat: "900 MS" },
@@ -64,10 +64,10 @@ const CSS = `
 @media (prefers-reduced-motion: reduce) { .oo-anim, .oo-anim * { animation: none !important; } }
 @keyframes oo-stage { 0%,100% { opacity: 0.35; } }
 .oo-stage { animation: oo-stage 6s linear infinite; }
-.oo-st0 { animation-name: oo-st0; } @keyframes oo-st0 { 0%,23% { opacity: 1; color: #C6F36B; } 23.1%,100% { opacity: 0.35; } }
-.oo-st1 { animation-name: oo-st1; } @keyframes oo-st1 { 0%,23% { opacity: 0.35; } 23%,40% { opacity: 1; color: #C6F36B; } 40.1%,100% { opacity: 0.35; } }
-.oo-st2 { animation-name: oo-st2; } @keyframes oo-st2 { 0%,40% { opacity: 0.35; } 40%,67% { opacity: 1; color: #C6F36B; } 67.1%,100% { opacity: 0.35; } }
-.oo-st3 { animation-name: oo-st3; } @keyframes oo-st3 { 0%,67% { opacity: 0.35; } 67%,93% { opacity: 1; color: #C6F36B; } 93.1%,100% { opacity: 0.35; } }
+.oo-st0 { animation-name: oo-st0; } @keyframes oo-st0 { 0%,23% { opacity: 1; color: #B8A98F; } 23.1%,100% { opacity: 0.35; } }
+.oo-st1 { animation-name: oo-st1; } @keyframes oo-st1 { 0%,23% { opacity: 0.35; } 23%,40% { opacity: 1; color: #B8A98F; } 40.1%,100% { opacity: 0.35; } }
+.oo-st2 { animation-name: oo-st2; } @keyframes oo-st2 { 0%,40% { opacity: 0.35; } 40%,67% { opacity: 1; color: #B8A98F; } 67.1%,100% { opacity: 0.35; } }
+.oo-st3 { animation-name: oo-st3; } @keyframes oo-st3 { 0%,67% { opacity: 0.35; } 67%,93% { opacity: 1; color: #B8A98F; } 93.1%,100% { opacity: 0.35; } }
 `;
 
 type DotStyle = React.CSSProperties & Record<"--dx" | "--dy", string>;
@@ -107,29 +107,30 @@ export default function Hero() {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[720px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(198,243,107,0.07),transparent)]"
+        className="pointer-events-none absolute -top-40 left-1/2 h-96 w-[720px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(184,169,143,0.07),transparent)]"
       />
       <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-14 md:px-6 lg:min-h-[88vh] lg:grid-cols-2 lg:items-center lg:gap-8 lg:pt-20">
         <div className="flex flex-col items-start">
           <Reveal as="span">
-            <p className="font-mono text-[10px] tracking-[0.25em] text-[#C6F36B]">
+            <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
               V0.1 BETA / AI ORCHESTRATION, OPTIMIZED
             </p>
           </Reveal>
           <Reveal delay={60}>
-            <h1 className="mt-5 text-[clamp(42px,6vw,74px)] font-semibold leading-[1.04] tracking-tight text-[#F3F5F2]">
-              Every AI request deserves a{" "}
-              <span className="text-[#C6F36B]">smarter route</span>.
+            <h1 className="mt-5 font-display text-[clamp(44px,6vw,76px)] font-normal leading-[1.05] tracking-tight text-[#E9E4DA]">
+              Intelligence,{" "}
+              <span className="otari-gradient-text">without the overhead</span>.
             </h1>
           </Reveal>
           <Reveal delay={120}>
-            <p className="mt-5 text-lg font-medium text-[#C6F36B]/90">
-              Less cost. More intelligence.
+            <p className="mt-5 text-lg font-medium text-[#B8A98F]/90">
+              Route intelligently. Spend deliberately. Operate confidently.
             </p>
-            <p className="mt-3 max-w-lg text-base leading-relaxed text-[#929DA5] md:text-lg">
-              Route every workload to the right model. Control spending.
-              Monitor every execution. One unified gateway built on the Otari
-              hosted gateway.
+            <p className="mt-3 max-w-lg text-base leading-relaxed text-[#A6A197] md:text-lg">
+              An intelligent orchestration layer for cost-aware AI
+              infrastructure. Route every workload to the right model, control
+              spending and monitor every execution through one unified gateway
+              built on the Otari hosted gateway.
             </p>
           </Reveal>
           <Reveal delay={180}>
@@ -158,23 +159,23 @@ export default function Hero() {
               ].map((chip) => (
                 <span
                   key={chip}
-                  className="rounded-md border border-[#293239] bg-[#111519] px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-[#929DA5]"
+                  className="rounded-md border border-[#34322D] bg-[#171715] px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-[#A6A197]"
                 >
-                  <span className="text-[#C6F36B]">{chip.slice(0, 2)}</span>{" "}
+                  <span className="text-[#B8A98F]">{chip.slice(0, 2)}</span>{" "}
                   {chip.slice(3)}
                 </span>
               ))}
             </div>
           </Reveal>
           <Reveal delay={300}>
-            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] tracking-[0.2em] text-[#929DA5]">
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] tracking-[0.2em] text-[#A6A197]">
               <span>
-                GATEWAY: <span className={live.status === "offline" ? "text-[#E05353]" : "text-[#C6F36B]"}>{status}</span>
+                GATEWAY: <span className={live.status === "offline" ? "text-[#C68179]" : "text-[#B8A98F]"}>{status}</span>
               </span>
               {live.budget && (
                 <span>
                   BUDGET CAP ${" "}
-                  <CountUp value={live.budget.cap} className="text-[#F3F5F2]" />
+                  <CountUp value={live.budget.cap} className="text-[#E9E4DA]" />
                 </span>
               )}
               {live.budget && live.budget.remaining > 0 && (
@@ -183,7 +184,7 @@ export default function Hero() {
                   <CountUp
                     value={live.budget.remaining}
                     format={(n) => n.toFixed(3)}
-                    className="text-[#C6F36B]"
+                    className="text-[#B8A98F]"
                   />
                 </span>
               )}
@@ -197,15 +198,15 @@ export default function Hero() {
           onPointerLeave={onLeave}
           style={{ willChange: "transform" }}
         >
-          <div ref={panelRef} className="oo-anim relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[#293239] bg-[#111519] transition-transform duration-300">
+          <div ref={panelRef} className="oo-anim relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[#34322D] bg-[#171715] transition-transform duration-300">
             <div
               aria-hidden
               className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(closest-side,rgba(101,201,232,0.08),transparent)]"
             />
-            <p className="absolute left-4 top-3 z-10 font-mono text-[10px] tracking-[0.2em] text-[#929DA5]">
+            <p className="absolute left-4 top-3 z-10 font-mono text-[10px] tracking-[0.2em] text-[#A6A197]">
               GATEWAY LIVE TRACE (DEMO)
             </p>
-            <p className="absolute bottom-3 right-4 z-10 font-mono text-[10px] tracking-[0.2em] text-[#293239]">
+            <p className="absolute bottom-3 right-4 z-10 font-mono text-[10px] tracking-[0.2em] text-[#34322D]">
               {sphere ? "WEBGL ROUTING SPHERE" : "LOOP 4.2S"}
             </p>
 
@@ -215,7 +216,7 @@ export default function Hero() {
               </div>
             )}
             {sphere && (
-              <div className="oo-anim absolute right-4 top-3 z-10 flex gap-2 font-mono text-[9px] tracking-[0.15em] text-[#929DA5]" aria-hidden>
+              <div className="oo-anim absolute right-4 top-3 z-10 flex gap-2 font-mono text-[9px] tracking-[0.15em] text-[#A6A197]" aria-hidden>
                 <span className="oo-stage oo-st0">RECEIVED</span>
                 <span aria-hidden>→</span>
                 <span className="oo-stage oo-st1">CLASSIFYING</span>
@@ -227,29 +228,29 @@ export default function Hero() {
             )}
             {!sphere && (
             <svg viewBox="0 0 400 300" className="absolute inset-0 h-full w-full" aria-hidden>
-              <line x1="16" y1="150" x2="166" y2="150" stroke="#293239" strokeWidth="1" />
-              <text x="52" y="136" fill="#929DA5" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="2">REQUEST</text>
+              <line x1="16" y1="150" x2="166" y2="150" stroke="#34322D" strokeWidth="1" />
+              <text x="52" y="136" fill="#A6A197" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="2">REQUEST</text>
 
-              <line x1="234" y1="150" x2="296" y2="70" stroke="#293239" strokeWidth="1" />
-              <line x1="234" y1="150" x2="318" y2="150" stroke="#293239" strokeWidth="1" />
-              <line x1="234" y1="150" x2="296" y2="230" stroke="#293239" strokeWidth="1" />
-              <line x1="234" y1="150" x2="296" y2="70" stroke="#65C9E8" strokeWidth="1.5" className="oo-line" opacity={0} />
-              <line x1="234" y1="150" x2="318" y2="150" stroke="#65C9E8" strokeWidth="1.5" className="oo-line oo-p1" opacity={0} />
-              <line x1="234" y1="150" x2="296" y2="230" stroke="#65C9E8" strokeWidth="1.5" className="oo-line oo-p2" opacity={0} />
+              <line x1="234" y1="150" x2="296" y2="70" stroke="#34322D" strokeWidth="1" />
+              <line x1="234" y1="150" x2="318" y2="150" stroke="#34322D" strokeWidth="1" />
+              <line x1="234" y1="150" x2="296" y2="230" stroke="#34322D" strokeWidth="1" />
+              <line x1="234" y1="150" x2="296" y2="70" stroke="#8FA6B7" strokeWidth="1.5" className="oo-line" opacity={0} />
+              <line x1="234" y1="150" x2="318" y2="150" stroke="#8FA6B7" strokeWidth="1.5" className="oo-line oo-p1" opacity={0} />
+              <line x1="234" y1="150" x2="296" y2="230" stroke="#8FA6B7" strokeWidth="1.5" className="oo-line oo-p2" opacity={0} />
 
-              <polygon points={HEX} fill="none" stroke="#293239" strokeWidth="1.5" />
-              <polygon points={HEX} fill="#C6F36B" className="oo-fillh" opacity={0.12} />
-              <circle cx="200" cy="150" r="40" fill="none" stroke="#65C9E8" strokeWidth="1" className="oo-scan" opacity={0} />
-              <text x="200" y="154" textAnchor="middle" fill="#C6F36B" fontSize="10" fontFamily="ui-monospace, monospace" letterSpacing="2">OPTM</text>
+              <polygon points={HEX} fill="none" stroke="#34322D" strokeWidth="1.5" />
+              <polygon points={HEX} fill="#B8A98F" className="oo-fillh" opacity={0.12} />
+              <circle cx="200" cy="150" r="40" fill="none" stroke="#8FA6B7" strokeWidth="1" className="oo-scan" opacity={0} />
+              <text x="200" y="154" textAnchor="middle" fill="#B8A98F" fontSize="10" fontFamily="ui-monospace, monospace" letterSpacing="2">OPTM</text>
 
-              <circle cx="16" cy="150" r="4" fill="#65C9E8" className="oo-in" opacity={0} />
+              <circle cx="16" cy="150" r="4" fill="#8FA6B7" className="oo-in" opacity={0} />
               {NODES.map((n, i) => (
                 <g key={n.name}>
                   <circle
                     cx="234"
                     cy="150"
                     r="4"
-                    fill="#C6F36B"
+                    fill="#B8A98F"
                     className={`oo-out${i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : ""}`}
                     style={{ "--dx": n.dx, "--dy": n.dy, opacity: 0 } as DotStyle}
                   />
@@ -258,12 +259,12 @@ export default function Hero() {
                     cy={i === 0 ? 70 : i === 1 ? 150 : 230}
                     r="10"
                     fill="none"
-                    stroke="#C6F36B"
+                    stroke="#B8A98F"
                     className={`oo-chip${i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : ""}`}
                     opacity={0}
                   />
-                  <rect x={i === 1 ? 318 : 296} y={i === 0 ? 59 : i === 1 ? 139 : 219} width="64" height="22" rx="6" fill="#171D22" stroke="#293239" />
-                  <text x={i === 1 ? 350 : 328} y={i === 0 ? 74 : i === 1 ? 154 : 234} textAnchor="middle" fill="#929DA5" fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="1">
+                  <rect x={i === 1 ? 318 : 296} y={i === 0 ? 59 : i === 1 ? 139 : 219} width="64" height="22" rx="6" fill="#1D1C19" stroke="#34322D" />
+                  <text x={i === 1 ? 350 : 328} y={i === 0 ? 74 : i === 1 ? 154 : 234} textAnchor="middle" fill="#A6A197" fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="1">
                     {n.name}
                   </text>
                 </g>
@@ -271,19 +272,19 @@ export default function Hero() {
             </svg>
             )}
 
-            <div className="absolute bottom-3 left-4 z-10 w-52 rounded-lg border border-[#293239] bg-[#090B0D]/90 px-3 py-2.5">
-              <p className="font-mono text-[9px] tracking-[0.2em] text-[#929DA5]">
+            <div className="absolute bottom-3 left-4 z-10 w-52 rounded-lg border border-[#34322D] bg-[#111110]/90 px-3 py-2.5">
+              <p className="font-mono text-[9px] tracking-[0.2em] text-[#A6A197]">
                 ROUTED BY POLICY (ILLUSTRATIVE)
               </p>
               <div className="mt-1 grid grid-cols-3 gap-1">
                 {PRESETS.map((p, i) => (
                   <div
                     key={p.label}
-                    className={`oo-read${i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : ""} font-mono text-[8.5px] text-[#929DA5]`}
+                    className={`oo-read${i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : ""} font-mono text-[8.5px] text-[#A6A197]`}
                     style={{ opacity: 0.35 }}
                   >
                     <p className="tracking-widest">{p.label}</p>
-                    <p className="text-[#F3F5F2]">{p.model}</p>
+                    <p className="text-[#E9E4DA]">{p.model}</p>
                     <p>
                       {p.cost} / {p.lat}ms
                     </p>
