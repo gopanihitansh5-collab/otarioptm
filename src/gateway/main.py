@@ -169,10 +169,37 @@ def _estimate_cost(model_map: Optional[Dict[str, Any]], messages: List[Dict[str,
     return _router_call_estimate(model_map)
 
 
+# Largest inbound JSON body accepted (bytes). Every documented payload cap
+# (messages/prompt/code limits above) sits far below this, so a legitimately
+# formed request never comes close; anything larger is a memory-exhaustion
+# attempt and is refused with 413 BEFORE the body is read into memory.
+MAX_BODY_BYTES = 1_000_000
+
+
 async def _json_body(request: Request) -> Dict[str, Any]:
-    """Parse a JSON object body; malformed input is a 400, not a 500."""
+    """Parse a JSON object body; malformed input is a 400, not a 500.
+
+    The accumulated read is bounded regardless of headers: a missing,
+    false or chunked Content-Length cannot grow memory past
+    MAX_BODY_BYTES, because the cap is enforced while streaming.
+    """
+    declared = request.headers.get("content-length")
+    if declared is not None:
+        try:
+            declared_len = int(declared)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="invalid content-length header")
+        if declared_len > MAX_BODY_BYTES:
+            raise HTTPException(status_code=413, detail="request body too large")
+    chunks: List[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > MAX_BODY_BYTES:
+            raise HTTPException(status_code=413, detail="request body too large")
+        chunks.append(chunk)
     try:
-        body = await request.json()
+        body = json.loads(b"".join(chunks))
     except Exception:
         raise HTTPException(status_code=400, detail="request body must be valid JSON")
     if not isinstance(body, dict):
@@ -1087,9 +1114,32 @@ _limiter = _TokenBucketLimiter()
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 
+def _client_ip(request: Request) -> str:
+    """Best available client key for rate limiting.
+
+    On Vercel (VERCEL env set) every request arrives from the platform's
+    edge proxies, so request.client.host is the proxy, not the caller.
+    Vercel's documented behaviour is to OVERWRITE x-forwarded-for with
+    the client IP (anti-spoofing); x-real-ip and x-vercel-forwarded-for
+    carry the same edge-observed value, and x-vercel-forwarded-for
+    survives a proxy in front of Vercel, so it is preferred, with
+    x-real-ip then the (single-value) x-forwarded-for as fallbacks.
+    Off Vercel the direct peer is used and the spoofable headers are
+    ignored.
+    """
+    if os.environ.get("VERCEL"):
+        for header in ("x-vercel-forwarded-for", "x-real-ip", "x-forwarded-for"):
+            value = request.headers.get(header)
+            if value:
+                first = value.split(",")[0].strip()
+                if first:
+                    return first
+    return request.client.host if request.client else "unknown"
+
+
 async def _rate_limit_middleware(request: Request, call_next: Any) -> Any:
     if _limiter.enabled and request.method in _MUTATING_METHODS and request.url.path.startswith("/api/v1/"):
-        ip = request.client.host if request.client else "unknown"
+        ip = _client_ip(request)
         allowed, retry_after = _limiter.check(ip)
         if not allowed:
             return JSONResponse(
