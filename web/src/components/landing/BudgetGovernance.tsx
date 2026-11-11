@@ -180,8 +180,8 @@ export default function BudgetGovernance() {
                   <ul className="space-y-2 font-mono text-[10px] tracking-wider text-[var(--color-silver)]">
                     {[
                       "ORDER: RESERVE > ROUTE > RECORD",
-                      "RESERVATIONS RELEASED IF A NODE ABORTS",
-                      "ACTUAL SPEND REPLACES THE ESTIMATE ON COMPLETION",
+                      "UNUSED RESERVATIONS RELEASED; UNCERTAIN ATTEMPTS MAY BE CHARGED",
+                      "REPORTED COST USED WHEN AVAILABLE; ESTIMATES MAY REMAIN",
                     ].map((t) => (
                       <li key={t} className="flex gap-2.5">
                         <span
@@ -202,10 +202,10 @@ export default function BudgetGovernance() {
                 </p>
                 <ul className="mt-4 space-y-2.5 text-sm leading-relaxed text-[var(--color-silver)]">
                   {[
-                    "Per-run reservations, released if a node aborts.",
-                    "Committed spend accumulates only on completed work.",
+                    "Unused reservations are released; uncertain attempts may retain an estimated charge.",
+                    "The app ledger includes reported costs and estimates, including some failed attempts.",
                     "The remaining balance is visible on every health poll and in the studio meter.",
-                    "Demo-mode responses cost nothing, so the cap never blocks learning.",
+                    "Local demo responses make no paid inference call; simulated results are labeled demo.",
                   ].map((t) => (
                     <li key={t} className="flex gap-2.5">
                       <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[var(--color-lime)]" />
