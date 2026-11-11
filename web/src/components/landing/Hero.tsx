@@ -8,9 +8,9 @@ const SECONDARY =
   "inline-flex h-12 items-center gap-2 rounded-lg border border-[var(--color-steel)] px-6 text-sm font-medium text-[var(--color-ice)] transition-all duration-200 hover:border-[var(--color-lime)]/40 hover:text-[var(--color-lime)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-lime)]/50";
 
 const NODES = [
-  { name: "QWEN-3.5", dx: "62px", dy: "-80px" },
-  { name: "GPT-4O-MINI", dx: "84px", dy: "0px" },
-  { name: "CLAUDE-SONNET", dx: "62px", dy: "80px" },
+  { name: "QWEN-3.5", dx: "72px", dy: "-80px" },
+  { name: "GPT-4O-MINI", dx: "72px", dy: "0px" },
+  { name: "CLAUDE-SONNET", dx: "72px", dy: "80px" },
 ];
 
 const CANDIDATES = ["qwen-3.5-35b", "gpt-4o-mini", "claude-sonnet-4-6"];
@@ -43,7 +43,7 @@ const CSS = `
 
 type DotStyle = React.CSSProperties & Record<"--dx" | "--dy", string>;
 
-const HEX = "234,150 217,179.4 183,179.4 166,150 183,120.6 217,120.6";
+const PATHS = [70, 150, 230];
 
 export default function Hero() {
   const live = useLiveGuard();
@@ -137,47 +137,49 @@ export default function Hero() {
               Routing trace · illustrative candidates
             </p>
             <svg viewBox="0 0 400 300" className="hero-trace absolute inset-0 h-full w-full" aria-hidden>
-              <line x1="16" y1="150" x2="166" y2="150" stroke="#34322D" strokeWidth="1" />
-              <text x="52" y="136" fill="#A6A197" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="2">REQUEST</text>
+              <defs>
+                <linearGradient id="ht-hot" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stopColor="var(--color-lime)" stopOpacity="0.05" />
+                  <stop offset="1" stopColor="var(--color-lime)" />
+                </linearGradient>
+              </defs>
 
-              <line x1="234" y1="150" x2="296" y2="70" stroke="#34322D" strokeWidth="1" />
-              <line x1="234" y1="150" x2="318" y2="150" stroke="#34322D" strokeWidth="1" />
-              <line x1="234" y1="150" x2="296" y2="230" stroke="#34322D" strokeWidth="1" />
-              <line x1="234" y1="150" x2="296" y2="70" stroke="#8FA6B7" strokeWidth="1.5" className="oo-line" opacity={0} />
-              <line x1="234" y1="150" x2="318" y2="150" stroke="#8FA6B7" strokeWidth="1.5" className="oo-line oo-p1" opacity={0} />
-              <line x1="234" y1="150" x2="296" y2="230" stroke="#8FA6B7" strokeWidth="1.5" className="oo-line oo-p2" opacity={0} />
+              <rect x="10" y="138" width="66" height="24" rx="12" fill="var(--color-elevated)" stroke="var(--color-steel)" />
+              <text x="43" y="153.5" textAnchor="middle" fill="var(--color-silver)" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="1.5">REQUEST</text>
 
-              <polygon points={HEX} fill="none" stroke="#34322D" strokeWidth="1.5" />
-              <polygon points={HEX} fill="#B8A98F" className="oo-fillh" opacity={0.12} />
-              <circle cx="200" cy="150" r="40" fill="none" stroke="#8FA6B7" strokeWidth="1" className="oo-scan" opacity={0} />
-              <text x="200" y="154" textAnchor="middle" fill="#B8A98F" fontSize="10" fontFamily="ui-monospace, monospace" letterSpacing="2">OPTM</text>
+              <path d="M76,150 C110,150 130,150 172,150" fill="none" stroke="var(--color-steel)" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="80" cy="150" r="3.5" fill="var(--color-lime)" className="oo-in" opacity={0} />
 
-              <circle cx="16" cy="150" r="4" fill="#8FA6B7" className="oo-in" opacity={0} />
-              {NODES.map((n, i) => (
-                <g key={n.name}>
-                  <circle
-                    cx="234"
-                    cy="150"
-                    r="4"
-                    fill="#B8A98F"
-                    className={`oo-out${i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : ""}`}
-                    style={{ "--dx": n.dx, "--dy": n.dy, opacity: 0 } as DotStyle}
-                  />
-                  <circle
-                    cx={i === 1 ? 350 : 326}
-                    cy={i === 0 ? 70 : i === 1 ? 150 : 230}
-                    r="10"
-                    fill="none"
-                    stroke="#B8A98F"
-                    className={`oo-chip${i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : ""}`}
-                    opacity={0}
-                  />
-                  <rect x={i === 1 ? 318 : 288} y={i === 0 ? 59 : i === 1 ? 139 : 219} width={i === 1 ? 64 : 76} height="22" rx="6" fill="#1D1C19" stroke="#34322D" />
-                  <text x={i === 1 ? 350 : 326} y={i === 0 ? 74 : i === 1 ? 154 : 234} textAnchor="middle" fill="#E9E4DA" fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="0.5">
-                    {n.name}
-                  </text>
-                </g>
-              ))}
+              <rect x="172" y="122" width="56" height="56" rx="16" fill="var(--color-elevated)" stroke="var(--color-steel)" strokeWidth="1.5" />
+              <rect x="172" y="122" width="56" height="56" rx="16" fill="var(--color-lime)" className="oo-fillh" opacity={0.1} />
+              <circle cx="200" cy="150" r="44" fill="none" stroke="var(--color-lime)" strokeWidth="1" className="oo-scan" opacity={0} />
+              <text x="200" y="154" textAnchor="middle" fill="var(--color-lime)" fontSize="10" fontFamily="ui-monospace, monospace" letterSpacing="2">OPTM</text>
+
+              {NODES.map((n, i) => {
+                const cy = PATHS[i];
+                const cls = i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : "";
+                const d = `M228,150 C262,150 268,${cy} 300,${cy}`;
+                return (
+                  <g key={n.name}>
+                    <path d={d} fill="none" stroke="var(--color-steel)" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d={d} fill="none" stroke="url(#ht-hot)" strokeWidth="2" strokeLinecap="round" className={`oo-line${cls}`} opacity={0} />
+                    <circle
+                      cx="228"
+                      cy="150"
+                      r="3.5"
+                      fill="var(--color-lime)"
+                      className={`oo-out${cls}`}
+                      style={{ "--dx": n.dx, "--dy": n.dy, opacity: 0 } as DotStyle}
+                    />
+                    <circle cx="300" cy={cy} r="6" fill="none" stroke="var(--color-lime)" className={`oo-chip${cls}`} opacity={0} />
+                    <rect x="300" y={cy - 13} width="92" height="26" rx="13" fill="var(--color-elevated)" stroke="var(--color-steel)" />
+                    <circle cx="313" cy={cy} r="3" fill="var(--color-lime)" opacity={0.85} />
+                    <text x="323" y={cy + 3.5} fill="var(--color-ice)" fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="0.5">
+                      {n.name}
+                    </text>
+                  </g>
+                );
+              })}
             </svg>
 
             <div

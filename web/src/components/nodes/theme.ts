@@ -48,18 +48,18 @@ export const TYPE_DOT: Record<NodeType, string> = {
 };
 
 export const CARD =
-  "relative w-56 rounded-xl border bg-elevated p-3 transition-colors duration-200";
+  "relative w-60 rounded-2xl border bg-elevated/95 p-3.5 shadow-[0_10px_30px_rgba(10,10,12,0.16)] backdrop-blur-sm transition-all duration-200 hover:shadow-[0_14px_38px_rgba(10,10,12,0.22)]";
 
 export const RESULT_PANEL =
-  "mt-2 space-y-1 rounded-lg border border-steel-dim bg-obsidian p-2 text-[10px] text-silver";
+  "mt-2.5 space-y-1 rounded-xl border border-steel-dim/70 bg-obsidian/90 p-2.5 text-[10px] text-silver";
 
-export const FIELD = `nodrag nowheel w-full rounded-md border border-steel-dim bg-obsidian px-2 py-1.5 text-[11px] text-ice outline-none transition-colors duration-150 placeholder:text-silver focus:border-lime/60 ${FOCUS_RING}`;
+export const FIELD = `nodrag nowheel w-full rounded-lg border border-steel-dim/70 bg-obsidian/80 px-2.5 py-1.5 text-[11px] text-ice outline-none transition-colors duration-150 placeholder:text-silver focus:border-lime/60 ${FOCUS_RING}`;
 
-export const FIELD_PLAIN = `nodrag w-full rounded-md border border-steel-dim bg-obsidian px-2 py-1.5 text-[11px] text-ice outline-none transition-colors duration-150 placeholder:text-silver focus:border-lime/60 ${FOCUS_RING}`;
+export const FIELD_PLAIN = `nodrag w-full rounded-lg border border-steel-dim/70 bg-obsidian/80 px-2.5 py-1.5 text-[11px] text-ice outline-none transition-colors duration-150 placeholder:text-silver focus:border-lime/60 ${FOCUS_RING}`;
 
 export const BADGE =
-  "flex h-5 w-5 shrink-0 items-center justify-center rounded border border-steel bg-obsidian font-mono text-[9px] font-medium text-silver";
+  "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-steel bg-obsidian font-mono text-[9px] font-medium text-silver";
 
 export function handleStyle(color: string): CSSProperties {
-  return { background: color, width: 10, height: 10, borderColor: NODE_SURFACE };
+  return { background: color, width: 9, height: 9, border: `2px solid ${NODE_SURFACE}` };
 }

@@ -5,6 +5,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  MarkerType,
   MiniMap,
   ReactFlow,
   useReactFlow,
@@ -92,7 +93,13 @@ export function Canvas({
       defaultEdgeOptions={{
         type: "smoothstep",
         animated,
-        style: { stroke: edgeStroke, strokeWidth: 1.5 },
+        style: { stroke: edgeStroke, strokeWidth: 2, strokeLinecap: "round" },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 16,
+          height: 16,
+          color: edgeStroke,
+        },
       }}
       onNodeClick={(_: unknown, node: { id: string }) => {
         if (!onNodeClick) return;
@@ -102,10 +109,10 @@ export function Canvas({
       onPaneClick={onPaneClick}
     >
       <Background
-        color={light ? "rgba(88, 71, 158, 0.14)" : "rgba(255,255,255,0.05)"}
+        color={light ? "rgba(88, 71, 158, 0.18)" : "rgba(255,255,255,0.07)"}
         bgColor={light ? "#F6F5FC" : "#111110"}
-        gap={24}
-        size={1}
+        gap={28}
+        size={1.5}
         variant={BackgroundVariant.Dots}
       />
       <Controls />

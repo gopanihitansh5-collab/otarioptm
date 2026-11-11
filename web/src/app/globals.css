@@ -256,33 +256,65 @@ body {
 }
 
 /* Slowly drifting lavender/blue background gradient (user-requested
-   "gradually moving gradients colour"). Movement is a gentle 54s drift of
-   large soft washes; text and controls never move. Decorative only - it is
-   not tied to routing state. Reduced-motion users get the static gradient. */
+   "gradually moving gradients colour"). The washes live on a fixed
+   body::before layer animated with transform: background-position on body
+   is compositor-optimized into a static paint (verified via pixel-identical
+   screenshots while the animation ran), so transforms are the honest way
+   to move actual pixels. Text and controls never move. Decorative only -
+   it is not tied to routing state. Reduced-motion users get the static
+   gradient. */
 @keyframes oo-gradient-drift {
   0% {
-    background-position: 0% 0%, 100% 0%, 50% 100%, 0 0;
+    transform: translate3d(0, 0, 0) scale(1);
   }
-  50% {
-    background-position: 55% 40%, 45% 60%, 60% 40%, 0 0;
+  33% {
+    transform: translate3d(-3.5%, 2.5%, 0) scale(1.06);
+  }
+  66% {
+    transform: translate3d(3%, -2%, 0) scale(1.03);
   }
   100% {
-    background-position: 0% 0%, 100% 0%, 50% 100%, 0 0;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 [data-theme="light"] body {
+  background: linear-gradient(180deg, #FAF9FD 0%, #F6F5FC 100%);
+}
+
+[data-theme="light"] body::before {
+  content: "";
+  position: fixed;
+  inset: -30%;
+  z-index: -1;
+  pointer-events: none;
   background:
-    radial-gradient(ellipse 70% 55% at 18% 8%, rgba(180, 197, 255, 0.6), transparent 62%),
-    radial-gradient(ellipse 60% 50% at 82% 22%, rgba(226, 217, 250, 0.95), transparent 66%),
-    radial-gradient(ellipse 80% 65% at 50% 95%, rgba(196, 181, 253, 0.45), transparent 62%),
-    linear-gradient(180deg, #FAF9FD 0%, #F6F5FC 100%);
-  background-size: 165% 165%, 165% 165%, 185% 185%, 100% 100%;
+    radial-gradient(ellipse 42% 34% at 20% 12%, rgba(180, 197, 255, 0.55), transparent 62%),
+    radial-gradient(ellipse 38% 32% at 80% 24%, rgba(226, 217, 250, 0.9), transparent 66%),
+    radial-gradient(ellipse 48% 40% at 52% 92%, rgba(196, 181, 253, 0.42), transparent 62%);
   animation: oo-gradient-drift 54s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Dark mode keeps the same slow drift with deep indigo washes at low alpha
+   so the obsidian surface stays dominant. */
+[data-theme="dark"] body::before {
+  content: "";
+  position: fixed;
+  inset: -30%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 44% 36% at 18% 10%, rgba(88, 71, 158, 0.16), transparent 62%),
+    radial-gradient(ellipse 40% 34% at 84% 26%, rgba(0, 81, 213, 0.10), transparent 66%),
+    radial-gradient(ellipse 50% 42% at 50% 96%, rgba(88, 71, 158, 0.12), transparent 62%);
+  animation: oo-gradient-drift 54s ease-in-out infinite;
+  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-theme="light"] body {
+  [data-theme="light"] body::before,
+  [data-theme="dark"] body::before {
     animation: none;
   }
 }
