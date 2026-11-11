@@ -336,3 +336,46 @@ Secrets:
 Still outstanding from those sessions: live-provider verification (awaiting
 key scope approval), actual `docker build`/`docker compose up` (no Docker
 runtime available in the build environment).
+
+---
+
+## 2026-11-11 - Pre-deploy state map (verified same day)
+
+Verified against main @ 8dae360 by the integration lane on 2026-11-11 IST:
+
+Done and tested:
+- Backend: 87/87 pytest pass; gateway boots on port 8000; all 4 starter
+  templates run end-to-end in demo mode (including real DuckDuckGo search in
+  the web-search node); SSE stream works; rate limit returns 429 after burst;
+  CSV export works; /api/v1/health, /models, /templates, /budget all 200.
+- Frontend: npm ci clean; lint clean; production build clean.
+- Landing page: all 14 checklist sections implemented per MASTER.md (the
+  graphite/lime/cyan infrastructure brief); studio templates panel loads live
+  from the gateway; load-and-run works with an explicit "Demo mode" state.
+- CI green on latest commit.
+
+Known gaps / in flight (do not claim as done):
+- Vercel: multi-service deploy (FastAPI via api/index.py + Next.js web/) is
+  being validated; the Python entrypoint on Vercel's runtime is not yet
+  confirmed.
+- /api/v1/activity: the WebSocket transport does not fit Vercel serverless.
+  The deployed activity feed uses the existing GET /api/v1/activity snapshot
+  polling path instead (backend branch feat/backend-hardening72e0c8d adds
+  truthful runtime/activity transport metadata; 91 backend tests pass there).
+- Budgets and activity are held in memory, so on serverless they are
+  per-invocation, not durable shared state: the hosted deployment does not
+  provide durable cross-invocation budget enforcement or activity history.
+  Local/self-hosted runs keep full in-process enforcement.
+- Live-provider verification still awaits provider key scope approval; demo
+  mode is the honest default.
+- docker build / docker compose up remain unrun (no container runtime in the
+  build environment).
+- The hackathon-2026-nov branch no longer exists on the remote; main @
+  8dae360 is the base of record. Active work sits on short-lived feature
+  branches (integration, backend hardening, docs) merged back via the
+  integration lane.
+
+README architecture diagram is now a pre-rendered SVG (brand/architecture.svg,
+portrait, brand palette) so it renders on GitHub mobile where Mermaid code
+blocks show as raw text; the Mermaid source is kept in docs/assets/architecture.mmd
+and in a details block under the diagram.

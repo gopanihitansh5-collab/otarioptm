@@ -1,0 +1,28 @@
+%%{init: {'theme':'base','flowchart':{'htmlLabels':true,'nodeSpacing':28,'rankSpacing':46,'padding':12},'themeVariables':{'background':'#090B0D','primaryColor':'#171D22','primaryTextColor':'#F3F5F2','primaryBorderColor':'#3A4650','lineColor':'#65C9E8','secondaryColor':'#111519','tertiaryColor':'#111519','clusterBkg':'#111519','clusterBorder':'#293239','edgeLabelBackground':'#0E1317','titleColor':'#F3F5F2','fontFamily':'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace','fontSize':'17px'}}}%%
+flowchart TD
+    subgraph web["Browser :3000"]
+        STUDIO["/studio<br/>React Flow canvas"]
+        FEEDUI["Activity + budget<br/>live panels"]
+    end
+    subgraph gw["FastAPI gateway :8000"]
+        ENGINE["Workflow engine<br/>topological + template refs"]
+        ROUTER["Router<br/>cost / latency / health"]
+        BUDGET["BudgetManager<br/>reserve / settle"]
+        SSE["SSE stream<br/>/chat/completions/stream"]
+        WS["WS /api/v1/activity"]
+    end
+    subgraph chain["Fallback chain per step"]
+        OTARI["Otari hosted gateway"]
+        GROQ["Groq free tier"]
+        DEMO["Local demo, $0.00"]
+    end
+    STUDIO -->|"POST /workflow/run"| ENGINE
+    STUDIO -->|"templates · export/import"| ENGINE
+    ENGINE --> ROUTER
+    ROUTER --> BUDGET
+    ROUTER --> OTARI
+    OTARI -.->|fallback| GROQ
+    GROQ -.->|fallback| DEMO
+    BUDGET -->|"snapshots + node events"| WS
+    WS --> FEEDUI
+    STUDIO -.-> SSE
