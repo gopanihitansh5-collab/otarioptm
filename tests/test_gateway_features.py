@@ -462,8 +462,16 @@ def test_gateway_estimate_is_the_router_estimate():
     assert gw._estimate_cost(free, [{"role": "user", "content": "hi"}], 4000) == 0.0
 
 
-def test_reservation_never_exceeds_the_router_estimate(monkeypatch):
-    """A model the router called affordable must not be rejected by reserve()."""
+def test_reservation_is_the_strict_bound_not_the_router_estimate(monkeypatch):
+    """The reservation is the provable per-call upper bound, not the flat estimate.
+
+    The router's affordability estimate ignores prompt size, so a real call
+    can exceed it; reserving the estimate let a crash lose the difference.
+    The reservation is now max-price x (payload_bytes + max_tokens). The
+    bound tracks the ACTUAL payload: tiny prompt -> tighter than the flat
+    estimate; large prompt -> larger. Trade-off (intended, conservative):
+    a 402 can fire for a large prompt that would actually have fit.
+    """
     reserved = {}
     original_reserve = gw.budget.reserve
 
@@ -487,9 +495,19 @@ def test_reservation_never_exceeds_the_router_estimate(monkeypatch):
                 100,
             )
         )
-    assert reserved["est"] == pytest.approx(router_est)
-    assert reserved["est"] <= router_est  # never larger than the router checked
-    assert result["cost"] == pytest.approx(router_est)
+    import json as _json
+    payload_bytes = len(_json.dumps([{"role": "user", "content": "hi"}], ensure_ascii=False).encode("utf-8"))
+    expected_bound = gw.router_mod.strict_call_bound(
+        models[0], payload_bytes=payload_bytes, max_tokens=100
+    )
+    assert reserved["est"] == pytest.approx(expected_bound)
+    assert expected_bound == pytest.approx(0.0000002 * (payload_bytes + 100))
+    assert result["cost"] == pytest.approx(expected_bound)  # unreported paid attempt charged at bound
+
+    big = [{"role": "user", "content": "word " * 5000}]
+    big_bytes = len(_json.dumps(big, ensure_ascii=False).encode("utf-8"))
+    big_bound = gw.router_mod.strict_call_bound(models[0], payload_bytes=big_bytes, max_tokens=100)
+    assert big_bound > router_est  # flat estimate would have under-reserved here
 
 
 def test_router_affordable_model_is_not_rejected_with_402():

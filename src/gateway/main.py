@@ -50,7 +50,8 @@ DEMO_COMPLETION_COST = 0.0
 
 # Smallest reservation the gateway takes when nothing is left in the budget.
 # It is only used to turn an EXHAUSTED cap into the documented 402; a paid
-# model is always reserved with exactly the router's affordability estimate.
+# model is always reserved with its strict per-call upper bound (see
+# router.strict_call_bound), never an estimate that actuals can exceed.
 MIN_RESERVATION = 0.01
 
 # Measured-fast Otari chat models (direct API timing, 2026-11-11:
@@ -535,12 +536,23 @@ async def execute_chat_step(
                 reason = f"preferred fast otari model ({preferred})"
                 break
 
-    # ONE estimate, shared with the router: the router judged this model
-    # affordable with exactly this number, so the reservation can never be
-    # larger than what the router checked.
-    est = _estimate_cost(chosen, ctx_messages, max_tokens)
-    if est > 0:
-        reservation = est
+    # STRICT reservation bound: the router's flat affordability estimate can
+    # be EXCEEDED by a real call (it ignores prompt size), which made a crash
+    # between call and settle lose the difference. The reservation is now a
+    # provable upper bound for one call to the chosen model: BPE tokenizers
+    # encode >= 1 byte per token (prompt tokens <= serialized payload bytes)
+    # and output is capped provider-side by max_tokens, so
+    #   cost <= max-per-token-price x (payload_bytes + max_tokens).
+    # The chain makes at most ONE paid attempt (paid-first -> free Groq ->
+    # free demo), so the bound covers the whole step and a crash can never
+    # lose spend. Trade-off (intended, conservative): a 402 can now fire for
+    # a large prompt that would actually have fit the remaining budget.
+    payload_bytes = len(json.dumps(ctx_messages, ensure_ascii=False).encode("utf-8"))
+    bound = router_mod.strict_call_bound(
+        chosen, payload_bytes=payload_bytes, max_tokens=max_tokens
+    ) if chosen else 0.0
+    if bound > 0:
+        reservation = bound
     else:
         # Zero-cost tier: reserve nothing, unless the cap is already exhausted
         # - then a minimal reservation keeps the documented 402 behaviour.
@@ -597,9 +609,9 @@ async def execute_chat_step(
             elif isinstance(exc, EmptyCompletion) and primary == "otari":
                 # A 200 with no content and no cost report (e.g. a reasoning
                 # model that spent its tokens on hidden reasoning) can still
-                # have billed: charge the shared estimate, clearly labeled as
+                # have billed: charge the strict bound, clearly labeled as
                 # an estimate, never record a paid attempt as free.
-                estimated_failed += est
+                estimated_failed += bound
             if primary == "otari":
                 if groq_client is not None:
                     try:
@@ -633,7 +645,7 @@ async def execute_chat_step(
         # provider-reported spend.
         estimated_total = estimated_failed
         if _reported_cost(result) == 0.0 and chain[:1] == ["otari"]:
-            estimated_total += est
+            estimated_total += bound
         actual_cost = reported_total + estimated_total
         if reported_total > 0 and estimated_total > 0:
             cost_source = "provider-reported+estimate"
@@ -648,7 +660,7 @@ async def execute_chat_step(
     finally:
         if not settled:
             # Uncertain execution: the provider region was entered but no
-            # settlement recorded the outcome. Charge the reserved estimate
+            # settlement recorded the outcome. Charge the reserved strict bound
             # (conservative - never frees possibly-billed spend) instead of
             # releasing.
             await _settle_reservation(rid, reservation)

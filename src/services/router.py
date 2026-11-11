@@ -124,6 +124,48 @@ def _model_token_estimate(m: Dict[str, Any]) -> float:
     return float(DEFAULT_TOKEN_ESTIMATE)
 
 
+def _max_model_cost(m: Dict[str, Any]) -> float:
+    """Largest per-token price across every known pricing key.
+
+    Prompt and completion prices can differ; a strict bound must use the
+    larger of the two, so this reads completion-side keys in addition to
+    the prompt-side ones ``_model_cost`` checks.
+    """
+    pricing = m.get("pricing") or {}
+    vals: List[float] = []
+    if isinstance(pricing, dict):
+        for key in (
+            "prompt_per_1k", "input", "prompt", "per_token", "cost_per_token",
+            "completion_per_1k", "output", "completion",
+        ):
+            if pricing.get(key) is not None:
+                vals.append(_f(pricing.get(key), 0.0))
+    vals.append(_f(m.get("cost_per_token"), 0.0))
+    return max(vals, default=0.0)
+
+
+def strict_call_bound(m: Dict[str, Any], *, payload_bytes: int, max_tokens: int) -> float:
+    """Provable upper bound on the USD cost of ONE call to ``m``.
+
+    BPE tokenizers encode every token as at least one byte, so prompt
+    tokens never exceed the serialized request's byte length; output
+    tokens are capped provider-side by ``max_tokens``. Therefore
+
+        cost <= max-per-token-price x (payload_bytes + max_tokens)
+
+    is an upper bound, not an estimate. Conditions (documented residuals):
+    the provider must bill only prompt+completion tokens (no uncapped
+    hidden reasoning or injected system/tool tokens) and the config's
+    prices must not lag the provider's. Within those conditions a crash
+    after the call can never lose spend: the reservation IS the bound.
+    """
+    price = _max_model_cost(m)
+    if price <= 0:
+        return 0.0
+    tokens = max(0, int(payload_bytes)) + max(0, int(max_tokens))
+    return max(0.0, price * tokens)
+
+
 def estimated_call_cost(m: Dict[str, Any], *, tokens: Optional[int] = None) -> float:
     """Estimated USD cost of ONE call: per-token cost x token estimate.
 

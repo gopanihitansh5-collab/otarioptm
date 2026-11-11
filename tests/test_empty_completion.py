@@ -135,7 +135,8 @@ def test_empty_completion_with_unreported_cost_charges_estimate_not_zero(monkeyp
     # shared estimate is charged, never a silently free paid attempt.
     assert snap["spent"] > 0.0
     assert result["costSource"] == "estimate"
-    assert snap["spent"] == pytest.approx(result["cost"])
+    # snapshot() rounds spend to 6 decimals for display; compare within that.
+    assert snap["spent"] == pytest.approx(result["cost"], abs=1e-6)
 
 
 def test_tool_call_only_response_is_a_failure_not_an_empty_success(monkeypatch):
