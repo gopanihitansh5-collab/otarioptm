@@ -429,7 +429,7 @@ function StudioInner() {
   );
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-obsidian text-ice">
+    <div className="flex h-screen flex-col overflow-hidden bg-transparent text-ice">
       <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-steel bg-graphite px-2 sm:gap-2 sm:px-4">
         <Link
           href="/"

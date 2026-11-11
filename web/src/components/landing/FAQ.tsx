@@ -30,11 +30,11 @@ const QA = [
   },
   {
     q: "Can I see and export every dollar?",
-    a: "Yes. The studio shows a live meter plus a WebSocket activity feed, GET /api/v1/budget returns the snapshot, and GET /api/v1/export streams the full spend log as CSV with a totals row.",
+    a: "Yes. The studio shows a live meter plus a live activity feed, GET /api/v1/budget returns the snapshot, and GET /api/v1/export streams the full spend log as CSV with a totals row.",
   },
   {
-    q: "Is the code-exec node safe to run untrusted code?",
-    a: "Yes. Each program runs in an isolated Vercel Sandbox microVM with deny-all network egress, no environment secrets, and a hard timeout. The old in-process sandbox was removed entirely - there is no in-process fallback.",
+    q: "How is code execution isolated?",
+    a: "Each program runs in an isolated Vercel Sandbox microVM with deny-all network egress, no environment secrets, and a hard timeout. The old in-process sandbox was removed entirely - there is no in-process fallback.",
   },
 ];
 

@@ -255,14 +255,10 @@ body {
   scrollbar-color: rgba(88, 71, 158, 0.25) transparent;
 }
 
-/* Slowly drifting lavender/blue background gradient (user-requested
-   "gradually moving gradients colour"). The washes live on a fixed
-   body::before layer animated with transform: background-position on body
-   is compositor-optimized into a static paint (verified via pixel-identical
-   screenshots while the animation ran), so transforms are the honest way
-   to move actual pixels. Text and controls never move. Decorative only -
-   it is not tied to routing state. Reduced-motion users get the static
-   gradient. */
+/* Decorative wash layer moves independently of content. Page roots must
+   remain transparent so they do not hide this layer. */
+body { isolation: isolate; }
+body > * { position: relative; z-index: 1; }
 @keyframes oo-gradient-drift {
   0% {
     transform: translate3d(0, 0, 0) scale(1);
@@ -286,7 +282,7 @@ body {
   content: "";
   position: fixed;
   inset: -30%;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   background:
     radial-gradient(ellipse 42% 34% at 20% 12%, rgba(180, 197, 255, 0.55), transparent 62%),
@@ -302,7 +298,7 @@ body {
   content: "";
   position: fixed;
   inset: -30%;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   background:
     radial-gradient(ellipse 44% 36% at 18% 10%, rgba(88, 71, 158, 0.16), transparent 62%),
