@@ -96,7 +96,8 @@ async def _test_isolation_bounds_passed_to_creation(monkeypatch):
     assert kw["env"] == {}  # no host env vars in the VM
     assert kw["persistent"] is False  # destroyed after the run
     assert kw["execution_time_limit"] <= 30
-    assert kw["resources"].vcpus == 1 and kw["resources"].memory <= 2048
+    assert kw["resources"].vcpus == 1
+    assert kw["resources"].memory == 2048 * kw["resources"].vcpus  # API requires 2048 MB per vCPU
     run = FakeBox.run_with
     assert run["command"] == "python"
     assert run["args"][0] == "-c"

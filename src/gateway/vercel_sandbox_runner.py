@@ -82,7 +82,7 @@ async def run_in_vercel_sandbox(code: str) -> Dict[str, Any]:
                 env={},  # no env vars in the VM: nothing to leak
                 persistent=False,  # destroy on exit; no snapshot storage
                 region=SANDBOX_REGION,
-                resources=SandboxResources(vcpus=1, memory=1024),
+                resources=SandboxResources(vcpus=1, memory=2048),  # memory is MB, 2048/vCPU required
             ) as box:
                 result = await box.run_command(
                     "python",
@@ -112,4 +112,14 @@ async def run_in_vercel_sandbox(code: str) -> Dict[str, Any]:
         # the context manager destroys it on cancellation where possible.
         return _fail("code-exec sandbox timed out", error="timeout")
     except Exception as exc:  # noqa: BLE001 - quota pause, auth, API errors
-        return _fail(f"code-exec sandbox unavailable ({exc.__class__.__name__})")
+        # Structured detail only (exception class, HTTP status, API error
+        # code): enough to diagnose quota/auth/parameter failures honestly,
+        # never the response body (which can echo request data).
+        detail = f"code-exec sandbox unavailable ({exc.__class__.__name__}"
+        status = getattr(exc, "status_code", None)
+        code = getattr(exc, "code", None)
+        if status is not None:
+            detail += f", status {status}"
+        if code:
+            detail += f", code {code}"
+        return _fail(detail + ")")
