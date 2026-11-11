@@ -41,7 +41,13 @@ export function Reveal({
       { threshold: 0.15, rootMargin: "0px 0px -10% 0px" },
     );
     io.observe(el);
-    return () => io.disconnect();
+    // Safety: never leave content hidden if the observer misses (capture
+    // tooling, odd viewports). Reveal anyway shortly after mount.
+    const safety = window.setTimeout(() => setSeen(true), 1200);
+    return () => {
+      io.disconnect();
+      window.clearTimeout(safety);
+    };
   }, [seen]);
 
   return (

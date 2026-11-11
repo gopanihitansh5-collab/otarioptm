@@ -73,7 +73,10 @@ export default function Hero() {
           </Reveal>
           <Reveal delay={60}>
             <h1 className="mt-5 font-display text-[clamp(40px,4.6vw,60px)] font-normal leading-[1.08] tracking-tight text-[var(--color-ice)]">
-              Route AI requests by cost, latency and budget.
+              Route AI requests by{" "}
+              <em className="italic text-[var(--color-lime)]">
+                cost, latency and budget.
+              </em>
             </h1>
           </Reveal>
           <Reveal delay={120}>
@@ -101,6 +104,9 @@ export default function Hero() {
             </div>
           </Reveal>
           <Reveal delay={240}>
+            <p className="mt-4 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
+              OTARI-FIRST ROUTING · AUTOMATIC GROQ FALLBACK · FREE TIER
+            </p>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
               <span>
                 GATEWAY: <span className={live.status === "offline" ? "text-[var(--color-fail)]" : "text-[var(--color-lime)]"}>{status}</span>

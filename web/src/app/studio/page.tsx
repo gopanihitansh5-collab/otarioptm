@@ -13,6 +13,7 @@ import { BlockedCard } from "@/components/studio/BlockedCard";
 import { HistoryPanel } from "@/components/studio/HistoryPanel";
 import { MobileDrawer } from "@/components/studio/MobileDrawer";
 import { NoticeBar } from "@/components/studio/NoticeBar";
+import ThemeToggle from "@/components/ThemeToggle";
 import { OverdraftDemo } from "@/components/studio/OverdraftDemo";
 import { SaveIndicator } from "@/components/studio/SaveIndicator";
 import { ShortcutsDialog } from "@/components/studio/ShortcutsDialog";
@@ -590,6 +591,8 @@ function StudioInner() {
             Clear
           </button>
         </div>
+
+        <ThemeToggle className="h-11 shrink-0 rounded-lg border border-steel px-3 font-mono text-[10px] tracking-[0.15em] text-silver transition-colors duration-150 hover:border-lime/40 hover:text-lime" />
 
         <button
           type="button"

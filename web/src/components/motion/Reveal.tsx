@@ -44,6 +44,9 @@ export default function Reveal({
     if (!el || reduced) return;
     if (!("IntersectionObserver" in window)) return;
     const t = window.setTimeout(() => setArmed(true), 0);
+    // Safety: never leave content hidden. If the observer never fires
+    // (headless capture, odd viewport, threshold miss), reveal anyway.
+    const safety = window.setTimeout(() => setInView(true), 1500);
     let seen = false;
     const io = new IntersectionObserver(
       (entries) => {
@@ -59,6 +62,7 @@ export default function Reveal({
     io.observe(el);
     return () => {
       window.clearTimeout(t);
+      window.clearTimeout(safety);
       io.disconnect();
     };
   }, [reduced, variant]);
