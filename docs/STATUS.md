@@ -101,7 +101,7 @@ is a vendored registry tarball in node_modules):
 ## Known limits
 
 - Em-dash grep on landing copy (audit discrepancy).
-- Redesign commit pushed 2026-11-10; keep pushing from `hackathon-2026-nov`.
+- Redesign commit pushed 2026-11-10; branch renamed to `main` on 2026-11-11 — keep pushing there.
 - Otari 402 on the hosted gateway reads "No credential is configured for
   provider 'openai'" - fine for the demo narrative (fallback chain shines),
   but worth re-checking before recording the demo video.

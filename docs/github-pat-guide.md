@@ -70,7 +70,7 @@ find . -name "README.md" -exec cat {} \;
 2. **Read local docs**: `cat otarioptm/docs/overview.md`
 3. **Check git status**: `git status` (no token needed)
 4. **Commit changes**: `git add . && git commit -m "feat: add budget node"` 
-5. **Push to branch**: `git push origin hackathon-2026-nov`
+5. **Push to branch**: `git push origin main`
 6. **Create PR** via GitHub UI (no PAT needed for public repos)
 
 ## .gitignore Template

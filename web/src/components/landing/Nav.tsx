@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const GH = "https://github.com/gopanihitansh5-collab/otarioptm";
-const GHB = `${GH}/blob/hackathon-2026-nov`;
+const GHB = `${GH}/blob/main`;
 
 type Item = { label: string; href: string; external?: boolean };
 

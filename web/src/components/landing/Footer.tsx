@@ -14,12 +14,12 @@ const COLUMNS: {
       },
       {
         label: "API reference",
-        href: "https://github.com/gopanihitansh5-collab/otarioptm/blob/hackathon-2026-nov/docs/api.md",
+        href: "https://github.com/gopanihitansh5-collab/otarioptm/blob/main/docs/api.md",
         external: true,
       },
       {
         label: "Quickstart",
-        href: "https://github.com/gopanihitansh5-collab/otarioptm/blob/hackathon-2026-nov/README.md#quickstart",
+        href: "https://github.com/gopanihitansh5-collab/otarioptm/blob/main/README.md#quickstart",
         external: true,
       },
     ],

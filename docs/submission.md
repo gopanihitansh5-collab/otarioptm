@@ -10,7 +10,7 @@ Hackathon: DoraHacks "Devs Wilding Online!" (Mozilla Otari). Deadline:
 | **Project name** | ✅ | `OtariOptm: AI workflow builder with auto-cost optimization` |
 | **Email address** | ✅ | `gopanihitansh5@gmail.com` |
 | **One-line description** | ✅ | `OtariOptm: Visual workflow engine with auto-model routing, budget enforcement, and activity analytics` |
-| **Public GitHub repo** | ✅ | https://github.com/gopanihitansh5-collab/otarioptm (branch: `hackathon-2026-nov`) |
+| **Public GitHub repo** | ✅ | https://github.com/gopanihitansh5-collab/otarioptm (branch: `main`) |
 | **First commit using Otari** | ✅ | [`745cc90`](https://github.com/gopanihitansh5-collab/otarioptm/commit/745cc90cacd7b466d236aae27e8d43edd5ec2124) - OTARI client, budget service, router, FastAPI gateway |
 | **Otari features used (7+)** | ✅ | see checklist below |
 | **Demo video (3-5 min)** | ☐ | record with the script below, host on YouTube/Loom |
@@ -44,7 +44,7 @@ OtariOptm: AI workflow builder with auto-cost optimization
 OtariOptm: Visual workflow engine with auto-model routing, budget enforcement, and activity analytics
 
 # GitHub Link
-https://github.com/gopanihitansh5-collab/otarioptm (branch: hackathon-2026-nov)
+https://github.com/gopanihitansh5-collab/otarioptm (branch: main)
 
 # Demo Video
 [YouTube/Loom link, 3-5 min]
