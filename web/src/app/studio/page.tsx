@@ -40,7 +40,7 @@ type GatewayState = "checking" | "otari" | "groq" | "demo" | "offline";
 
 const GATEWAY_BADGE: Record<GatewayState, { dot: string; label: string; title?: string }> = {
   checking: { dot: "bg-silver", label: "checking gateway" },
-  otari: { dot: "bg-lime", label: "Otari live" },
+  otari: { dot: "bg-lime", label: "Otari connected", title: "Gateway reachable and key configured; not proof a model answer succeeds" },
   groq: { dot: "bg-amber", label: "Groq fallback" },
   demo: { dot: "bg-silver", label: "Demo mode" },
   offline: { dot: "bg-fail", label: "Gateway offline", title: "Gateway unreachable" },

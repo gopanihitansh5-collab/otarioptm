@@ -95,7 +95,7 @@ export default function Pricing() {
         </div>
 
         <Reveal delay={200}>
-          <p className="mt-6 font-mono text-[9px] tracking-[0.2em] text-[var(--color-steel)]">
+          <p className="mt-6 font-mono text-[9px] tracking-[0.2em] text-[var(--color-silver)]">
             PROVIDER CALLS ARE BILLED BY PROVIDERS AT THEIR PUBLISHED RATES. THE
             CAP ENFORCES YOUR LIMIT, IT DOES NOT REPLACE THEIR PRICING.
           </p>

@@ -5,7 +5,7 @@ import { Reveal } from "../../lib/landing/Reveal";
 const Items = [
   {
     title: "API key security",
-    body: "Provider keys live in a server-side environment file, are never committed to git and are never printed in logs or error responses.",
+    body: "Provider keys live in a server-side environment file, never committed to git. We audited gateway logging and error paths: no key values are printed or returned, and key-shaped strings are redacted by a guardrail pattern.",
     status: "IMPLEMENTED",
   },
   {
@@ -20,7 +20,7 @@ const Items = [
   },
   {
     title: "Budget as rate control",
-    body: "The project cap is the rate limiter: a run that exceeds the remaining balance is refused with HTTP 402 before a single token leaves.",
+    body: "The project cap refuses an over-budget run with HTTP 402 before a token leaves. It is tracked in memory per server instance, so it is not a durable cross-instance guarantee on serverless deploys; a call that fails after dispatch can still be billed by the provider. Per-run spend is labeled by source: provider-reported or estimate.",
     status: "IMPLEMENTED",
   },
   {

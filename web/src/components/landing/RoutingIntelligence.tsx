@@ -61,7 +61,7 @@ const MODELS: {
 const FALLBACK_STEPS = [
   { name: "OTARI HOSTED", state: "PRIMARY PROVIDER" },
   { name: "GROQ FALLBACK", state: "SECOND PROVIDER" },
-  { name: "LOCAL DEMO", state: "GUARANTEED RESPONSE" },
+  { name: "LOCAL DEMO", state: "DETERMINISTIC DEMO" },
 ];
 
 const fmtScore = (s: number) => `${s < 0 ? "-" : "+"}${Math.abs(s).toFixed(3)}`;
@@ -369,8 +369,8 @@ export default function RoutingIntelligence() {
             <p className="mt-4 text-sm leading-relaxed text-[var(--color-silver)]">
               When a tier fails, the next one takes the call and the response
               carries a diagnostic note with the reason from each failed
-              provider, surfaced in the activity feed. Every run returns real
-              output, even when the providers are dark.
+              provider, surfaced in the activity feed. Every run returns an
+              output, labeled by tier, even when the providers are dark.
             </p>
           </div>
         </Reveal>

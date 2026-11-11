@@ -178,7 +178,7 @@ export default function Hero() {
               className="absolute bottom-3 left-4 z-10 w-64 rounded-lg border border-[var(--color-steel)] bg-[var(--color-obsidian)]/90 px-3 py-2.5"
             >
               <p className="font-mono text-[9px] tracking-[0.2em] text-[var(--color-silver)]">
-                FALLBACK CATALOG · ILLUSTRATIVE ESTIMATES
+                FALLBACK CATALOG · ILLUSTRATIVE
               </p>
               <div className="mt-1.5 space-y-1">
                 {CANDIDATES.map((model) => (
