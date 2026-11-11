@@ -169,8 +169,23 @@ def _estimate_cost(model_map: Optional[Dict[str, Any]], messages: List[Dict[str,
     return _router_call_estimate(model_map)
 
 
+# Largest inbound JSON body accepted (bytes). Every documented payload cap
+# (messages/prompt/code limits above) sits far below this, so a legitimately
+# formed request never comes close; anything larger is a memory-exhaustion
+# attempt and is refused with 413 BEFORE the body is read into memory.
+MAX_BODY_BYTES = 1_000_000
+
+
 async def _json_body(request: Request) -> Dict[str, Any]:
     """Parse a JSON object body; malformed input is a 400, not a 500."""
+    declared = request.headers.get("content-length")
+    if declared is not None:
+        try:
+            declared_len = int(declared)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="invalid content-length header")
+        if declared_len > MAX_BODY_BYTES:
+            raise HTTPException(status_code=413, detail="request body too large")
     try:
         body = await request.json()
     except Exception:
@@ -1087,9 +1102,26 @@ _limiter = _TokenBucketLimiter()
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 
+def _client_ip(request: Request) -> str:
+    """Best available client key for rate limiting.
+
+    On Vercel serverless every request arrives from the platform's edge
+    proxies, so request.client.host is the proxy, not the caller; Vercel
+    sets x-forwarded-for there and only there we trust its leftmost entry.
+    Locally the direct peer is used and the header is ignored (spoofable).
+    """
+    if os.environ.get("VERCEL"):
+        xff = request.headers.get("x-forwarded-for")
+        if xff:
+            first = xff.split(",")[0].strip()
+            if first:
+                return first
+    return request.client.host if request.client else "unknown"
+
+
 async def _rate_limit_middleware(request: Request, call_next: Any) -> Any:
     if _limiter.enabled and request.method in _MUTATING_METHODS and request.url.path.startswith("/api/v1/"):
-        ip = request.client.host if request.client else "unknown"
+        ip = _client_ip(request)
         allowed, retry_after = _limiter.check(ip)
         if not allowed:
             return JSONResponse(
