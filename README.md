@@ -108,6 +108,18 @@ someone else's problem:
 
 ## 🏗️ Architecture
 
+<picture>
+  <img src="brand/architecture.svg" alt="OtariOptm architecture diagram: the browser studio and live activity panels talk to the FastAPI gateway (workflow engine, router, budget manager, SSE stream, activity WebSocket), and every step routes through the Otari hosted gateway with Groq free tier and local demo fallbacks." width="680">
+</picture>
+
+*Local development architecture (browser on :3000, gateway on :8000, activity over
+WebSocket). On the Vercel deployment the activity feed uses `GET /api/v1/activity`
+snapshot polling instead of the WebSocket, and budgets/activity are per-invocation
+in-memory, not durable shared state.*
+
+<details>
+<summary>Mermaid source (edit and re-render to brand/architecture.svg to update the diagram)</summary>
+
 ```mermaid
 flowchart LR
     subgraph web["Browser :3000"]
@@ -137,6 +149,8 @@ flowchart LR
     WS --> FEEDUI
     STUDIO -.-> SSE
 ```
+
+</details>
 
 The engine is a topological executor (Kahn's algorithm, cycles rejected with HTTP 400):
 each node's output feeds downstream nodes through template references. The router scores

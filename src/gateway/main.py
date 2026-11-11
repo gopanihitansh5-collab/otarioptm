@@ -169,10 +169,37 @@ def _estimate_cost(model_map: Optional[Dict[str, Any]], messages: List[Dict[str,
     return _router_call_estimate(model_map)
 
 
+# Largest inbound JSON body accepted (bytes). Every documented payload cap
+# (messages/prompt/code limits above) sits far below this, so a legitimately
+# formed request never comes close; anything larger is a memory-exhaustion
+# attempt and is refused with 413 BEFORE the body is read into memory.
+MAX_BODY_BYTES = 1_000_000
+
+
 async def _json_body(request: Request) -> Dict[str, Any]:
-    """Parse a JSON object body; malformed input is a 400, not a 500."""
+    """Parse a JSON object body; malformed input is a 400, not a 500.
+
+    The accumulated read is bounded regardless of headers: a missing,
+    false or chunked Content-Length cannot grow memory past
+    MAX_BODY_BYTES, because the cap is enforced while streaming.
+    """
+    declared = request.headers.get("content-length")
+    if declared is not None:
+        try:
+            declared_len = int(declared)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="invalid content-length header")
+        if declared_len > MAX_BODY_BYTES:
+            raise HTTPException(status_code=413, detail="request body too large")
+    chunks: List[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > MAX_BODY_BYTES:
+            raise HTTPException(status_code=413, detail="request body too large")
+        chunks.append(chunk)
     try:
-        body = await request.json()
+        body = json.loads(b"".join(chunks))
     except Exception:
         raise HTTPException(status_code=400, detail="request body must be valid JSON")
     if not isinstance(body, dict):
@@ -741,6 +768,23 @@ async def _send_budget_alert(node_id: str) -> None:
         pass  # alerts must never break workflow execution
 
 
+def _runtime_info() -> Dict[str, Any]:
+    """Truthful runtime/transport labels for the dashboard.
+
+    On Vercel serverless (VERCEL env set) the /api/v1/activity WebSocket
+    cannot stay open, in-memory activity/budget state is per-invocation,
+    and the supported live path is polling GET /api/v1/activity. The
+    dashboard must render "polling" / "snapshot" state there instead of a
+    fake live WebSocket panel. Locally both WebSocket and polling work.
+    """
+    serverless = bool(os.environ.get("VERCEL"))
+    return {
+        "runtime": "vercel-serverless" if serverless else "local",
+        "activity_transport": "poll" if serverless else "websocket+poll",
+        "activity_snapshot_path": "/api/v1/activity",
+    }
+
+
 async def health() -> Dict[str, Any]:
     snap = await budget.snapshot()
     return {
@@ -748,6 +792,7 @@ async def health() -> Dict[str, Any]:
         "otari": otari_client is not None,
         "groq": groq_client is not None,
         "budget": snap,
+        **_runtime_info(),
     }
 
 
@@ -981,7 +1026,9 @@ def _trim(text: str, limit: int = 2000) -> str:
 
 
 async def activity_snapshot() -> Dict[str, Any]:
-    return {"events": ACTIVITY_LOG[-200:], "budget": await budget.snapshot()}
+    # Serverless-compatible activity feed: this snapshot is the supported
+    # transport where WebSockets cannot stay open (see _runtime_info).
+    return {"events": ACTIVITY_LOG[-200:], "budget": await budget.snapshot(), **_runtime_info()}
 
 
 async def activity_ws(websocket: WebSocket) -> None:
@@ -1067,9 +1114,32 @@ _limiter = _TokenBucketLimiter()
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 
+def _client_ip(request: Request) -> str:
+    """Best available client key for rate limiting.
+
+    On Vercel (VERCEL env set) every request arrives from the platform's
+    edge proxies, so request.client.host is the proxy, not the caller.
+    Vercel's documented behaviour is to OVERWRITE x-forwarded-for with
+    the client IP (anti-spoofing); x-real-ip and x-vercel-forwarded-for
+    carry the same edge-observed value, and x-vercel-forwarded-for
+    survives a proxy in front of Vercel, so it is preferred, with
+    x-real-ip then the (single-value) x-forwarded-for as fallbacks.
+    Off Vercel the direct peer is used and the spoofable headers are
+    ignored.
+    """
+    if os.environ.get("VERCEL"):
+        for header in ("x-vercel-forwarded-for", "x-real-ip", "x-forwarded-for"):
+            value = request.headers.get(header)
+            if value:
+                first = value.split(",")[0].strip()
+                if first:
+                    return first
+    return request.client.host if request.client else "unknown"
+
+
 async def _rate_limit_middleware(request: Request, call_next: Any) -> Any:
     if _limiter.enabled and request.method in _MUTATING_METHODS and request.url.path.startswith("/api/v1/"):
-        ip = request.client.host if request.client else "unknown"
+        ip = _client_ip(request)
         allowed, retry_after = _limiter.check(ip)
         if not allowed:
             return JSONResponse(

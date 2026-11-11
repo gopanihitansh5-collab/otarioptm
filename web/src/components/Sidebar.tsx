@@ -19,6 +19,7 @@ type SidebarProps = {
   onDeselect?: () => void;
   snapshot: BudgetSnapshot | null;
   connected: boolean;
+  transport?: "ws" | "poll" | null;
   events: ActivityEvent[];
 };
 
@@ -217,12 +218,13 @@ export function Sidebar({
   onDeselect,
   snapshot,
   connected,
+  transport,
   events,
 }: SidebarProps) {
   return (
     <aside className="flex w-[320px] shrink-0 flex-col border-l border-steel bg-elevated">
       <div className="shrink-0 p-4">
-        <BudgetMeter snapshot={snapshot} connected={connected} />
+        <BudgetMeter snapshot={snapshot} connected={connected} transport={transport} />
       </div>
       <div className="shrink-0 border-t border-steel-dim p-4">
         {node ? (

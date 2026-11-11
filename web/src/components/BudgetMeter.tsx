@@ -3,6 +3,8 @@ import type { BudgetSnapshot } from "@/lib/types";
 type BudgetMeterProps = {
   snapshot: BudgetSnapshot | null;
   connected: boolean;
+  /** "poll" on runtimes where the WebSocket cannot stay open (serverless). */
+  transport?: "ws" | "poll" | null;
 };
 
 /**
@@ -11,7 +13,7 @@ type BudgetMeterProps = {
  * labels and the figures are mono. The panel is an elevated surface with a
  * steel border, never a shadow.
  */
-export function BudgetMeter({ snapshot, connected }: BudgetMeterProps) {
+export function BudgetMeter({ snapshot, connected, transport }: BudgetMeterProps) {
   const pct =
     snapshot && snapshot.cap > 0
       ? Math.min(100, Math.max(0, (snapshot.committed / snapshot.cap) * 100))
@@ -30,7 +32,7 @@ export function BudgetMeter({ snapshot, connected }: BudgetMeterProps) {
             className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-lime" : "bg-steel"}`}
             aria-hidden="true"
           />
-          {connected ? "live" : "disconnected"}
+          {connected ? (transport === "poll" ? "polling" : "live") : "disconnected"}
         </span>
       </div>
 
