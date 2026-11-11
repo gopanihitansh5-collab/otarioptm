@@ -429,7 +429,7 @@ function StudioInner() {
   );
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-transparent text-ice">
+    <div className="flex h-screen flex-col overflow-clip bg-transparent text-ice">
       <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-steel bg-graphite px-2 sm:gap-2 sm:px-4">
         <Link
           href="/"
@@ -647,7 +647,7 @@ function StudioInner() {
           <Palette addNode={addNode} codeExecAvailable={health?.code_exec ?? false} />
         </div>
 
-        <main className="relative min-w-0 flex-1">
+        <main className="relative min-w-0 flex-1 overflow-hidden">
           <NodePatchProvider onPatch={updateNodeData}>
             <Canvas
               nodes={flowNodes}
