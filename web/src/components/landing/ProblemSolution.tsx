@@ -73,10 +73,10 @@ export default function ProblemSolution() {
     <section id="product" className="scroll-mt-24">
       <div className="mx-auto max-w-6xl px-4 py-20 md:px-6 md:py-24">
         <Reveal>
-          <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
+          <p className="font-mono text-[10px] tracking-[0.25em] text-[var(--color-lime)]">
             THE PROBLEM
           </p>
-          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#E9E4DA]">
+          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[var(--color-ice)]">
             Fragmented models mean gaming a pricing page every day.
           </h2>
         </Reveal>
@@ -84,10 +84,10 @@ export default function ProblemSolution() {
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
           <Reveal className="panel p-6" delay={60}>
             <div className="flex items-center justify-between">
-              <p className="font-mono text-[10px] tracking-[0.2em] text-[#D1AD75]">
+              <p className="font-mono text-[10px] tracking-[0.2em] text-[var(--color-amber)]">
                 WITHOUT OTARIOPTM
               </p>
-              <span className="rounded border border-[#34322D] px-2 py-0.5 font-mono text-[9px] tracking-widest text-[#A6A197]">
+              <span className="rounded border border-[var(--color-steel)] px-2 py-0.5 font-mono text-[9px] tracking-widest text-[var(--color-silver)]">
                 ILLUSTRATIVE
               </span>
             </div>
@@ -97,10 +97,10 @@ export default function ProblemSolution() {
           </Reveal>
           <Reveal className="panel p-6" delay={140}>
             <div className="flex items-center justify-between">
-              <p className="font-mono text-[10px] tracking-[0.2em] text-[#B8A98F]">
+              <p className="font-mono text-[10px] tracking-[0.2em] text-[var(--color-lime)]">
                 WITH OTARIOPTM
               </p>
-              <span className="rounded border border-[#34322D] px-2 py-0.5 font-mono text-[9px] tracking-widest text-[#A6A197]">
+              <span className="rounded border border-[var(--color-steel)] px-2 py-0.5 font-mono text-[9px] tracking-widest text-[var(--color-silver)]">
                 ILLUSTRATIVE
               </span>
             </div>
@@ -113,11 +113,11 @@ export default function ProblemSolution() {
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {CARDS.map((c, i) => (
             <Reveal key={c.n} className="panel p-6" delay={i * 70}>
-              <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
+              <p className="font-mono text-[10px] tracking-[0.25em] text-[var(--color-lime)]">
                 {c.n}
               </p>
-              <h3 className="mt-3 text-lg font-medium text-[#E9E4DA]">{c.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#A6A197]">{c.body}</p>
+              <h3 className="mt-3 text-lg font-medium text-[var(--color-ice)]">{c.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-silver)]">{c.body}</p>
             </Reveal>
           ))}
         </div>

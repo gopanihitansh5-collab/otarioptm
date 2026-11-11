@@ -56,6 +56,14 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const THEME_INIT = `
+try {
+  var q = new URLSearchParams(location.search).get('theme');
+  var t = q === 'light' || q === 'dark' ? q : (localStorage.getItem('otari-theme') || 'dark');
+  document.documentElement.dataset.theme = t;
+} catch (e) { document.documentElement.dataset.theme = 'dark'; }
+`;
+
 export default function RootLayout({
   children,
 }: {
@@ -63,6 +71,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body
         className={`${geist.variable} ${instrument.variable} ${plexMono.variable} bg-obsidian text-ice antialiased`}
       >

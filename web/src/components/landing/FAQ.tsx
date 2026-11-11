@@ -45,15 +45,15 @@ export default function FAQ() {
     <section id="faq" className="scroll-mt-24">
       <div className="mx-auto max-w-4xl px-4 py-20 md:px-6 md:py-24">
         <Reveal>
-          <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
+          <p className="font-mono text-[10px] tracking-[0.25em] text-[var(--color-lime)]">
             FAQ
           </p>
-          <h2 className="mt-3 text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#E9E4DA]">
+          <h2 className="mt-3 text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[var(--color-ice)]">
             The questions a technical buyer asks first.
           </h2>
         </Reveal>
 
-        <div className="mt-10 divide-y divide-[#34322D] border-y border-[#34322D]">
+        <div className="mt-10 divide-y divide-[var(--color-steel)] border-y border-[var(--color-steel)]">
           {QA.map((item, i) => {
             const isOpen = open === i;
             return (
@@ -63,18 +63,18 @@ export default function FAQ() {
                   onClick={() => setOpen(isOpen ? -1 : i)}
                   aria-expanded={isOpen}
                   aria-controls={`faq-panel-${i}`}
-                  className="flex w-full items-center justify-between gap-4 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B8A98F]/50"
+                  className="flex w-full items-center justify-between gap-4 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-lime)]/50"
                 >
                   <span
                     className={`text-[15px] font-medium transition-colors duration-200 ${
-                      isOpen ? "text-[#B8A98F]" : "text-[#E9E4DA]"
+                      isOpen ? "text-[var(--color-lime)]" : "text-[var(--color-ice)]"
                     }`}
                   >
                     {item.q}
                   </span>
                   <span
                     aria-hidden
-                    className={`shrink-0 font-mono text-sm text-[#A6A197] transition-transform duration-300 ${
+                    className={`shrink-0 font-mono text-sm text-[var(--color-silver)] transition-transform duration-300 ${
                       isOpen ? "rotate-45" : ""
                     }`}
                   >
@@ -89,7 +89,7 @@ export default function FAQ() {
                       : "grid-rows-[0fr] opacity-0 motion-reduce:opacity-100"
                   }`}
                 >
-                  <p className="overflow-hidden pb-5 text-sm leading-relaxed text-[#A6A197]">
+                  <p className="overflow-hidden pb-5 text-sm leading-relaxed text-[var(--color-silver)]">
                     {item.a}
                   </p>
                 </div>

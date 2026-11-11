@@ -60,13 +60,13 @@ export default function ProductDemo() {
   const stage = staticAll ? STEPS.length : active;
 
   return (
-    <section id="demo" className="scroll-mt-24 border-y border-[#34322D] bg-[#171715]">
+    <section id="demo" className="scroll-mt-24 border-y border-[var(--color-steel)] bg-[var(--color-graphite)]">
       <div className="mx-auto max-w-6xl px-4 py-20 md:px-6 md:py-24">
         <Reveal>
-          <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
+          <p className="font-mono text-[10px] tracking-[0.25em] text-[var(--color-lime)]">
             PRODUCT DEMO
           </p>
-          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[#E9E4DA]">
+          <h2 className="mt-3 max-w-2xl text-[clamp(30px,4vw,40px)] font-semibold leading-[1.1] tracking-tight text-[var(--color-ice)]">
             One workflow graph shows the entire lifecycle.
           </h2>
         </Reveal>
@@ -82,18 +82,18 @@ export default function ProductDemo() {
                 }}
                 className={`rounded-xl border p-5 transition-colors duration-300 ${
                   stage === i
-                    ? "border-[#B8A98F]/60 bg-[#111110]"
-                    : "border-[#34322D] bg-[#111110]/50"
+                    ? "border-[var(--color-lime)]/60 bg-[var(--color-obsidian)]"
+                    : "border-[var(--color-steel)] bg-[var(--color-obsidian)]/50"
                 }`}
               >
                 <p
                   className={`font-mono text-[10px] tracking-[0.2em] transition-colors duration-300 ${
-                    stage === i ? "text-[#B8A98F]" : "text-[#A6A197]"
+                    stage === i ? "text-[var(--color-lime)]" : "text-[var(--color-silver)]"
                   }`}
                 >
                   STEP {i + 1} / {STEPS.length} - {s.label}
                 </p>
-                <p className="mt-2 text-sm leading-relaxed text-[#A6A197]">
+                <p className="mt-2 text-sm leading-relaxed text-[var(--color-silver)]">
                   {s.body}
                 </p>
               </div>
@@ -103,10 +103,10 @@ export default function ProductDemo() {
           <div className="lg:sticky lg:top-32 self-start">
             <div className="panel !transform-none p-5">
               <div className="flex items-center justify-between">
-                <p className="font-mono text-[10px] tracking-[0.2em] text-[#A6A197]">
+                <p className="font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
                   WORKFLOW EXECUTION (DEMO)
                 </p>
-                <span className="rounded border border-[#34322D] px-2 py-0.5 font-mono text-[9px] tracking-widest text-[#A6A197]">
+                <span className="rounded border border-[var(--color-steel)] px-2 py-0.5 font-mono text-[9px] tracking-widest text-[var(--color-silver)]">
                   DEMO MODE
                 </span>
               </div>

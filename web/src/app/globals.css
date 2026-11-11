@@ -77,7 +77,7 @@ html {
 }
 
 body {
-  background: #111110;
+  background: var(--color-obsidian);
   color: #E9E4DA;
 }
 
@@ -192,4 +192,33 @@ body {
   .panel:hover {
     transform: none;
   }
+}
+
+/* ---- Light theme: ivory paper, deepened champagne for contrast ---- */
+[data-theme="light"] {
+  --color-obsidian: #F5F2EA;
+  --color-graphite: #ECE8DD;
+  --color-elevated: #FBF9F4;
+  --color-steel: #D9D3C3;
+  --color-steel-dim: #E4DFD2;
+  --color-lime: #8A7A5B;
+  --color-lime-ink: #F5F2EA;
+  --color-ice: #1C1A16;
+  --color-silver: #615B4E;
+  --color-signal: #46677A;
+  --color-amber: #96702E;
+  --color-fail: #A44A41;
+  --accent: #8A7A5B;
+  --accent-strong: #6F6046;
+  --accent-dim: rgba(138, 122, 91, 0.35);
+  --accent-contrast: #F5F2EA;
+  --glow-champagne: 0 0 45px rgba(138, 122, 91, 0.1);
+  --glow-soft: 0 0 80px rgba(138, 122, 91, 0.07);
+  --glow-active: 0 0 22px rgba(138, 122, 91, 0.16);
+  --otari-material-glow: 0 12px 65px rgba(138, 122, 91, 0.12);
+  --surface-glass: rgba(28, 26, 22, 0.03);
+  --surface-border: rgba(138, 122, 91, 0.28);
+}
+[data-theme="light"] .otari-premium-surface {
+  background: linear-gradient(145deg, rgba(28, 26, 22, 0.05), rgba(28, 26, 22, 0.01));
 }
