@@ -282,7 +282,7 @@ function StudioInner() {
           if (event.event === "node.completed") updateNodeData(event.nodeId, { status: stepFailed(event as import("@/lib/types").StepResult) ? "error" : "done", statusInfo: event as import("@/lib/types").StepResult });
           if (event.event === "node.blocked") updateNodeData(event.nodeId, { status: "error" });
         }, searchProvider);
-        setLastDeliverable({ steps: response.steps, edges: runEdges, aborted: response.aborted, completedAt: new Date().toISOString(), task: generatedTask, planner: planProvenance, stages: planStages, partial: response.partial, failedNodes: response.failedNodes, reportStatus: response.reportStatus, unverifiedNodes: response.unverifiedNodes, computedData: response.computedData, computedJson: response.computedJson, sources: response.sources });
+        setLastDeliverable({ steps: response.steps, edges: runEdges, aborted: response.aborted, completedAt: new Date().toISOString(), task: generatedTask, planner: planProvenance, stages: planStages, partial: response.partial, failedNodes: response.failedNodes, costAnalysis: response.costAnalysis, reportStatus: response.reportStatus, unverifiedNodes: response.unverifiedNodes, computedData: response.computedData, computedJson: response.computedJson, sources: response.sources });
         const byId = new Map(response.steps.map((s) => [s.nodeId, s]));
         // Batch responses carry real results, but not live per-node start times.
         for (const step of response.steps) {

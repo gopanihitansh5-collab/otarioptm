@@ -4,11 +4,12 @@ import { stepFailed } from "@/lib/stepStatus";
 import { costLabel } from "@/lib/costLabel";
 import { useRef } from "react";
 import type { PlanResponse } from "@/lib/api";
-import type { StepResult, WorkflowEdge } from "@/lib/types";
+import type { RunResponse, StepResult, WorkflowEdge } from "@/lib/types";
 import { useFocusTrap } from "./useFocusTrap";
 import { CLOSE_BTN, SECONDARY_BTN } from "./ui";
 
 export type RunDeliverable = {
+  costAnalysis?: RunResponse["costAnalysis"];
   steps: StepResult[];
   edges: WorkflowEdge[];
   completedAt: string;
@@ -30,6 +31,7 @@ function reportMarkdown(run: RunDeliverable): string {
   const demo = run.steps.some(s => s.demo);
   const sections = ["# OtariOptm run report", `Recorded: ${run.completedAt}`, `Status: ${incomplete ? "Incomplete or blocked" : "Returned by gateway"}${demo ? " (includes demo output)" : ""}`];
   if (run.failedNodes?.length) sections.push(`Failed or skipped nodes: ${run.failedNodes.join(", ")}`);
+  if (run.costAnalysis) sections.push(`## Cost-only conclusion\n\n${JSON.stringify(run.costAnalysis, null, 2)}\n\nModel commentary below is NOT ENDORSED. Capability and quality were not benchmarked.`);
   if (run.computedJson) sections.push(`## Structured computed output\n\n${JSON.stringify(run.computedJson, null, 2)}`);
   if (run.computedData) for (const [id, output] of Object.entries(run.computedData)) sections.push(`## Computed data: ${id}\n\nExact successful Python stdout, not model prose:\n\n${output}`);
   if (run.sources?.length) sections.push(`## Search source URLs\n\n${run.sources.join("\n")}\n\nSearch URLs are returned references, not verification of every report claim.`);
@@ -76,6 +78,7 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
       <div className="scroll-thin overflow-y-auto p-5">
         {(failed || demo) && <p role="status" className="mb-5 rounded-xl border border-amber/40 bg-amber/10 p-3 text-sm text-amber">{failed ? "This run is incomplete or contains blocked/failed steps. " : ""}{demo ? "This run includes explicitly labeled demo output, not live model inference." : ""}</p>}
         {run.task && <p className="mb-5 whitespace-pre-wrap text-sm text-silver">{run.task}</p>}
+        {run.costAnalysis && <section className="mb-6 rounded-xl border border-lime/40 bg-lime/5 p-4"><h3 className="text-sm font-semibold text-ice">Cost-only conclusion</h3><p className="mt-2 text-sm text-ice">Lowest computed cost: {String(run.costAnalysis.cheapest.model ?? "model not reported")} · {String(run.costAnalysis.cheapest.monthly_cost ?? "cost not reported")} {run.costAnalysis.currency || "currency not reported"}</p><p className="mt-2 text-xs leading-6 text-silver">{run.costAnalysis.note} Based on actual computed rows from {run.costAnalysis.sourceNode}. Capability and quality were not benchmarked. This does not endorse the model commentary.</p></section>}
         {run.computedJson && Object.entries(run.computedJson).map(([id, value]) => {
           if (!value || typeof value !== "object") return null;
           const obj = value as { rows?: unknown[]; results?: unknown[]; currency?: unknown };
@@ -88,7 +91,8 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
         })}
         {run.computedData && Object.keys(run.computedData).length > 0 && <section className="mb-6"><h3 className="mb-2 text-sm font-semibold text-ice">Computed data</h3><p className="mb-3 text-xs text-silver">Exact successful Python output. Model commentary below cannot replace these values. Correct computation does not verify the input data.</p><div className="overflow-x-auto rounded-xl border border-steel"><table className="w-full text-left text-xs"><thead className="bg-elevated text-silver"><tr><th className="p-3">Node</th><th className="p-3">Actual stdout</th></tr></thead><tbody>{Object.entries(run.computedData).map(([id, output]) => <tr key={id} className="border-t border-steel"><th className="p-3 align-top font-medium text-ice">{id}</th><td className="p-3"><pre className="whitespace-pre-wrap break-words font-mono leading-6 text-ice">{output}</pre></td></tr>)}</tbody></table></div></section>}
         {run.sources && run.sources.length > 0 && <section className="mb-6"><h3 className="mb-2 text-sm font-semibold text-ice">Search source URLs</h3><p className="mb-2 text-xs text-silver">Returned references, not verification of every claim.</p><ul className="space-y-2">{run.sources.filter(url => /^https?:\/\//.test(url)).map(url => <li key={url}><a href={url} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-lime underline">{url}</a></li>)}</ul></section>}
-        <p className="mb-3 text-xs text-silver">Model output / commentary. Execution completion is not factual verification.</p>
+        <details open={!run.costAnalysis}><summary className="mb-3 cursor-pointer rounded-lg border border-amber/40 p-3 text-xs text-amber">Model commentary - NOT ENDORSED. May contain unsupported or contradictory recommendations.</summary>
+        <p className="mb-3 text-xs text-silver">Execution completion is not factual verification.</p>
         <div className="space-y-5">
           {terminals.length === 0 && <p className="text-sm text-silver">No terminal-node output was returned. Inspect the trace below.</p>}
           {terminals.map(s => <section key={s.nodeId} className="rounded-xl border border-steel bg-elevated p-5">
@@ -97,6 +101,7 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
             <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-ice">{s.output || s.error || "No output returned."}</pre>
           </section>)}
         </div>
+        </details>
         <h3 className="mb-3 mt-7 text-sm font-semibold text-ice">Execution trace</h3>
         <div className="space-y-2">{run.steps.map(s => <details key={s.nodeId} className="rounded-xl border border-steel-dim bg-obsidian p-3">
           <summary className="cursor-pointer text-xs text-ice"><span className="font-medium">{s.nodeId}</span> · {s.chain?.join(" → ") || s.model || s.type || "step"} · {stepFailed(s) ? "failed / blocked" : s.demo ? "demo" : "response received"}</summary>

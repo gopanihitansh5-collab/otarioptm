@@ -1559,6 +1559,29 @@ async def _execute_graph(
         str(r["nodeId"]) for r in results
         if isinstance(r.get("consistency"), dict) and r["consistency"].get("status") == "mismatch"
     )
+    # Deterministic cost-only analysis from computed rows (keys "rows" or
+    # "results" with monthly_cost). This is the trustworthy recommendation:
+    # cheapest-first ordering straight from verified computation. Quality /
+    # capability is NOT benchmarked, so nothing here endorses a model beyond
+    # cost. LLM prose may contradict this; when it does, THIS wins.
+    cost_analysis = None
+    for _nid, _parsed in computed_json.items():
+        _rows = _parsed.get("rows") or _parsed.get("results") if isinstance(_parsed, dict) else None
+        if (isinstance(_rows, list) and _rows
+                and all(isinstance(r, dict) and isinstance(r.get("monthly_cost"), (int, float)) for r in _rows)):
+            _ordered = sorted(_rows, key=lambda r: r["monthly_cost"])
+            cost_analysis = {
+                "sourceNode": _nid,
+                "currency": _parsed.get("currency", "USD"),
+                "cheapest": _ordered[0],
+                "rows": _ordered,
+                "basis": "cost-only",
+                "note": ("Deterministic ordering from the computed rows above. "
+                         "Capability and quality were not benchmarked; any model "
+                         "commentary in this report is unverified and not endorsed."),
+            }
+            break
+
     incomplete = bool(aborted) or bool(failed) or bool(unverified_nodes)
 
     payload = {
@@ -1576,6 +1599,8 @@ async def _execute_graph(
         "reportStatus": "incomplete" if incomplete else "mechanically-complete",
         "computedData": computed_data,
         "computedJson": computed_json,
+            "costAnalysis": cost_analysis,
+        "costAnalysis": cost_analysis,
         "sources": sorted(set(source_urls))[:20],
         "overBudget": any(bool(r.get("overBudget")) for r in results),
         # Nodes whose answer came from the simulated demo tier. These never
