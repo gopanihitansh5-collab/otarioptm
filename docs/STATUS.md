@@ -358,9 +358,14 @@ Known gaps / in flight (do not claim as done):
 - Vercel: multi-service deploy (FastAPI via api/index.py + Next.js web/) is
   being validated; the Python entrypoint on Vercel's runtime is not yet
   confirmed.
-- /api/v1/activity is a WebSocket endpoint; Vercel serverless does not hold
-  persistent WebSocket connections, so the live activity panel needs a
-  verified alternative before it can be called supported on the deploy.
+- /api/v1/activity: the WebSocket transport does not fit Vercel serverless.
+  The deployed activity feed uses the existing GET /api/v1/activity snapshot
+  polling path instead (backend branch feat/backend-hardening72e0c8d adds
+  truthful runtime/activity transport metadata; 91 backend tests pass there).
+- Budgets and activity are held in memory, so on serverless they are
+  per-invocation, not durable shared state: the hosted deployment does not
+  provide durable cross-invocation budget enforcement or activity history.
+  Local/self-hosted runs keep full in-process enforcement.
 - Live-provider verification still awaits provider key scope approval; demo
   mode is the honest default.
 - docker build / docker compose up remain unrun (no container runtime in the
