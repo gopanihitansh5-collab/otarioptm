@@ -1,0 +1,21 @@
+{
+  "name": "Research then summarize (demo fixture)",
+  "nodes": [
+    {
+      "id": "search",
+      "type": "web-search",
+      "config": { "query": "retrieval augmented generation evaluation metrics", "max_results": 3 }
+    },
+    {
+      "id": "summarize",
+      "type": "chat",
+      "depends_on": ["search"],
+      "config": {
+        "model": "auto",
+        "messages": [
+          { "role": "user", "content": "Summarize these search results for an engineering audience: {{search.output}}" }
+        ]
+      }
+    }
+  ]
+}

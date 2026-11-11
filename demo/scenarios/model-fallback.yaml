@@ -1,0 +1,20 @@
+scenario: model-fallback
+title: Model failure and fallback
+status: partial
+purpose: Demonstrate the provider fallback chain (Otari -> Groq -> demo) without fabricating a live provider outage.
+inputs:
+  prompt: "ping"
+  model: auto
+config:
+  provider_keys: none -> the chain resolves to the demo tier by configuration
+expected:
+  - The response identifies which tier answered, with the demo label when applicable
+  - Fallback behavior is unit-tested; production demonstration is config-driven, not an induced outage
+steps:
+  - POST /api/v1/chat/completions, model auto
+  - Show the tier label in the response
+  - Point at tests/test_chat.py fallback tests as evidence of the failure path
+validation:
+  - Label and tier agree
+  - Presenter states plainly that no live provider failed during the demo
+cleanup: none
