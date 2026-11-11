@@ -51,18 +51,18 @@ const COLUMNS: {
 
 export default function Footer() {
   return (
-    <footer className="border-t border-[#34322D]">
+    <footer className="border-t border-[var(--color-steel)]">
       <div className="mx-auto max-w-6xl px-4 py-10 md:px-6">
         <div className="flex flex-col gap-8 md:flex-row md:justify-between">
-          <p className="max-w-xs font-mono text-[11px] leading-5 tracking-wider text-[#A6A197]">
-            <span className="text-[#E9E4DA]">OTARIOPTM</span>
+          <p className="max-w-xs font-mono text-[11px] leading-5 tracking-wider text-[var(--color-silver)]">
+            <span className="text-[var(--color-ice)]">OTARIOPTM</span>
             <br />
             Built on Otari (Mozilla AI) · DoraHacks Devs Wilding 2026
           </p>
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
             {COLUMNS.map((col) => (
               <nav key={col.heading} aria-label={col.heading}>
-                <p className="font-mono text-[10px] uppercase tracking-widest text-[#A6A197]">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-silver)]">
                   {col.heading}
                 </p>
                 <ul className="mt-3 space-y-1">
@@ -73,14 +73,14 @@ export default function Footer() {
                           href={l.href}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex min-h-[36px] items-center font-mono text-[11px] tracking-wider text-[#A6A197] transition-colors duration-200 hover:text-[#B8A98F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50"
+                          className="inline-flex min-h-[36px] items-center font-mono text-[11px] tracking-wider text-[var(--color-silver)] transition-colors duration-200 hover:text-[var(--color-lime)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-lime)]/50"
                         >
                           {l.label}
                         </a>
                       ) : (
                         <Link
                           href={l.href}
-                          className="inline-flex min-h-[36px] items-center font-mono text-[11px] tracking-wider text-[#A6A197] transition-colors duration-200 hover:text-[#B8A98F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50"
+                          className="inline-flex min-h-[36px] items-center font-mono text-[11px] tracking-wider text-[var(--color-silver)] transition-colors duration-200 hover:text-[var(--color-lime)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-lime)]/50"
                         >
                           {l.label}
                         </Link>

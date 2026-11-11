@@ -29,9 +29,9 @@ function useRoutingSphere(): boolean {
 }
 
 const PRIMARY =
-  "group inline-flex h-12 items-center gap-2 rounded-lg bg-[#B8A98F] px-6 text-sm font-semibold text-[#111110] shadow-[0_0_28px_rgba(184,169,143,0.18)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50";
+  "group inline-flex h-12 items-center gap-2 rounded-lg bg-[var(--color-lime)] px-6 text-sm font-semibold text-[var(--color-obsidian)] shadow-[0_0_28px_rgba(184,169,143,0.18)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-lime)]/50";
 const SECONDARY =
-  "inline-flex h-12 items-center gap-2 rounded-lg border border-[#34322D] px-6 text-sm font-medium text-[#E9E4DA] transition-all duration-200 hover:border-[#B8A98F]/40 hover:text-[#B8A98F] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50";
+  "inline-flex h-12 items-center gap-2 rounded-lg border border-[var(--color-steel)] px-6 text-sm font-medium text-[var(--color-ice)] transition-all duration-200 hover:border-[var(--color-lime)]/40 hover:text-[var(--color-lime)] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-lime)]/50";
 
 const NODES = [
   { name: "QWEN", sub: "v3.5", dx: "62px", dy: "-80px", cost: "$0.0008", lat: "900 MS" },
@@ -113,12 +113,12 @@ export default function Hero() {
       <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-14 md:px-6 lg:min-h-[88vh] lg:grid-cols-2 lg:items-center lg:gap-8 lg:pt-20">
         <div className="flex flex-col items-start">
           <Reveal as="span">
-            <p className="font-mono text-[10px] tracking-[0.25em] text-[#B8A98F]">
+            <p className="font-mono text-[10px] tracking-[0.25em] text-[var(--color-lime)]">
               V0.1 BETA / AI ORCHESTRATION, OPTIMIZED
             </p>
           </Reveal>
           <Reveal delay={60}>
-            <h1 className="mt-5 font-display text-[clamp(44px,6vw,76px)] font-normal leading-[1.05] tracking-tight text-[#E9E4DA]">
+            <h1 className="mt-5 font-display text-[clamp(44px,6vw,76px)] font-normal leading-[1.05] tracking-tight text-[var(--color-ice)]">
               <KineticType text="Intelligence," speed={40} startDelay={350} />{" "}
               <KineticType
                 text="without the overhead."
@@ -129,10 +129,10 @@ export default function Hero() {
             </h1>
           </Reveal>
           <Reveal delay={120}>
-            <p className="mt-5 text-lg font-medium text-[#B8A98F]/90">
+            <p className="mt-5 text-lg font-medium text-[var(--color-lime)]/90">
               Route intelligently. Spend deliberately. Operate confidently.
             </p>
-            <p className="mt-3 max-w-lg text-base leading-relaxed text-[#A6A197] md:text-lg">
+            <p className="mt-3 max-w-lg text-base leading-relaxed text-[var(--color-silver)] md:text-lg">
               An intelligent orchestration layer for cost-aware AI
               infrastructure. Route every workload to the right model, control
               spending and monitor every execution through one unified gateway
@@ -165,23 +165,23 @@ export default function Hero() {
               ].map((chip) => (
                 <span
                   key={chip}
-                  className="rounded-md border border-[#34322D] bg-[#171715] px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-[#A6A197]"
+                  className="rounded-md border border-[var(--color-steel)] bg-[var(--color-graphite)] px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]"
                 >
-                  <span className="text-[#B8A98F]">{chip.slice(0, 2)}</span>{" "}
+                  <span className="text-[var(--color-lime)]">{chip.slice(0, 2)}</span>{" "}
                   {chip.slice(3)}
                 </span>
               ))}
             </div>
           </Reveal>
           <Reveal delay={300}>
-            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] tracking-[0.2em] text-[#A6A197]">
+            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
               <span>
-                GATEWAY: <span className={live.status === "offline" ? "text-[#C68179]" : "text-[#B8A98F]"}>{status}</span>
+                GATEWAY: <span className={live.status === "offline" ? "text-[var(--color-fail)]" : "text-[var(--color-lime)]"}>{status}</span>
               </span>
               {live.budget && (
                 <span>
                   BUDGET CAP ${" "}
-                  <CountUp value={live.budget.cap} className="text-[#E9E4DA]" />
+                  <CountUp value={live.budget.cap} className="text-[var(--color-ice)]" />
                 </span>
               )}
               {live.budget && live.budget.remaining > 0 && (
@@ -190,7 +190,7 @@ export default function Hero() {
                   <CountUp
                     value={live.budget.remaining}
                     format={(n) => n.toFixed(3)}
-                    className="text-[#B8A98F]"
+                    className="text-[var(--color-lime)]"
                   />
                 </span>
               )}
@@ -204,15 +204,15 @@ export default function Hero() {
           onPointerLeave={onLeave}
           style={{ willChange: "transform" }}
         >
-          <div ref={panelRef} className="oo-anim relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[#34322D] bg-[#171715] transition-transform duration-300">
+          <div ref={panelRef} className="oo-anim relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[var(--color-steel)] bg-[var(--color-graphite)] transition-transform duration-300">
             <div
               aria-hidden
               className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(closest-side,rgba(101,201,232,0.08),transparent)]"
             />
-            <p className="absolute left-4 top-3 z-10 font-mono text-[10px] tracking-[0.2em] text-[#A6A197]">
+            <p className="absolute left-4 top-3 z-10 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
               GATEWAY LIVE TRACE (DEMO)
             </p>
-            <p className="absolute bottom-3 right-4 z-10 font-mono text-[10px] tracking-[0.2em] text-[#34322D]">
+            <p className="absolute bottom-3 right-4 z-10 font-mono text-[10px] tracking-[0.2em] text-[var(--color-steel)]">
               {sphere ? "WEBGL ROUTING SPHERE" : "LOOP 4.2S"}
             </p>
 
@@ -222,7 +222,7 @@ export default function Hero() {
               </div>
             )}
             {sphere && (
-              <div className="oo-anim absolute right-4 top-3 z-10 flex gap-2 font-mono text-[9px] tracking-[0.15em] text-[#A6A197]" aria-hidden>
+              <div className="oo-anim absolute right-4 top-3 z-10 flex gap-2 font-mono text-[9px] tracking-[0.15em] text-[var(--color-silver)]" aria-hidden>
                 <span className="oo-stage oo-st0">RECEIVED</span>
                 <span aria-hidden>→</span>
                 <span className="oo-stage oo-st1">CLASSIFYING</span>
@@ -278,19 +278,19 @@ export default function Hero() {
             </svg>
             )}
 
-            <div className="absolute bottom-3 left-4 z-10 w-52 rounded-lg border border-[#34322D] bg-[#111110]/90 px-3 py-2.5">
-              <p className="font-mono text-[9px] tracking-[0.2em] text-[#A6A197]">
+            <div className="absolute bottom-3 left-4 z-10 w-52 rounded-lg border border-[var(--color-steel)] bg-[var(--color-obsidian)]/90 px-3 py-2.5">
+              <p className="font-mono text-[9px] tracking-[0.2em] text-[var(--color-silver)]">
                 ROUTED BY POLICY (ILLUSTRATIVE)
               </p>
               <div className="mt-1 grid grid-cols-3 gap-1">
                 {PRESETS.map((p, i) => (
                   <div
                     key={p.label}
-                    className={`oo-read${i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : ""} font-mono text-[8.5px] text-[#A6A197]`}
+                    className={`oo-read${i === 1 ? " oo-p1" : i === 2 ? " oo-p2" : ""} font-mono text-[8.5px] text-[var(--color-silver)]`}
                     style={{ opacity: 0.35 }}
                   >
                     <p className="tracking-widest">{p.label}</p>
-                    <p className="text-[#E9E4DA]">{p.model}</p>
+                    <p className="text-[var(--color-ice)]">{p.model}</p>
                     <p>
                       {p.cost} / {p.lat}ms
                     </p>

@@ -1,7 +1,39 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import WordmarkSignature from "../motion/WordmarkSignature";
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState<"dark" | "light" | null>(null);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setTheme(
+        document.documentElement.dataset.theme === "light" ? "light" : "dark",
+      );
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, []);
+  const toggle = () => {
+    const next = theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    try {
+      localStorage.setItem("otari-theme", next);
+    } catch {
+      /* private mode */
+    }
+    setTheme(next);
+  };
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label="Toggle light and dark theme"
+      className="h-11 rounded-lg border border-[var(--color-steel)] px-3 font-mono text-[10px] tracking-[0.15em] text-[var(--color-silver)] transition-colors duration-200 hover:text-[var(--color-ice)]"
+    >
+      {theme === "light" ? "DARK" : "LIGHT"}
+    </button>
+  );
+}
 
 const GH = "https://github.com/gopanihitansh5-collab/otarioptm";
 const GHB = `${GH}/blob/main`;
@@ -33,7 +65,7 @@ const DEVELOPERS: Item[] = [
 ];
 
 const LINK_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8A98F]/50";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-lime)]/50";
 
 function Dropdown({ label, items }: { label: string; items: Item[] }) {
   const [open, setOpen] = useState(false);
@@ -60,7 +92,7 @@ function Dropdown({ label, items }: { label: string; items: Item[] }) {
         aria-haspopup="true"
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex h-11 items-center gap-1 text-sm text-[#A6A197] transition-colors duration-200 hover:text-[#E9E4DA] ${LINK_RING}`}
+        className={`inline-flex h-11 items-center gap-1 text-sm text-[var(--color-silver)] transition-colors duration-200 hover:text-[var(--color-ice)] ${LINK_RING}`}
       >
         {label}
         <span
@@ -75,13 +107,13 @@ function Dropdown({ label, items }: { label: string; items: Item[] }) {
           id={menuId}
           className="absolute left-0 top-full z-50 min-w-48 pt-2"
         >
-          <div className="rounded-xl border border-[#34322D] bg-[#171715] py-2 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+          <div className="rounded-xl border border-[var(--color-steel)] bg-[var(--color-graphite)] py-2 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
             {items.map((i) => (
               <a
                 key={i.label}
                 href={i.href}
                 {...(i.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                className={`block px-4 py-2 text-sm text-[#A6A197] transition-colors duration-150 hover:bg-[#1D1C19] hover:text-[#E9E4DA] ${LINK_RING}`}
+                className={`block px-4 py-2 text-sm text-[var(--color-silver)] transition-colors duration-150 hover:bg-[var(--color-elevated)] hover:text-[var(--color-ice)] ${LINK_RING}`}
               >
                 {i.label}
                 {i.external && (
@@ -101,7 +133,7 @@ export default function Nav() {
 
   return (
     <header
-      className="sticky top-0 z-40 border-b border-[#34322D] bg-[#111110]/90"
+      className="sticky top-0 z-40 border-b border-[var(--color-steel)] bg-[var(--color-obsidian)]/90"
       onKeyDown={(e) => {
         if (e.key === "Escape") setOpen(false);
       }}
@@ -109,10 +141,10 @@ export default function Nav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6">
         <a href="#top" className={`flex items-baseline gap-3 ${LINK_RING}`}>
           <WordmarkSignature
-            className="font-mono text-sm font-semibold tracking-[0.2em] text-[#E9E4DA]"
+            className="font-mono text-sm font-semibold tracking-[0.2em] text-[var(--color-ice)]"
             staggerMs={55}
           />
-          <span className="hidden font-mono text-[10px] tracking-[0.2em] text-[#A6A197] sm:inline">
+          <span className="hidden font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)] sm:inline">
             ORCHESTRATION CONTROL PLANE
           </span>
         </a>
@@ -123,23 +155,24 @@ export default function Nav() {
           <Dropdown label="Developers" items={DEVELOPERS} />
           <a
             href="#pricing"
-            className={`text-sm text-[#A6A197] transition-colors duration-200 hover:text-[#E9E4DA] ${LINK_RING}`}
+            className={`text-sm text-[var(--color-silver)] transition-colors duration-200 hover:text-[var(--color-ice)] ${LINK_RING}`}
           >
             Pricing
           </a>
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <span
             aria-disabled="true"
             title="Coming soon"
-            className="hidden h-11 cursor-not-allowed items-center rounded-lg border border-[#34322D] px-4 text-sm text-[#A6A197]/60 md:inline-flex"
+            className="hidden h-11 cursor-not-allowed items-center rounded-lg border border-[var(--color-steel)] px-4 text-sm text-[var(--color-silver)]/60 md:inline-flex"
           >
             Sign in
           </span>
           <a
             href="/studio"
-            className="hidden h-11 items-center rounded-lg bg-[#B8A98F] px-4 text-sm font-semibold text-[#111110] transition-all duration-200 hover:brightness-110 active:scale-[0.98] sm:inline-flex"
+            className="hidden h-11 items-center rounded-lg bg-[var(--color-lime)] px-4 text-sm font-semibold text-[var(--color-obsidian)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] sm:inline-flex"
           >
             Open Studio
           </a>
@@ -149,7 +182,7 @@ export default function Nav() {
             aria-controls="mobile-menu"
             aria-label={open ? "Close menu" : "Open menu"}
             onClick={() => setOpen((v) => !v)}
-            className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[#34322D] text-sm text-[#A6A197] transition-colors duration-200 hover:border-[#B8A98F]/40 hover:text-[#E9E4DA] md:hidden ${LINK_RING}`}
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--color-steel)] text-sm text-[var(--color-silver)] transition-colors duration-200 hover:border-[var(--color-lime)]/40 hover:text-[var(--color-ice)] md:hidden ${LINK_RING}`}
           >
             <span aria-hidden>{open ? "✕" : "≡"}</span>
           </button>
@@ -158,7 +191,7 @@ export default function Nav() {
 
       <div
         id="mobile-menu"
-        className={`border-t border-[#34322D] bg-[#111110] md:hidden ${open ? "block" : "hidden"}`}
+        className={`border-t border-[var(--color-steel)] bg-[var(--color-obsidian)] md:hidden ${open ? "block" : "hidden"}`}
       >
         <nav aria-label="Mobile sections" className="mx-auto flex max-w-6xl flex-col px-4">
           {[
@@ -166,8 +199,8 @@ export default function Nav() {
             { group: "SOLUTIONS", items: SOLUTIONS },
             { group: "DEVELOPERS", items: DEVELOPERS },
           ].map(({ group, items }) => (
-            <div key={group} className="border-b border-[#292823] py-2">
-              <p className="py-1 font-mono text-[9px] tracking-[0.25em] text-[#A6A197]/60">
+            <div key={group} className="border-b border-[var(--color-steel-dim)] py-2">
+              <p className="py-1 font-mono text-[9px] tracking-[0.25em] text-[var(--color-silver)]/60">
                 {group}
               </p>
               {items.map((i) => (
@@ -176,7 +209,7 @@ export default function Nav() {
                   href={i.href}
                   {...(i.external ? { target: "_blank", rel: "noreferrer" } : {})}
                   onClick={() => setOpen(false)}
-                  className={`block py-3 text-sm text-[#A6A197] transition-colors duration-200 hover:text-[#E9E4DA] ${LINK_RING}`}
+                  className={`block py-3 text-sm text-[var(--color-silver)] transition-colors duration-200 hover:text-[var(--color-ice)] ${LINK_RING}`}
                 >
                   {i.label}
                   {i.external && (
@@ -189,20 +222,20 @@ export default function Nav() {
           <a
             href="#pricing"
             onClick={() => setOpen(false)}
-            className={`border-b border-[#292823] py-3 text-sm text-[#A6A197] transition-colors duration-200 hover:text-[#E9E4DA] ${LINK_RING}`}
+            className={`border-b border-[var(--color-steel-dim)] py-3 text-sm text-[var(--color-silver)] transition-colors duration-200 hover:text-[var(--color-ice)] ${LINK_RING}`}
           >
             Pricing
           </a>
           <span
             aria-disabled="true"
-            className="border-b border-[#292823] py-3 text-sm text-[#A6A197]/50"
+            className="border-b border-[var(--color-steel-dim)] py-3 text-sm text-[var(--color-silver)]/50"
           >
             Sign in (coming soon)
           </span>
           <a
             href="/studio"
             onClick={() => setOpen(false)}
-            className={`my-3 inline-flex h-11 items-center justify-center rounded-lg bg-[#B8A98F] text-sm font-semibold text-[#111110] ${LINK_RING}`}
+            className={`my-3 inline-flex h-11 items-center justify-center rounded-lg bg-[var(--color-lime)] text-sm font-semibold text-[var(--color-obsidian)] ${LINK_RING}`}
           >
             Open Studio
           </a>
