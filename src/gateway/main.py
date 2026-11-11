@@ -291,16 +291,6 @@ def _validate_node_payload(node: Dict[str, Any], node_id: str) -> None:
         )
 
 
-async def _release_reservation(reservation_id: Optional[str]) -> None:
-    """Release a still-outstanding reservation exactly once (no leaks)."""
-    if not reservation_id:
-        return
-    try:
-        await asyncio.shield(budget.release(reservation_id))
-    except Exception:
-        pass
-
-
 async def _settle_reservation(reservation_id: str, actual_cost: Any) -> Tuple[float, bool]:
     """Charge a reservation exactly once through the canonical budget primitive.
 
@@ -557,6 +547,8 @@ async def execute_chat_step(
         reservation = MIN_RESERVATION if remaining <= 0 else 0.0
     ok, rid = await budget.reserve(reservation)
     if not ok:
+        if getattr(budget, "_ledger_error", None):
+            raise HTTPException(status_code=503, detail="Budget store unavailable - step blocked before any spend (fail-closed)")
         raise HTTPException(status_code=402, detail="Budget cap reached - step skipped")
 
     t0 = time.time()
@@ -655,7 +647,11 @@ async def execute_chat_step(
         settled = True
     finally:
         if not settled:
-            await _release_reservation(rid)
+            # Uncertain execution: the provider region was entered but no
+            # settlement recorded the outcome. Charge the reserved estimate
+            # (conservative - never frees possibly-billed spend) instead of
+            # releasing.
+            await _settle_reservation(rid, reservation)
 
     # Safe, body-free provider context: names, statuses and exception classes.
     fallback_note: Optional[str] = "; ".join(failures) if failures else None
@@ -826,13 +822,21 @@ from src.gateway.sandbox_runner import sandbox_violation as _sandbox_violation
 _SANDBOX_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sandbox_runner.py")
 _SANDBOX_WALL_TIMEOUT = 15.0
 
-# Fail-closed kill switch. The code-exec node refuses every program until
-# untrusted execution runs behind a genuine isolation boundary (separate
-# container/user, no shared filesystem or network with the gateway). The
-# fresh-interpreter runner below is a mitigation, NOT that boundary: same-UID
-# filesystem/network escapes remain possible, so a benign spawn smoke test is
-# NOT a re-enable criterion. There is never an in-process fallback.
-CODE_EXEC_DISABLED = True
+# Fail-closed kill switch (env-overridable, default ON). The code-exec node
+# refuses every program until untrusted execution runs behind a genuine
+# isolation boundary (separate container/user, no shared filesystem or
+# network with the gateway). The fresh-interpreter runner below is a
+# mitigation, NOT that boundary. Re-enable only with
+# CODE_EXEC_BACKEND=vercel-sandbox (microVM, deny-all egress, empty env) plus
+# CODE_EXEC_DISABLED=false. There is never an in-process fallback.
+CODE_EXEC_DISABLED = os.environ.get("CODE_EXEC_DISABLED", "true").lower() in ("1", "true", "yes")
+
+# Execution backend. "vercel-sandbox" runs each program in a fresh Vercel
+# Sandbox microVM (deny-all egress, empty env, 30s cap, destroyed after the
+# run) - the genuine isolation boundary the kill switch above requires.
+# "local" is the dev fallback: fresh interpreter subprocess with the AST
+# validator and RLIMITs. Untrusted code NEVER runs in-process.
+CODE_EXEC_BACKEND = os.environ.get("CODE_EXEC_BACKEND", "local")
 
 
 async def _run_code(code: str) -> Dict[str, Any]:
@@ -857,12 +861,11 @@ async def _run_code(code: str) -> Dict[str, Any]:
             "ok": False,
             "error": "code-exec temporarily disabled (sandbox hardening in progress)",
         }
-    if CODE_EXEC_DISABLED:
-        return {
-            "output": "code-exec unavailable: sandbox hardening in progress",
-            "ok": False,
-            "error": "code-exec temporarily disabled (sandbox hardening in progress)",
-        }
+    if CODE_EXEC_BACKEND == "vercel-sandbox":
+        # Real isolation boundary (microVM, deny-all egress, no host env):
+        # full Python allowed, no AST validator needed.
+        from src.gateway.vercel_sandbox_runner import run_in_vercel_sandbox
+        return await run_in_vercel_sandbox(code)
     violation = _sandbox_violation(code)
     if violation:
         return {"output": f"sandbox rejected: {violation}", "ok": False, "error": violation}
@@ -1130,6 +1133,8 @@ async def workflow_run(request: Request) -> Dict[str, Any]:
                 # Budget: reserve a padded estimate, charge the real Exa cost after.
                 ok, rid = await budget.reserve(0.01)
                 if not ok:
+                    if getattr(budget, "_ledger_error", None):
+                        raise HTTPException(status_code=503, detail="Budget store unavailable - search blocked before any spend (fail-closed)")
                     raise HTTPException(status_code=402, detail="Budget cap reached - search skipped")
                 settled = False
                 try:
@@ -1138,7 +1143,10 @@ async def workflow_run(request: Request) -> Dict[str, Any]:
                     settled = True
                 finally:
                     if not settled:
-                        await _release_reservation(rid)
+                        # Uncertain execution (search raised after reserve):
+                        # charge the reserved 0.01 estimate rather than freeing
+                        # a possibly-billed call.
+                        await _settle_reservation(rid, 0.01)
                 provider = search_out.get("provider", "duckduckgo")
                 results.append({"nodeId": nid, "type": ntype, "output": search_out["results_text"],
                                 "provider": provider, "cost": search_cost,

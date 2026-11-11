@@ -3,3 +3,7 @@ uvicorn[standard]>=0.29
 httpx>=0.27
 pyyaml>=6.0
 python-dotenv>=1.0
+
+# CodeExec full restoration: Vercel Sandbox microVM SDK (used when
+# CODE_EXEC_BACKEND=vercel-sandbox; the runner fails closed without it).
+vercel==0.12.2
