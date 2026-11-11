@@ -11,6 +11,7 @@ Execution chain per chat step:
   3. Demo mode (no keys configured)            -> deterministic local response
 """
 
+import ast
 import asyncio
 import csv
 import io
@@ -30,15 +31,31 @@ from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSock
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
+from src.services import router as router_mod
 from src.services.budget import BudgetManager
 from src.services.otari_client import OTARIClient
-from src.services.router import _model_cost, select_model
+from src.services.router import _model_cost, estimated_call_cost, select_model
 
 budget = BudgetManager()
 otari_client: Optional[OTARIClient] = None
 groq_client: Optional[httpx.AsyncClient] = None
 
 DEMO_COMPLETION_COST = 0.0
+
+# Smallest reservation the gateway takes when nothing is left in the budget.
+# It is only used to turn an EXHAUSTED cap into the documented 402; a paid
+# model is always reserved with exactly the router's affordability estimate.
+MIN_RESERVATION = 0.01
+
+# Inbound payload caps (P0-3). Every one of them answers 400, never 500.
+MAX_WORKFLOW_NODES = 100
+MAX_WORKFLOW_EDGES = 300
+MAX_MESSAGES = 50
+MAX_PROMPT_CHARS = 8000
+MAX_CODE_CHARS = 8000
+MAX_TOKENS_MIN = 1
+MAX_TOKENS_MAX = 4096
+MAX_TEMPLATE_ID_CHARS = 64
 
 ACTIVITY_LOG: List[Dict[str, Any]] = []
 
@@ -87,15 +104,24 @@ async def startup() -> None:
             timeout=60.0,
         )
         print("OtariOptm: Groq fallback enabled")
+    # Start the background health probe so the 60 s TTL cache is refreshed
+    # periodically instead of only on demand.
+    _schedule_health_probe()
 
 
 async def shutdown() -> None:
+    global _probe_task
     if otari_client:
         await otari_client.close()
     if groq_client:
         await groq_client.aclose()
-    if _probe_task is not None:
-        _probe_task.cancel()
+    task, _probe_task = _probe_task, None
+    if task is not None:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 async def _log_activity(event: Dict[str, Any]) -> None:
@@ -107,14 +133,152 @@ async def _log_activity(event: Dict[str, Any]) -> None:
     await hub.emit(await budget.snapshot())
 
 
-def _estimate_cost(model_map: Optional[Dict[str, Any]], messages: List[Dict[str, Any]], max_tokens: int) -> float:
-    """Rough pre-flight cost estimate in USD (chars/4 ~ tokens)."""
-    if not model_map or _model_cost(model_map) <= 0:
+def _router_call_estimate(model_map: Optional[Dict[str, Any]]) -> float:
+    """Estimated USD cost of ONE call to ``model_map``.
+
+    This is the router's own affordability estimate (per-token cost x a token
+    estimate: the model's ``max_tokens`` hint, else
+    ``router.DEFAULT_TOKEN_ESTIMATE``), taken from the router's PUBLIC
+    ``estimated_call_cost`` helper. The gateway reserves with the SAME
+    number, so a model the router called affordable is never rejected by
+    ``reserve()`` with a 402.
+    """
+    if not model_map:
         return 0.0
-    chars = sum(len(m.get("content") or "") for m in messages)
-    prompt_tokens = chars / 4
+    try:
+        return max(0.0, float(estimated_call_cost(model_map)))
+    except Exception:
+        pass
+    # Defensive mirror of the router formula (used only if the router helper
+    # ever misbehaves) - keep it identical to router.estimated_call_cost.
     per_tok = _model_cost(model_map)
-    return prompt_tokens * per_tok + 0.05  # + completion pad
+    if per_tok <= 0:
+        return 0.0
+    hint = float(model_map.get("max_tokens") or 0.0)
+    tokens = hint if hint > 0 else float(getattr(router_mod, "DEFAULT_TOKEN_ESTIMATE", 500))
+    return per_tok * tokens
+
+
+def _estimate_cost(model_map: Optional[Dict[str, Any]], messages: List[Dict[str, Any]], max_tokens: int) -> float:
+    """Pre-flight cost estimate in USD, SHARED with the router.
+
+    ``messages``/``max_tokens`` are kept for call-site compatibility; the
+    estimate itself is the router's per-call estimate so the gateway can never
+    reserve more than the router considered affordable.
+    """
+    return _router_call_estimate(model_map)
+
+
+async def _json_body(request: Request) -> Dict[str, Any]:
+    """Parse a JSON object body; malformed input is a 400, not a 500."""
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="request body must be valid JSON")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="request body must be a JSON object")
+    return body
+
+
+def _clamp_max_tokens(value: Any, default: int = 4000) -> int:
+    """Clamp max_tokens into [1, 4096]; non-numeric input is a 400."""
+    if value is None:
+        value = default
+    try:
+        tokens = int(value)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="max_tokens must be an integer")
+    return max(MAX_TOKENS_MIN, min(MAX_TOKENS_MAX, tokens))
+
+
+def _validate_messages(messages: Any) -> List[Dict[str, Any]]:
+    """Validate the inbound chat message list against the payload caps."""
+    if not isinstance(messages, list):
+        raise HTTPException(status_code=400, detail="messages must be an array")
+    if len(messages) > MAX_MESSAGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"too many messages ({len(messages)} > {MAX_MESSAGES})",
+        )
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages are required")
+    for msg in messages:
+        if not isinstance(msg, dict):
+            raise HTTPException(status_code=400, detail="each message must be an object")
+        content = msg.get("content")
+        if isinstance(content, str) and len(content) > MAX_PROMPT_CHARS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"message content exceeds {MAX_PROMPT_CHARS} characters",
+            )
+    return messages
+
+
+def _validate_node_payload(node: Dict[str, Any], node_id: str) -> None:
+    """Reject oversized node payloads (prompt / code / query) with a 400."""
+    data = node.get("data") or {}
+    if not isinstance(data, dict):
+        return
+    node_data = data.get("data") if isinstance(data.get("data"), dict) else data
+    prompt = node_data.get("prompt")
+    if isinstance(prompt, str) and len(prompt) > MAX_PROMPT_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"node '{node_id}' prompt exceeds {MAX_PROMPT_CHARS} characters",
+        )
+    system = node_data.get("system")
+    if isinstance(system, str) and len(system) > MAX_PROMPT_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"node '{node_id}' system prompt exceeds {MAX_PROMPT_CHARS} characters",
+        )
+    code = data.get("code")
+    if isinstance(code, str) and len(code) > MAX_CODE_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"node '{node_id}' code exceeds {MAX_CODE_CHARS} characters",
+        )
+    query = data.get("query")
+    if isinstance(query, str) and len(query) > MAX_PROMPT_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"node '{node_id}' query exceeds {MAX_PROMPT_CHARS} characters",
+        )
+
+
+async def _release_reservation(reservation_id: Optional[str]) -> None:
+    """Release a still-outstanding reservation exactly once (no leaks)."""
+    if not reservation_id:
+        return
+    try:
+        await asyncio.shield(budget.release(reservation_id))
+    except Exception:
+        pass
+
+
+async def _settle_reservation(reservation_id: str, actual_cost: Any) -> Tuple[float, bool]:
+    """Charge a reservation exactly once through the canonical budget primitive.
+
+    ``BudgetManager.settle`` owns the exactly-once ledger, the cap clamp and
+    the over-budget flag, so the gateway never hand-rolls the accounting.
+    Returns (charged, over_budget).
+    """
+    cost = max(0.0, float(actual_cost or 0.0))
+    return await budget.settle(reservation_id, cost)
+
+
+def _routing_step_type(node: Optional[Dict[str, Any]]) -> str:
+    """Map a workflow node onto the router's step-type weights."""
+    ntype = str((node or {}).get("type") or "chat")
+    return {"code-exec": "code", "web-search": "search"}.get(ntype, "chat")
+
+
+def _select_model(candidates: List[Dict[str, Any]], remaining: float, step_type: str) -> Tuple[Optional[Dict[str, Any]], float, str]:
+    """Call the router with keyword arguments so extra optional params are safe."""
+    try:
+        return select_model(candidates, budget_remaining=remaining, step_type=step_type)
+    except TypeError:
+        return select_model(candidates, remaining, step_type)
 
 
 async def _otari_chat(model: str, messages: List[Dict[str, Any]], max_tokens: int) -> Dict[str, Any]:
@@ -165,8 +329,28 @@ async def _groq_chat(messages: List[Dict[str, Any]], max_tokens: int) -> Dict[st
         if cap_match:
             resp = await _call(max(int(cap_match.group(1)), 64))  # honor the model's completion cap
     if resp.status_code != 200:
-        raise RuntimeError(f"Groq error {resp.status_code}: {resp.text[:200] if resp.text else 'no body'}")
+        # Status only: the provider's response body can echo prompts, key
+        # material or internal payloads and must never reach a client.
+        raise RuntimeError(f"Groq returned {resp.status_code}")
     return resp.json()
+
+
+_PROVIDER_STATUS_RE = re.compile(r"(?:status|returned|http|code)\s*[:=]?\s*(\d{3})", re.IGNORECASE)
+
+
+def _safe_provider_error(provider: str, exc: BaseException) -> str:
+    """Provider failure context that is safe to return to a client.
+
+    Only the provider name, an HTTP status code (when the exception carries
+    one in a known shape) and the exception class survive: a raw provider
+    response body can echo prompts, key material or internal payloads, so it
+    is never copied into a note, an activity event or an HTTP response.
+    """
+    status = ""
+    match = _PROVIDER_STATUS_RE.search(str(exc))
+    if match:
+        status = f" {match.group(1)}"
+    return f"{provider} error{status} ({exc.__class__.__name__})"
 
 
 async def _demo_chat(messages: List[Dict[str, Any]], node_id: str) -> Dict[str, Any]:
@@ -208,68 +392,95 @@ async def execute_chat_step(
         if m and not (has_provider and str(m.get("id") or m.get("name")) == "demo")
     ] or [m for m in models if m]
 
-    chosen, score, reason = select_model(candidates, await budget.get_remaining(), "chat")
+    step_type = _routing_step_type(node)
+    remaining = await budget.get_remaining()
+    chosen, score, reason = _select_model(candidates, remaining, step_type)
 
+    # ONE estimate, shared with the router: the router judged this model
+    # affordable with exactly this number, so the reservation can never be
+    # larger than what the router checked.
     est = _estimate_cost(chosen, ctx_messages, max_tokens)
-    est = max(0.01, est) if est > 0 else 0.01  # keep a floor reservation for paid calls
-    ok, rid = await budget.reserve(est)
+    if est > 0:
+        reservation = est
+    else:
+        # Zero-cost tier: reserve nothing, unless the cap is already exhausted
+        # - then a minimal reservation keeps the documented 402 behaviour.
+        reservation = MIN_RESERVATION if remaining <= 0 else 0.0
+    ok, rid = await budget.reserve(reservation)
     if not ok:
         raise HTTPException(status_code=402, detail="Budget cap reached - step skipped")
 
     t0 = time.time()
     chain: List[str] = []
     primary: Optional[str] = None
-    fallback_note: Optional[str] = None
+    failures: List[str] = []
+    settled = False
+    over_budget = False
+    actual_cost = 0.0
+    result: Dict[str, Any] = {}
     try:
-        chosen_id = str(chosen.get("id") or chosen.get("name")) if chosen else ""
-        if otari_client is not None and chosen_id and chosen_id != "demo":
-            primary = "otari"
-            result = await _otari_chat(chosen_id, ctx_messages, max_tokens)
-            chain = ["otari"]
-        elif groq_client is not None:
-            primary = "groq"
-            result = await _groq_chat(ctx_messages, max_tokens)
-            chain = ["groq"]
-        else:
-            primary = "demo"
-            result = await _demo_chat(ctx_messages, node_id)
-            chain = ["demo"]
-    except Exception as exc:  # provider failure (incl. wallet-level HTTP errors) -> next tier
-        fallback_note = f"{primary} error: {str(exc)[:140]}"
-        if primary == "otari":
-            if groq_client is not None:
-                try:
-                    result = await _groq_chat(ctx_messages, max_tokens)
-                    chain = ["otari->groq"]
-                except Exception as _gexc:
-                    fallback_note = f"{fallback_note}; groq error: {str(_gexc)[:140]}"
+        try:
+            chosen_id = str(chosen.get("id") or chosen.get("name")) if chosen else ""
+            if otari_client is not None and chosen_id and chosen_id != "demo":
+                primary = "otari"
+                result = await _otari_chat(chosen_id, ctx_messages, max_tokens)
+                chain = ["otari"]
+            elif groq_client is not None:
+                primary = "groq"
+                result = await _groq_chat(ctx_messages, max_tokens)
+                chain = ["groq"]
+            else:
+                primary = "demo"
+                result = await _demo_chat(ctx_messages, node_id)
+                chain = ["demo"]
+        except Exception as exc:  # provider failure (incl. wallet-level HTTP errors) -> next tier
+            failures.append(_safe_provider_error(primary or "provider", exc))
+            if primary == "otari":
+                if groq_client is not None:
+                    try:
+                        result = await _groq_chat(ctx_messages, max_tokens)
+                        chain = ["otari->groq"]
+                    except Exception as _gexc:
+                        failures.append(_safe_provider_error("groq", _gexc))
+                        result = await _demo_chat(ctx_messages, node_id)
+                        chain = ["otari->groq->demo"]
+                else:
                     result = await _demo_chat(ctx_messages, node_id)
-                    chain = ["otari->groq->demo"]
+                    chain = ["otari->demo"]
+            elif primary == "groq":
+                result = await _demo_chat(ctx_messages, node_id)
+                chain = ["groq->demo"]
             else:
                 result = await _demo_chat(ctx_messages, node_id)
-                chain = ["otari->demo"]
-        elif primary == "groq":
-            result = await _demo_chat(ctx_messages, node_id)
-            chain = ["groq->demo"]
-        else:
-            result = await _demo_chat(ctx_messages, node_id)
-            chain = ["demo (fallback after error)"]
-            fallback_note = f"primary error: {str(exc)[:140]}"
-        await budget.release(rid)  # fresh actual replaced with record below
-    latency_ms = (time.time() - t0) * 1000
+                chain = ["demo (fallback after error)"]
+        latency_ms = (time.time() - t0) * 1000
 
-    usage = result.get("usage") or {}
-    reported = float(result.get("cost") or result.get("actual_cost") or 0.0)
-    # When the provider doesn't report spend, charge the reservation estimate
-    # so the cap can't be bypassed; demo/Groq tiers are explicitly free.
-    actual_cost = reported if reported > 0 else (est if chain[:1] == ["otari"] else 0.0)
-    await budget.record(rid, actual_cost)
+        usage = result.get("usage") or {}
+        reported = float(result.get("cost") or result.get("actual_cost") or 0.0)
+        # When the provider doesn't report spend, charge the shared estimate
+        # so the cap can't be bypassed; demo/Groq tiers are explicitly free.
+        actual_cost = reported if reported > 0 else (est if chain[:1] == ["otari"] else 0.0)
+        actual_cost, over_budget = await _settle_reservation(rid, actual_cost)
+        settled = True
+    finally:
+        if not settled:
+            await _release_reservation(rid)
+
+    # Safe, body-free provider context: names, statuses and exception classes.
+    fallback_note: Optional[str] = "; ".join(failures) if failures else None
+    if fallback_note and chain and chain[-1] == "demo":
+        fallback_note += ", falling back to demo"
 
     text = ""
     try:
         text = result["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError):
-        text = json.dumps(result)[:500]
+        # A 200 payload without a completion can still be an error body:
+        # only echo it when it clearly carries no error payload.
+        if isinstance(result, dict) and not result.get("error"):
+            text = json.dumps(result)[:500]
+        else:
+            text = "[provider returned no completion content]"
 
     await _log_activity({
         "event": "node.completed",
@@ -281,6 +492,7 @@ async def execute_chat_step(
         "latencyMs": round(latency_ms),
         "routing": reason,
         **({"fallbackNote": fallback_note} if fallback_note else {}),
+        **({"overBudget": True} if over_budget else {}),
     })
 
     return {
@@ -294,6 +506,7 @@ async def execute_chat_step(
         "routing": reason,
         "demo": result.get("demo", False),
         "note": fallback_note,
+        "overBudget": over_budget,
     }
 
 
@@ -315,22 +528,53 @@ def _substitute(text: str, outputs: Dict[str, Dict[str, Any]]) -> str:
 
 
 def _topo_order(nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    order = []
-    seen = set()
+    """Order nodes parents-first, rejecting malformed or cyclic graphs.
 
-    def visit(nid: str) -> None:
-        if nid in seen:
-            return
-        seen.add(nid)
-        for e in edges:
-            if str(e.get("target")) == nid:
-                visit(str(e.get("source")))
-        node = next((n for n in nodes if str(n["id"]) == nid), None)
-        if node:
-            order.append(node)
+    Uses Kahn's algorithm: a node is emitted only once every parent (edge
+    source) has been emitted, so a cycle can never produce a partial order.
+    """
+    node_by_id: Dict[str, Dict[str, Any]] = {}
+    for index, node in enumerate(nodes):
+        if not isinstance(node, dict):
+            raise HTTPException(status_code=400, detail=f"workflow node at index {index} must be an object")
+        raw_id = node.get("id")
+        if raw_id is None or str(raw_id).strip() == "":
+            raise HTTPException(status_code=400, detail=f"workflow node at index {index} is missing an 'id'")
+        node_id = str(raw_id)
+        if node_id in node_by_id:
+            raise HTTPException(status_code=400, detail=f"duplicate node id '{node_id}'")
+        node_by_id[node_id] = node
 
-    for n in nodes:
-        visit(str(n["id"]))
+    parents: Dict[str, set] = {nid: set() for nid in node_by_id}
+    for edge in edges or []:
+        if not isinstance(edge, dict):
+            raise HTTPException(status_code=400, detail="each edge must be an object")
+        source = str(edge.get("source") or "")
+        target = str(edge.get("target") or "")
+        if source not in node_by_id:
+            raise HTTPException(status_code=400, detail=f"edge references unknown node '{source}'")
+        if target not in node_by_id:
+            raise HTTPException(status_code=400, detail=f"edge references unknown node '{target}'")
+        parents[target].add(source)
+
+    remaining = {nid: set(p) for nid, p in parents.items()}
+    order: List[Dict[str, Any]] = []
+    ready = [nid for nid in node_by_id if not remaining[nid]]
+    while ready:
+        node_id = ready.pop(0)
+        order.append(node_by_id[node_id])
+        for other in node_by_id:
+            if node_id in remaining[other]:
+                remaining[other].discard(node_id)
+                if not remaining[other]:
+                    ready.append(other)
+
+    if len(order) != len(node_by_id):
+        stuck = sorted(nid for nid, p in remaining.items() if p)
+        raise HTTPException(
+            status_code=400,
+            detail=f"workflow contains a cycle (involving: {', '.join(stuck)})",
+        )
     return order
 
 
@@ -395,10 +639,57 @@ SAFE_GLOBALS = {
     }
 }
 
+SANDBOX_DUNDER_ALLOWLIST = {"__name__", "__doc__", "__file__"}
 
-async def _run_code(code: str) -> str:
-    """Best-effort in-process sandbox. For hackathon MVP only - not a security boundary."""
-    import asyncio as _asyncio
+SANDBOX_BANNED_NAMES = {
+    "eval", "exec", "compile", "open", "__import__", "input", "breakpoint",
+    "globals", "locals", "vars", "getattr", "setattr", "delattr", "memoryview",
+    "exit", "quit", "help", "id",
+}
+
+
+def _sandbox_violation(code: str) -> Optional[str]:
+    """Static check of untrusted code; returns a reason string or None.
+
+    Blocks the classic ``().__class__.__bases__[0].__subclasses__()`` escape:
+    dunder attribute access is refused (except a tiny allowlist) and the
+    builtins that expose the interpreter internals are refused by name, so
+    no import call is needed to walk out of the sandbox.
+    """
+    try:
+        tree = ast.parse(code, mode="exec")
+    except SyntaxError as exc:
+        return f"syntax error: {exc.msg} (line {exc.lineno})"
+    except Exception as exc:
+        return f"could not parse code: {exc.__class__.__name__}"
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            return "imports are not allowed in the sandbox"
+        if isinstance(node, ast.Attribute):
+            attr = node.attr
+            if attr in SANDBOX_BANNED_NAMES:
+                return f"'{attr}' is not allowed in the sandbox"
+            if attr.startswith("__") and attr.endswith("__") and attr not in SANDBOX_DUNDER_ALLOWLIST:
+                return f"attribute '{attr}' is not allowed in the sandbox"
+        elif isinstance(node, ast.Name):
+            name = node.id
+            if name in SANDBOX_BANNED_NAMES:
+                return f"'{name}' is not allowed in the sandbox"
+            if name.startswith("__") and name.endswith("__") and name not in SANDBOX_DUNDER_ALLOWLIST:
+                return f"name '{name}' is not allowed in the sandbox"
+    return None
+
+
+async def _run_code(code: str) -> Dict[str, Any]:
+    """Run untrusted code in a restricted namespace after AST validation.
+
+    Returns ``{"output", "ok", "error"}``. A rejected program never raises,
+    never returns a traceback and never reaches ``exec``.
+    """
+    violation = _sandbox_violation(code)
+    if violation:
+        return {"output": f"sandbox rejected: {violation}", "ok": False, "error": violation}
 
     stdout: List[str] = []
 
@@ -409,11 +700,16 @@ async def _run_code(code: str) -> str:
     gl["print"] = _fake_print
     try:
         def run() -> Any:
-            exec(code, gl, {})  # noqa: S102 - intentional MVP sandbox
-        await _asyncio.wait_for(_asyncio.to_thread(run), timeout=5.0)
-        return "\n".join(stdout) or "(no output)"
-    except BaseException as exc:  # noqa: BLE001
-        return f"sandbox error: {exc.__class__.__name__}: {exc}"
+            exec(code, gl, {})  # noqa: S102 - AST-validated, restricted namespace
+        await asyncio.wait_for(asyncio.to_thread(run), timeout=5.0)
+        return {"output": "\n".join(stdout) or "(no output)", "ok": True, "error": None}
+    except asyncio.CancelledError:
+        raise
+    except asyncio.TimeoutError:
+        return {"output": "sandbox error: timeout after 5s", "ok": False, "error": "timeout"}
+    except Exception as exc:  # noqa: BLE001
+        detail = f"{exc.__class__.__name__}: {exc}"
+        return {"output": f"sandbox error: {detail}", "ok": False, "error": detail}
 
 
 async def _send_budget_alert(node_id: str) -> None:
@@ -507,12 +803,10 @@ async def get_models() -> List[Dict[str, Any]]:
 
 
 async def chat_completions(request: Request) -> Dict[str, Any]:
-    body = await request.json()
+    body = await _json_body(request)
     model = body.get("model", "")
-    messages = body.get("messages", [])
-    max_tokens = int(body.get("max_tokens", 4000))
-    if not messages:
-        raise HTTPException(status_code=400, detail="messages are required")
+    messages = _validate_messages(body.get("messages", []))
+    max_tokens = _clamp_max_tokens(body.get("max_tokens"))
 
     models = await _models()
     ctx = messages[:]
@@ -535,24 +829,43 @@ async def chat_completions(request: Request) -> Dict[str, Any]:
 
 async def workflow_run(request: Request) -> Dict[str, Any]:
     """Compile {nodes, edges} into topological steps and execute them."""
-    body = await request.json()
+    body = await _json_body(request)
     nodes: List[Dict[str, Any]] = body.get("nodes") or []
     edges: List[Dict[str, Any]] = body.get("edges") or []
+    if not isinstance(nodes, list) or not isinstance(edges, list):
+        raise HTTPException(status_code=400, detail="'nodes' and 'edges' must be arrays")
+    if len(nodes) > MAX_WORKFLOW_NODES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"workflow has too many nodes ({len(nodes)} > {MAX_WORKFLOW_NODES})",
+        )
+    if len(edges) > MAX_WORKFLOW_EDGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"workflow has too many edges ({len(edges)} > {MAX_WORKFLOW_EDGES})",
+        )
     if not nodes:
         raise HTTPException(status_code=400, detail="workflow has no nodes")
 
     max_steps = int(budget.config["workflows"]["max_steps"])
-    max_tokens = int(budget.config["workflows"]["max_tokens"])
+    max_tokens = _clamp_max_tokens(budget.config["workflows"]["max_tokens"])
     if len(nodes) > max_steps:
         raise HTTPException(status_code=400, detail=f"Workflow exceeds max_steps={max_steps}")
 
     models = await _models()
     ordered = _topo_order(nodes, edges)
+    for node in ordered:
+        _validate_node_payload(node, str(node["id"]))
     outputs: Dict[str, Dict[str, Any]] = {}
     results: List[Dict[str, Any]] = []
     aborted: Optional[str] = None
 
-    await _log_activity({"event": "workflow.started", "nodes": len(ordered), "edges": len(edges)})
+    await _log_activity({
+        "event": "workflow.started",
+        "nodeCount": len(ordered),
+        "nodes": [str(n["id"]) for n in ordered],
+        "edges": len(edges),
+    })
 
     for node in ordered:
         nid = str(node["id"])
@@ -574,25 +887,37 @@ async def workflow_run(request: Request) -> Dict[str, Any]:
             elif ntype == "web-search":
                 query = _substitute(str(data.get("query", "")), outputs) or _gather_upstream(nid, edges, outputs)
                 query = _trim(query)
+                raw_objective = data.get("objective")
+                objective = str(raw_objective) if raw_objective else None
                 # Budget: reserve a padded estimate, charge the real Exa cost after.
                 ok, rid = await budget.reserve(0.01)
                 if not ok:
                     raise HTTPException(status_code=402, detail="Budget cap reached - search skipped")
-                search_out = await _web_search(query)
-                await budget.record(rid, float(search_out.get("cost") or 0.0))
+                settled = False
+                try:
+                    search_out = await _web_search(query, objective)
+                    search_cost, search_over_budget = await _settle_reservation(rid, float(search_out.get("cost") or 0.0))
+                    settled = True
+                finally:
+                    if not settled:
+                        await _release_reservation(rid)
                 provider = search_out.get("provider", "duckduckgo")
                 results.append({"nodeId": nid, "type": ntype, "output": search_out["results_text"],
-                                "provider": provider, "cost": search_out.get("cost", 0.0),
+                                "provider": provider, "cost": search_cost,
+                                "overBudget": search_over_budget,
                                 **({"objective": search_out["objective"]} if search_out.get("objective") else {})})
                 outputs[nid] = {"output": search_out["results_text"]}
                 await _log_activity({"event": "node.completed", "nodeId": nid, "model": provider,
-                                     "tokens": 0, "cost": search_out.get("cost", 0.0)})
+                                     "tokens": 0, "cost": search_cost})
 
             elif ntype == "code-exec":
                 code = str(data.get("code", ""))
                 code = _substitute(code, outputs)
-                out = await _run_code(code)
-                results.append({"nodeId": nid, "type": ntype, "output": out})
+                sandbox = await _run_code(code)
+                out = str(sandbox.get("output") or "")
+                results.append({"nodeId": nid, "type": ntype, "output": out,
+                                "status": "completed" if sandbox.get("ok") else "failed",
+                                **({"error": sandbox["error"]} if sandbox.get("error") else {})})
                 outputs[nid] = {"output": out}
                 await _log_activity({"event": "node.completed", "nodeId": nid, "model": "sandbox",
                                      "tokens": 0, "cost": 0.0})
@@ -621,8 +946,11 @@ async def workflow_run(request: Request) -> Dict[str, Any]:
             results.append({"nodeId": nid, "type": ntype, "error": exc.detail})
             outputs[nid] = {"output": f"error: {exc.detail}"}
         except Exception as exc:
-            results.append({"nodeId": nid, "type": ntype, "error": str(exc)})
-            outputs[nid] = {"output": f"error: {exc}"}
+            # Never echo a raw exception string: it can carry a provider
+            # response body. The exception class is safe and enough to triage.
+            detail = exc.__class__.__name__
+            results.append({"nodeId": nid, "type": ntype, "error": detail})
+            outputs[nid] = {"output": f"error: {detail}"}
 
     snap = await budget.snapshot()
     await _log_activity({"event": "workflow.finished", "aborted": aborted, "budget": snap})
@@ -632,6 +960,7 @@ async def workflow_run(request: Request) -> Dict[str, Any]:
         "steps": results,
         "budget": snap,
         "aborted": aborted,
+        "overBudget": any(bool(r.get("overBudget")) for r in results),
         "source": "otarioptm-gateway",
     }
 
@@ -664,7 +993,7 @@ async def activity_ws(websocket: WebSocket) -> None:
             # Client pings keep the socket warm; server pushes events hub.emit.
             msg = await websocket.receive_text()
             if msg == "ping":
-                await websocket.send_text(json.dumps({"event": "pong", **await budget.snapshot()}))
+                await websocket.send_text(json.dumps({"event": "pong", "type": "pong", **await budget.snapshot()}))
     except WebSocketDisconnect:
         pass
     finally:
@@ -804,6 +1133,27 @@ async def _health_probe_loop() -> None:
         await asyncio.sleep(HEALTH_PROBE_TTL)
 
 
+def _schedule_health_probe() -> Optional[asyncio.Task]:
+    """Start the background health-probe loop (at most one at a time).
+
+    Called from the FastAPI startup handler so the 60 s TTL cache is
+    refreshed periodically instead of only when a request asks for the
+    catalog. Returns the running task, or ``None`` when there is no running
+    event loop.
+    """
+    global _probe_task
+    if _probe_task is not None and not _probe_task.done():
+        return _probe_task
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+    _probe_task = loop.create_task(_health_probe_loop())
+    _bg_tasks.add(_probe_task)
+    _probe_task.add_done_callback(_bg_tasks.discard)
+    return _probe_task
+
+
 async def _models() -> List[Dict[str, Any]]:
     catalog = await _model_catalog()
     probe = await _probe_model_health(catalog)
@@ -887,6 +1237,11 @@ async def list_templates() -> List[Dict[str, Any]]:
 
 
 async def get_template(template_id: str) -> Dict[str, Any]:
+    if len(template_id) > MAX_TEMPLATE_ID_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"template id exceeds {MAX_TEMPLATE_ID_CHARS} characters",
+        )
     tpl = _templates_by_id().get(template_id)
     if tpl is None:
         raise HTTPException(status_code=404, detail=f"Unknown template '{template_id}'")
@@ -905,12 +1260,10 @@ _SSE_CHUNK_CHARS = 24
 
 
 async def chat_completions_stream(request: Request) -> Response:
-    body = await request.json()
-    messages = body.get("messages") or []
-    if not messages:
-        raise HTTPException(status_code=400, detail="messages are required")
+    body = await _json_body(request)
+    messages = _validate_messages(body.get("messages") or [])
     model = str(body.get("model", "") or "")
-    max_tokens = int(body.get("max_tokens", 4000))
+    max_tokens = _clamp_max_tokens(body.get("max_tokens"))
 
     models = await _models()
     if model:
@@ -993,6 +1346,16 @@ async def chat_completions_stream(request: Request) -> Response:
 # App factory: the single seam for tests, embeddings, and alternate deployments.
 # ---------------------------------------------------------------------------
 
+def _allowed_origins() -> List[str]:
+    """Explicit origins; the Vercel wildcard is handled by allow_origin_regex."""
+    origins = ["http://localhost:3000", "http://localhost:5173"]
+    for raw in (os.environ.get("ALLOWED_ORIGINS") or "").split(","):
+        origin = raw.strip()
+        if origin and origin not in origins:
+            origins.append(origin)
+    return origins
+
+
 def create_app() -> FastAPI:
     """Build a fully-wired gateway app. Module-level singletons (budget, hub,
     activity log) are shared across instances, matching the historical
@@ -1002,11 +1365,8 @@ def create_app() -> FastAPI:
     application.middleware("http")(_rate_limit_middleware)
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://localhost:5173",
-            "https://*.vercel.app",
-        ],
+        allow_origins=_allowed_origins(),
+        allow_origin_regex=r"https://.*\.vercel\.app",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

@@ -4,16 +4,22 @@ type ActivityFeedProps = {
   events: ActivityEvent[];
 };
 
+/**
+ * Activity stream. Every label sits at or above 4.5:1 on the elevated panel:
+ * silver timestamps (6.0:1), lime for a completed node, silver for a started
+ * workflow, ice for a finished one, red for a blocked run. Rows are separated
+ * by a steel hairline because the content is tabular.
+ */
 const CHIPS: Record<string, string> = {
-  "node.completed": "bg-emerald-500/15 text-emerald-300",
-  "workflow.started": "bg-indigo-500/15 text-indigo-300",
-  "workflow.finished": "bg-neutral-500/15 text-neutral-300",
-  "workflow.blocked": "bg-red-500/15 text-red-300",
-  pong: "bg-neutral-800 text-neutral-500",
+  "node.completed": "border border-lime/40 bg-lime/10 text-lime",
+  "workflow.started": "border border-steel bg-graphite text-silver",
+  "workflow.finished": "border border-steel bg-graphite text-ice",
+  "workflow.blocked": "border border-fail/40 bg-obsidian text-fail",
+  pong: "border border-steel-dim bg-graphite text-silver",
 };
 
 function chipCls(event: string): string {
-  return CHIPS[event] ?? "bg-neutral-800 text-neutral-400";
+  return CHIPS[event] ?? "border border-steel-dim bg-graphite text-silver";
 }
 
 function fmtTime(ts: number): string {
@@ -38,7 +44,9 @@ function rowDetail(e: ActivityEvent): string {
         ? e.nodeCount
         : typeof e.node_count === "number"
           ? e.node_count
-          : undefined;
+          : typeof e.nodes === "number"
+            ? e.nodes
+            : undefined;
     return n != null ? `${n} nodes` : "";
   }
   if (e.event === "workflow.blocked") {
@@ -54,28 +62,35 @@ function rowDetail(e: ActivityEvent): string {
 export function ActivityFeed({ events }: ActivityFeedProps) {
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 px-4 pb-2 pt-3 text-[10px] uppercase tracking-widest text-neutral-500">
+      <div className="shrink-0 px-4 pb-2 pt-3 font-mono text-[10px] uppercase tracking-[0.25em] text-lime">
         Activity
       </div>
       {events.length === 0 ? (
-        <div className="px-4 pb-4 text-[11px] text-neutral-600">
+        <div className="px-4 pb-4 text-[11px] text-silver">
           No activity yet. Run a workflow.
         </div>
       ) : (
-        <ul className="scroll-thin min-h-0 flex-1 space-y-1.5 overflow-y-auto px-4 pb-4">
+        <ul className="scroll-thin min-h-0 flex-1 divide-y divide-steel-dim overflow-y-auto px-4 pb-4">
           {[...events]
             .sort((a, b) => b.ts - a.ts)
             .slice(0, 60)
             .map((e, i) => {
               const detail = rowDetail(e);
               return (
-                <li key={`${e.event}-${e.ts}-${i}`} className="flex items-start gap-2 text-[10px]">
-                  <span className="shrink-0 pt-0.5 font-mono text-neutral-600">{fmtTime(e.ts)}</span>
-                  <span className={`shrink-0 rounded px-1 py-0.5 font-medium ${chipCls(e.event)}`}>
+                <li
+                  key={`${e.event}-${e.ts}-${i}`}
+                  className="flex items-start gap-2 py-1.5 text-[10px]"
+                >
+                  <span className="shrink-0 pt-0.5 font-mono text-silver">
+                    {fmtTime(e.ts)}
+                  </span>
+                  <span
+                    className={`shrink-0 rounded px-1 py-0.5 font-mono text-[9px] uppercase tracking-widest ${chipCls(e.event)}`}
+                  >
                     {e.event}
                   </span>
                   {detail && (
-                    <span className="min-w-0 flex-1 truncate text-neutral-400" title={detail}>
+                    <span className="min-w-0 flex-1 truncate text-silver" title={detail}>
                       {detail}
                     </span>
                   )}

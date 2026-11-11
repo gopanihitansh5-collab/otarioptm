@@ -1,0 +1,63 @@
+# OtariOptm runtime configuration.
+#
+# This is the LIVE config file. The gateway loads it at startup through
+# BudgetManager (src/services/budget.py:43-44) and only falls back to the
+# built-in DEFAULT_CONFIG (src/services/budget.py:7-36) when the file is
+# missing. Every value below is byte-for-byte the default the code uses, so a
+# clean checkout behaves exactly like a config-less deployment until you edit.
+#
+# MERGE SEMANTICS (src/services/budget.py:51-64): the loader merges ONE level
+# deep only. A section you declare here REPLACES that whole default section,
+# so keep every key of every section you touch - dropping a key here removes
+# the default it would have inherited.
+#
+# Point the gateway at a different file with OTARIOPTM_CONFIG
+# (src/services/budget.py:43). Paths must be reachable from the process
+# working directory (inside the image: /app).
+
+otari:
+  # NOTE: the base URL is currently hardcoded in src/services/otari_client.py:6;
+  # this key documents the intended value and is not yet read by the client.
+  base_url: "https://eu.api.otari.ai/api/v1"
+  # Placeholder only - the real token comes from the OTARI_API_KEY environment
+  # variable (src/gateway/main.py:76). Never write a real key here.
+  auth_token: "${OTARI_API_KEY}"
+
+models:
+  # NOTE: the router's scored catalog is hardcoded in src/gateway/main.py:462-467
+  # (FALLBACK_CATALOG); these keys document the intended default/fallback pair.
+  default: "alibaba/qwen-3.5-35b-a3b"
+  fallback: "openai:gpt-4o-mini"
+
+budget:
+  # USD. Hard ceiling for the whole project. Enforced atomically by
+  # BudgetManager.reserve (src/services/budget.py:79-97); a step that would
+  # exceed it is skipped with HTTP 402 (src/gateway/main.py:215-217).
+  project_cap: 5.00
+  # USD. Intended per-user ceiling; reserved, not enforced yet.
+  per_user: 2.00
+
+workflows:
+  # Max nodes in one compiled workflow run; a bigger graph is rejected with
+  # HTTP 400 (src/gateway/main.py:544-547).
+  max_steps: 10
+  # Default completion-token budget for chat steps
+  # (src/gateway/main.py:545, src/gateway/main.py:513).
+  max_tokens: 4000
+
+profiles:
+  # Node-type toggles. Reserved: the engine currently runs every node type
+  # regardless of these flags (src/gateway/main.py:557-613).
+  code-exec: true
+  web-search: true
+  guardrails: true
+
+gateway:
+  rate_limit:
+    # Per-IP token bucket on mutating /api/v1/* endpoints
+    # (src/gateway/main.py:700-751). /api/v1/health is exempt. Exceeding the
+    # bucket returns HTTP 429 with a Retry-After header
+    # (src/gateway/main.py:745-750).
+    enabled: true
+    capacity: 30         # burst size per IP
+    refill_per_sec: 1.0  # tokens restored per second

@@ -1,5 +1,8 @@
 name: CI
 
+# Zero secrets by design: no job below reads a secret, so CI must pass on a
+# clean checkout with no API keys. The gateway then runs its demo tier.
+
 on:
   push:
     branches: [main]
@@ -29,6 +32,43 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
+
+      # Config truth: every key declared in config/config.yml must exist in the
+      # code's DEFAULT_CONFIG, otherwise the key is silently dead. The file is
+      # OPTIONAL - when it is absent (fresh checkout, no config) the gateway
+      # falls back to DEFAULT_CONFIG and this check passes.
+      - name: Config truth check (config/config.yml, optional)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+
+          import yaml
+
+          sys.path.insert(0, os.getcwd())
+          from src.services.budget import DEFAULT_CONFIG
+
+          path = os.environ.get("OTARIOPTM_CONFIG") or "config/config.yml"
+          if not os.path.exists(path):
+              print(f"{path} not present - gateway falls back to DEFAULT_CONFIG. OK.")
+              sys.exit(0)
+          with open(path, "r", encoding="utf-8") as fh:
+              data = yaml.safe_load(fh) or {}
+          unknown = []
+          for section, values in data.items():
+              ref = DEFAULT_CONFIG.get(section)
+              if ref is None:
+                  unknown.append(str(section))
+              elif isinstance(ref, dict) and isinstance(values, dict):
+                  for key in values:
+                      if key not in ref:
+                          unknown.append(f"{section}.{key}")
+          if unknown:
+              print("::error::config keys absent from DEFAULT_CONFIG: " + ", ".join(unknown))
+              sys.exit(1)
+          print(f"{path} OK - every declared key exists in DEFAULT_CONFIG.")
+          PY
 
       # House policy: tests are never silenced. Output is teed to a log so a failed
       # run leaves a post-mortem trail (never started / died mid-run / real failure

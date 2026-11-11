@@ -1,3 +1,8 @@
 node_modules
 .next
 npm-debug.log
+# Never bake local env files into the image. The supported way to set the
+# gateway URL is the NEXT_PUBLIC_GATEWAY_URL build arg (web/Dockerfile), which
+# docker-compose.yml passes through.
+.env
+.env.local

@@ -5,8 +5,19 @@ from fastapi import HTTPException
 
 OTARI_BASE_URL = "https://eu.api.otari.ai/api/v1"
 
+# Provider failures are surfaced as opaque, safe messages: no response body,
+# no key material and no echoed prompt ever reaches the caller.
+def _safe_detail(action: str, status_code: int) -> str:
+    return f"OTARI {action} failed (status {status_code})"
+
 
 class OTARIClient:
+    """Minimal OTARI HTTP client.
+
+    The API key lives only in the outgoing request header; it is never
+    logged, never echoed in an error message and never returned to a caller.
+    """
+
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.client = httpx.AsyncClient(
@@ -21,7 +32,7 @@ class OTARIClient:
         if resp.status_code == 402:
             raise HTTPException(status_code=402, detail="OTARI payment required - key needs onboarding")
         if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail=f"OTARI models error: {resp.text}")
+            raise HTTPException(status_code=resp.status_code, detail=_safe_detail("models request", resp.status_code))
         return resp.json()
 
     async def chat_completions(
@@ -48,7 +59,7 @@ class OTARIClient:
         if resp.status_code == 429:
             raise HTTPException(status_code=429, detail="OTARI rate limited - retry after backoff")
         if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail=f"OTARI chat error: {resp.text}")
+            raise HTTPException(status_code=resp.status_code, detail=_safe_detail("chat completion", resp.status_code))
         return resp.json()
 
     async def activity_stream(self, model: str, session_id: str):

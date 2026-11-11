@@ -1,15 +1,16 @@
 import { NODE_LABELS, type NodeType } from "@/lib/types";
 import { FOCUS_RING } from "@/components/studio/ui";
+import { TYPE_DOT } from "@/components/nodes/theme";
 
 type PaletteProps = {
   addNode: (type: NodeType) => string;
 };
 
 const ITEMS: { type: NodeType; desc: string; dot: string }[] = [
-  { type: "chat", desc: "LLM chain step: prompt + system", dot: "bg-lime" },
-  { type: "web-search", desc: "Fetch live web context", dot: "bg-signal" },
-  { type: "code-exec", desc: "Sandboxed code snippet", dot: "bg-silver" },
-  { type: "guardrails", desc: "Block banned terms", dot: "bg-amber" },
+  { type: "chat", desc: "LLM chain step: prompt + system", dot: TYPE_DOT.chat },
+  { type: "web-search", desc: "Fetch live web context", dot: TYPE_DOT["web-search"] },
+  { type: "code-exec", desc: "Sandboxed code snippet", dot: TYPE_DOT["code-exec"] },
+  { type: "guardrails", desc: "Block banned terms", dot: TYPE_DOT.guardrails },
 ];
 
 const ADD_BTN = `flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-steel text-base leading-none text-silver transition-colors duration-150 hover:border-lime/40 hover:text-lime active:scale-[0.98] ${FOCUS_RING}`;

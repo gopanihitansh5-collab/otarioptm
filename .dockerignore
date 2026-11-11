@@ -1,4 +1,6 @@
 .git
+.github
+.bunshin
 .env
 .venv
 __pycache__
@@ -8,3 +10,5 @@ web/.next
 docs
 *.md
 !README.md
+# config/ is intentionally NOT ignored: the gateway image ships
+# config/config.yml, which is the live budget/rate-limit configuration.

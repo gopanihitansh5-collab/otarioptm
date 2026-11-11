@@ -1,5 +1,11 @@
 # Phase 3: Optimization & Polish
 
+> **Historical planning document, not the current API. The live contract is `docs/api.md`.**
+> Some routes named below (`POST /api/v1/search`, `POST /api/v1/budgets/reserve`,
+> `GET /api/v1/workflows/public`, `POST /api/v1/guardrails`) were never
+> implemented. The live route table is in `docs/api.md`; the gateway registers
+> its routes in `create_app()` (`src/gateway/main.py`).
+
 **Duration:** 5-6 days (Week 3 of hackathon)  
 **Goal:** Budget enforcement + team features + UI/UX polish  
 **Target Completion:** End of Day 21  

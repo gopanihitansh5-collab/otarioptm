@@ -16,6 +16,7 @@ const STATUS_CHIP: Record<RunRecord["status"], string> = {
   completed: "border-lime/50 bg-lime/10 text-lime",
   aborted: "border-amber/50 bg-amber/10 text-amber",
   error: "border-fail/50 bg-fail/10 text-fail",
+  blocked: "border-fail bg-fail/25 text-fail",
 };
 
 function formatClock(ts: number): string {
@@ -65,7 +66,7 @@ export function HistoryPanel({ open, onClose, runs, onClear }: HistoryPanelProps
           <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
             <p className="text-xs font-medium text-ice">No runs yet</p>
             <p className="text-[11px] leading-relaxed text-silver">
-              Run a workflow — every run is recorded here with its cost, duration and
+              Run a workflow to record it here with its cost, duration and
               per-node events.
             </p>
           </div>

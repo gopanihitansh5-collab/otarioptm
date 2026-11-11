@@ -10,19 +10,18 @@ import {
   type WorkflowNodeData,
 } from "@/lib/types";
 import { useNodePatch } from "@/components/nodeDataPatch";
-
-const ACCENT = "#6366f1";
-
-const STATUS_CHIPS: Record<NodeRunStatus, string> = {
-  idle: "border-white/10 bg-neutral-800 text-neutral-400",
-  running: "animate-pulse border-indigo-500/40 bg-indigo-500/10 text-indigo-300",
-  done: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-  error: "border-red-500/40 bg-red-500/10 text-red-300",
-  skipped: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-};
-
-const FIELD =
-  "nodrag nowheel w-full rounded-md border border-white/10 bg-neutral-950/80 px-2 py-1.5 text-[11px] text-neutral-200 outline-none focus:border-indigo-500/60";
+import { RunBadge } from "@/components/nodes/RunBadge";
+import {
+  BADGE,
+  CARD,
+  FIELD,
+  NODE_ACCENT,
+  RESULT_PANEL,
+  STATUS_CHIPS,
+  STATUS_DOT,
+  TYPE_RULE,
+  handleStyle,
+} from "@/components/nodes/theme";
 
 export function NodeChat(props: NodeProps) {
   const id = props.id;
@@ -35,26 +34,31 @@ export function NodeChat(props: NodeProps) {
   const title = data.label || NODE_LABELS[type] || "Model Chat";
 
   return (
-    <div className="w-56 rounded-xl border border-[#C6F36B] bg-[#171D22] p-3">
+    <div className={`${CARD} border-t-2 border-steel ${TYPE_RULE[type]}`}>
+      <RunBadge status={status} step={step} />
       <Handle
         type="target"
         position={Position.Top}
-        style={{ background: ACCENT, width: 10, height: 10, borderColor: "#18181b" }}
+        style={handleStyle(NODE_ACCENT)}
       />
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ background: ACCENT, width: 10, height: 10, borderColor: "#18181b" }}
+        style={handleStyle(NODE_ACCENT)}
       />
 
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-indigo-500/90 text-[9px] font-bold text-white">
-          M
+        <span className={BADGE} role="img" aria-label={NODE_LABELS[type]}>
+          <span aria-hidden="true">M</span>
         </span>
-        <span className="flex-1 truncate text-xs font-medium text-neutral-100">{title}</span>
+        <span className="flex-1 truncate text-xs font-medium text-ice">{title}</span>
         <span
-          className={`rounded border px-1 py-0.5 text-[9px] uppercase tracking-wide ${STATUS_CHIPS[status]}`}
+          className={`flex items-center gap-1 rounded border px-1 py-0.5 font-mono text-[9px] uppercase tracking-widest ${STATUS_CHIPS[status]}`}
         >
+          <span
+            className={`h-1 w-1 shrink-0 rounded-full ${STATUS_DOT[status]}`}
+            aria-hidden="true"
+          />
           {status}
         </span>
       </div>
@@ -62,44 +66,48 @@ export function NodeChat(props: NodeProps) {
       <textarea
         className={`${FIELD} mt-2`}
         rows={2}
+        aria-label="Chat prompt"
         placeholder="Prompt..."
         value={data.prompt ?? ""}
         onChange={(e) => onPatch(id, { prompt: e.target.value })}
       />
       <input
         className={`${FIELD} mt-1.5`}
+        aria-label="Chat system prompt"
         placeholder="System text..."
         value={data.system ?? ""}
         onChange={(e) => onPatch(id, { system: e.target.value })}
       />
 
       {step && (status === "done" || status === "error") && (
-        <div className="mt-2 space-y-0.5 border-t border-white/10 pt-1.5 text-[10px] text-neutral-400">
+        <div className={RESULT_PANEL}>
           {step.demo && (
-            <span className="rounded bg-sky-500/15 px-1 py-0.5 text-[9px] text-sky-300">demo</span>
+            <span className="inline-block rounded border border-steel bg-elevated px-1 py-0.5 font-mono text-[9px] uppercase tracking-widest text-silver">
+              demo
+            </span>
           )}
           {step.model && (
             <div>
-              <span className="text-neutral-600">model</span>{" "}
-              <span className="text-neutral-300">
+              <span className="text-silver">model</span>{" "}
+              <span className="text-ice">
                 {step.model.length > 24 ? `${step.model.slice(0, 24)}...` : step.model}
               </span>
             </div>
           )}
-          <div className="font-mono text-neutral-500">
+          <div className="font-mono text-silver">
             {step.tokens ?? 0} tok · ${(step.cost ?? 0).toFixed(4)} · {step.latencyMs ?? 0} ms
           </div>
           {step.output && (
-            <div className="text-neutral-300">
+            <div className="text-ice">
               {step.output.length > 80 ? `${step.output.slice(0, 80)}...` : step.output}
             </div>
           )}
           {step.error && (
-            <div className="truncate text-red-300" title={step.error}>
+            <div className="truncate text-fail" title={step.error}>
               {step.error}
             </div>
           )}
-          <div className="text-[8px] uppercase tracking-widest text-neutral-700">
+          <div className="font-mono text-[8px] uppercase tracking-widest text-silver">
             showing latest run
           </div>
         </div>

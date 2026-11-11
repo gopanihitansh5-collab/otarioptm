@@ -15,7 +15,7 @@ export type StoredStep = {
 export type RunRecord = {
   id: string;
   ts: number;
-  status: "completed" | "aborted" | "error";
+  status: "completed" | "aborted" | "error" | "blocked";
   nodeCount: number;
   cost: number;
   tokens: number;
@@ -33,13 +33,33 @@ function isRunRecord(value: unknown): value is RunRecord {
   return (
     typeof r.id === "string" &&
     typeof r.ts === "number" &&
-    (r.status === "completed" || r.status === "aborted" || r.status === "error") &&
+    (r.status === "completed" ||
+      r.status === "aborted" ||
+      r.status === "error" ||
+      r.status === "blocked") &&
     typeof r.nodeCount === "number" &&
     typeof r.cost === "number" &&
     typeof r.tokens === "number" &&
     typeof r.durationMs === "number" &&
-    typeof r.demo === "boolean"
+    // `demo` was added after the first release, older records are read as
+    // non-demo rather than discarded.
+    (typeof r.demo === "boolean" || r.demo === undefined)
   );
+}
+
+/**
+ * Derives the honest status of a run from what the gateway actually
+ * returned. A run whose nodes failed or were blocked is never stored as
+ * "completed".
+ */
+export function deriveRunStatus(
+  steps: StepResult[],
+  aborted?: string | null,
+): RunRecord["status"] {
+  if (aborted) return "aborted";
+  if (steps.some((s) => s.blocked)) return "blocked";
+  if (steps.some((s) => s.error)) return "error";
+  return "completed";
 }
 
 export function loadRunHistory(): RunRecord[] {
@@ -49,7 +69,10 @@ export function loadRunHistory(): RunRecord[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isRunRecord).slice(0, MAX_RUNS);
+    return parsed
+      .filter(isRunRecord)
+      .map((r) => ({ ...r, demo: r.demo === true }))
+      .slice(0, MAX_RUNS);
   } catch {
     return [];
   }

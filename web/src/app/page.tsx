@@ -10,6 +10,7 @@ import BudgetGovernance from "../components/landing/BudgetGovernance";
 import Observability from "../components/landing/Observability";
 import Architecture from "../components/landing/Architecture";
 import DX from "../components/landing/DX";
+import BuiltDifferent from "../components/landing/BuiltDifferent";
 import Trust from "../components/landing/Trust";
 import Pricing from "../components/landing/Pricing";
 import FAQ from "../components/landing/FAQ";
@@ -30,6 +31,7 @@ export default function Page() {
         <Observability />
         <Architecture />
         <DX />
+        <BuiltDifferent />
         <Trust />
         <UseCases />
         <Pricing />

@@ -48,7 +48,8 @@ async def exa_search(query: str, objective: Optional[str] = None) -> Dict[str, A
         resp = await client.post(f"{EXA_BASE_URL}/search", json=payload)
 
     if resp.status_code != 200:
-        raise RuntimeError(f"Exa error {resp.status_code}: {resp.text[:200]}")
+        # Safe message only: no raw provider body (it can echo the query).
+        raise RuntimeError(f"Exa search failed (status {resp.status_code})")
 
     data = resp.json()
     results = data.get("results") or []

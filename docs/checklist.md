@@ -76,7 +76,7 @@
 - [x] FastAPI app with `/api/v1` prefix, CORS for localhost:3000
 - [x] Budget reservation and enforcement (`src/services/budget.py`)
 - [x] Workflow compiler (topological node execution in `src/gateway/main.py`)
-- [x] Groq fallback handler (`src/services/groq_fallback.py`)
+- [x] Groq fallback handler and the Otari -> Groq -> demo chain (`src/gateway/main.py`)
 - [x] Router algorithm (`src/services/router.py`)
 - [x] Otari client (`src/services/otari_client.py`)
 - [x] CSV export with TOTAL row (`GET /api/v1/export`)

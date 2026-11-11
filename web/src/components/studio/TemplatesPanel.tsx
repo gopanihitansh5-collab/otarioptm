@@ -11,6 +11,7 @@ type TemplatesPanelProps = {
   source: "gateway" | "local" | null;
   canvasEmpty: boolean;
   onLoad: (template: WorkflowTemplate) => void;
+  onLoadAndRun: (template: WorkflowTemplate) => void;
 };
 
 export function TemplatesPanel({
@@ -20,6 +21,7 @@ export function TemplatesPanel({
   source,
   canvasEmpty,
   onLoad,
+  onLoadAndRun,
 }: TemplatesPanelProps) {
   return (
     <Drawer open={open} onClose={onClose} side="left" label="Workflow templates" panelId="templates-panel">
@@ -57,6 +59,7 @@ export function TemplatesPanel({
                 template={template}
                 canvasEmpty={canvasEmpty}
                 onLoad={onLoad}
+                onLoadAndRun={onLoadAndRun}
               />
             ))
           )}
@@ -70,11 +73,17 @@ function TemplateCard({
   template,
   canvasEmpty,
   onLoad,
+  onLoadAndRun,
 }: {
   template: WorkflowTemplate;
   canvasEmpty: boolean;
   onLoad: (template: WorkflowTemplate) => void;
+  onLoadAndRun: (template: WorkflowTemplate) => void;
 }) {
+  const confirmReplace = () =>
+    canvasEmpty ||
+    window.confirm(`Replace the current canvas with "${template.name}"?`);
+
   return (
     <article className="rounded-lg border border-steel bg-elevated p-3">
       <h3 className="text-sm font-semibold text-ice">{template.name}</h3>
@@ -82,20 +91,31 @@ function TemplateCard({
       <div className="mt-2 font-mono text-[10px] tracking-wider text-silver">
         {template.graph.nodes.length} nodes · {template.graph.edges.length} edges
       </div>
-      <button
-        type="button"
-        onClick={() => {
-          if (
-            canvasEmpty ||
-            window.confirm(`Replace the current canvas with "${template.name}"?`)
-          ) {
-            onLoad(template);
-          }
-        }}
-        className={`mt-3 flex h-11 w-full items-center justify-center rounded-lg border border-steel text-xs font-medium text-silver transition-colors duration-150 hover:border-lime/40 hover:text-lime active:scale-[0.98] ${FOCUS_RING}`}
-      >
-        Load template
-      </button>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (confirmReplace()) {
+              onLoad(template);
+            }
+          }}
+          className={`flex h-11 items-center justify-center rounded-lg border border-steel text-xs font-medium text-silver transition-colors duration-150 hover:border-lime/40 hover:text-lime active:scale-[0.98] ${FOCUS_RING}`}
+        >
+          Load template
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (confirmReplace()) {
+              onLoadAndRun(template);
+            }
+          }}
+          aria-label={`Load ${template.name} and run it immediately`}
+          className={`flex h-11 items-center justify-center rounded-lg border border-steel text-xs font-medium text-silver transition-colors duration-150 hover:border-lime/40 hover:text-lime active:scale-[0.98] ${FOCUS_RING}`}
+        >
+          Load and run
+        </button>
+      </div>
     </article>
   );
 }

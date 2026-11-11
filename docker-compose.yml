@@ -2,15 +2,29 @@
 #
 # Secrets: this file contains none. Optional keys (OTARI_API_KEY, GROQ_API_KEY,
 # EXA_API_KEY, RESEND_API_KEY, BUDGET_ALERT_EMAIL, OTARIOPTM_CONFIG) are read
-# from a repo-root .env (never committed) via the optional env_file below —
-# the long syntax needs Compose v2.24+. No .env at all? Zero-key demo mode
-# still boots and everything is labeled DEMO.
+# from a repo-root .env (never committed) via the optional env_file below.
+# No .env at all? Zero-key demo mode still boots and everything is labeled DEMO.
 services:
   gateway:
     build: .
     env_file:
+      # Compose v2.24+ is required for the long (path/required) env_file syntax.
       - path: .env
         required: false
+    environment:
+      # Config file the gateway loads at startup (src/services/budget.py:43).
+      # The image ships /app/config/config.yml (Dockerfile: COPY config ./config),
+      # so the cap/rate-limit values are the ones in that file, not the built-in
+      # defaults. Mount a different file and point OTARIOPTM_CONFIG at it.
+      OTARIOPTM_CONFIG: ${OTARIOPTM_CONFIG:-/app/config/config.yml}
+      # Comma-separated CORS allow-list.
+      # NOTE: the gateway hardcodes its allow-list today
+      # (src/gateway/main.py:1005-1009); this variable is inert until that read
+      # is wired. The default mirrors the built-in list.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      # Public base URL of this gateway; the same value is baked into the web
+      # image at build time (see the web service below).
+      NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8000}
     ports:
       - "8000:8000"
     healthcheck:
@@ -26,7 +40,13 @@ services:
       args:
         # The browser talks to the gateway directly, so this stays localhost
         # unless the gateway is reached through another public address.
+        # Next.js inlines NEXT_PUBLIC_* at build time (web/src/lib/api.ts:10),
+        # so this build arg - not a runtime env var - is what the browser uses.
         NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8000}
+    environment:
+      # Runtime copy of the same value (Next.js already inlined it at build
+      # time; kept here so `docker compose config` shows the effective URL).
+      NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8000}
     ports:
       - "3000:3000"
     depends_on:

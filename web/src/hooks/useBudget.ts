@@ -82,6 +82,14 @@ export function useBudget(): {
         }
         if (!data || typeof data !== "object") return;
         const obj = data as Record<string, unknown>;
+        const isPong = obj.type === "pong" || obj.event === "pong";
+        if (isPong) {
+          // A pong carries the budget snapshot but is not an activity event.
+          if ("cap" in obj && "spent" in obj) {
+            setSnapshot(obj as unknown as BudgetSnapshot);
+          }
+          return;
+        }
         if ("event" in obj && typeof obj.event === "string") {
           const activity: ActivityEvent = {
             ...obj,

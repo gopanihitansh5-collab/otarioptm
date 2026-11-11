@@ -1,8 +1,12 @@
 """Tests for the gateway factory seam, template gallery, SSE streaming,
 per-IP rate limiting, and the model-health probe. Zero keys: demo mode only."""
 
+import asyncio
+import contextlib
 import json
+from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 import src.gateway.main as gw
@@ -10,6 +14,52 @@ import src.gateway.main as gw
 client = TestClient(gw.app)
 
 TEMPLATE_IDS = {"research-then-summarize", "guarded-chat", "code-review", "web-fact-check"}
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limiter():
+    """Every test starts with an empty rate-limit bucket table."""
+    gw._limiter._buckets.clear()
+    yield
+    gw._limiter._buckets.clear()
+
+
+@contextlib.contextmanager
+def _isolated_budget(cap: float | None = None):
+    """Run a block against a private budget state and restore it afterwards."""
+    saved_spend = gw.budget.spend
+    saved_reservations = dict(gw.budget.reservations)
+    saved_cap = gw.budget.config["budget"]["project_cap"]
+    if cap is not None:
+        gw.budget.config["budget"]["project_cap"] = cap
+    gw.budget.spend = 0.0
+    gw.budget.reservations.clear()
+    try:
+        yield gw.budget
+    finally:
+        gw.budget.spend = saved_spend
+        gw.budget.reservations.clear()
+        gw.budget.reservations.update(saved_reservations)
+        gw.budget.config["budget"]["project_cap"] = saved_cap
+
+
+class _FakeOtari:
+    """Minimal stand-in for the OTARI client."""
+
+    def __init__(self, cost=None, error=None):
+        self.cost = cost
+        self.error = error
+
+    async def chat_completions(self, model, messages, max_tokens):
+        if self.error:
+            raise RuntimeError(self.error)
+        return {
+            "model": model,
+            "choices": [{"index": 0, "message": {"role": "assistant", "content": "fake reply"}}],
+            "usage": {"total_tokens": 12},
+            "cost": self.cost,
+        }
 
 
 # --- P1: create_app() factory seam -----------------------------------------
@@ -65,6 +115,39 @@ def test_workflow_run_from_template_demo_mode():
     guard = next(s for s in steps if s.get("type") == "guardrails")
     assert guard["blocked"] is False  # benign prompt passes
     assert body["aborted"] is None
+
+
+def test_every_template_fits_the_configured_max_steps():
+    """A template must never exceed workflows.max_steps (it would 400)."""
+    max_steps = int(gw.budget.config["workflows"]["max_steps"])
+    assert max_steps >= 2
+    for tpl in client.get("/api/v1/templates").json():
+        assert tpl["nodeCount"] <= max_steps, (
+            f"{tpl['id']} has {tpl['nodeCount']} nodes > max_steps={max_steps}"
+        )
+
+
+def test_every_template_runs_to_completion_in_demo_mode(monkeypatch):
+    """Every starter template must run end-to-end through /workflow/run."""
+
+    async def fake_search(query, objective=None):
+        # Hermetic stub: no outbound search call from the test suite.
+        return {"results_text": "stub result", "cost": 0.0, "provider": "stub", "objective": objective}
+
+    monkeypatch.setattr(gw, "_web_search", fake_search)
+
+    templates = client.get("/api/v1/templates").json()
+    assert templates
+    for tpl in templates:
+        with _isolated_budget():
+            r = client.post("/api/v1/workflow/run", json=tpl["graph"])
+            assert r.status_code == 200, tpl["id"]
+            body = r.json()
+            assert body["aborted"] is None, f"{tpl['id']} aborted at {body.get('aborted')}"
+            assert len(body["steps"]) == tpl["nodeCount"], tpl["id"]
+            for step in body["steps"]:
+                assert "error" not in step, f"{tpl['id']} step failed: {step}"
+            assert body["budget"]["spent"] <= body["budget"]["cap"]
 
 
 # --- P4: SSE chat stream ------------------------------------------------------
@@ -143,3 +226,399 @@ def test_models_carry_labeled_probe_values_demo_mode():
         assert probe.get("source") == "synthetic-demo"
         assert 0.5 <= probe.get("value", 0) <= 1.0
         assert abs(m["health"] - probe["value"]) < 1e-9  # router consumes the stamped value
+
+
+# --- P0-6: CORS ----------------------------------------------------------------
+
+def test_cors_allows_vercel_origin():
+    app2 = gw.create_app()
+    r = TestClient(app2).get(
+        "/api/v1/health", headers={"Origin": "https://otarioptm-abc.vercel.app"}
+    )
+    assert r.status_code == 200
+    assert r.headers.get("access-control-allow-origin") == "https://otarioptm-abc.vercel.app"
+
+
+def test_cors_rejects_unknown_origin():
+    app2 = gw.create_app()
+    r = TestClient(app2).get(
+        "/api/v1/health", headers={"Origin": "https://evil.example.com"}
+    )
+    assert r.status_code == 200
+    assert "access-control-allow-origin" not in r.headers
+
+
+def test_cors_honours_allowed_origins_env(monkeypatch):
+    monkeypatch.setenv("ALLOWED_ORIGINS", "https://studio.example.com, https://other.example.com")
+    app2 = gw.create_app()
+    c = TestClient(app2)
+    r = c.get("/api/v1/health", headers={"Origin": "https://studio.example.com"})
+    assert r.headers.get("access-control-allow-origin") == "https://studio.example.com"
+    r2 = c.get("/api/v1/health", headers={"Origin": "http://localhost:3000"})
+    assert r2.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+
+
+# --- P0-5: websocket pong payload ----------------------------------------------
+
+def test_websocket_pong_payload_is_typed():
+    with client.websocket_connect("/api/v1/activity") as ws:
+        snapshot = ws.receive_json()
+        assert "cap" in snapshot and "spent" in snapshot
+        ws.send_text("ping")
+        pong = ws.receive_json()
+    assert pong["event"] == "pong"
+    assert pong["type"] == "pong"
+    assert "cap" in pong and "spent" in pong
+
+
+# --- P0-2: budget lifecycle ----------------------------------------------------
+
+def test_raising_provider_leaves_no_outstanding_reservation(monkeypatch):
+    async def boom_demo(*args, **kwargs):
+        raise RuntimeError("demo tier exploded")
+
+    monkeypatch.setattr(gw, "otari_client", _FakeOtari(error="provider exploded"))
+    monkeypatch.setattr(gw, "_demo_chat", boom_demo)
+
+    with _isolated_budget() as budget:
+        with pytest.raises(RuntimeError):
+            asyncio.run(
+                gw.execute_chat_step(
+                    {"id": "n1", "type": "chat"},
+                    [{"role": "user", "content": "hi"}],
+                    gw.FALLBACK_CATALOG,
+                    100,
+                )
+            )
+        assert budget.reservations == {}
+        snap = asyncio.run(budget.snapshot())
+        assert snap["reserved"] == 0.0
+
+
+def test_provider_error_does_not_double_count(monkeypatch):
+    calls = {"settle": 0, "record": 0, "release": 0}
+    original_settle = gw.budget.settle
+    original_record = gw.budget.record
+    original_release = gw.budget.release
+
+    async def counting_settle(rid, cost):
+        calls["settle"] += 1
+        return await original_settle(rid, cost)
+
+    async def counting_record(rid, cost):
+        calls["record"] += 1
+        return await original_record(rid, cost)
+
+    async def counting_release(rid):
+        calls["release"] += 1
+        return await original_release(rid)
+
+    monkeypatch.setattr(gw.budget, "settle", counting_settle)
+    monkeypatch.setattr(gw.budget, "record", counting_record)
+    monkeypatch.setattr(gw.budget, "release", counting_release)
+    monkeypatch.setattr(gw, "otari_client", _FakeOtari(error="provider exploded"))
+
+    with _isolated_budget() as budget:
+        result = asyncio.run(
+            gw.execute_chat_step(
+                {"id": "n1", "type": "chat"},
+                [{"role": "user", "content": "hi"}],
+                gw.FALLBACK_CATALOG,
+                100,
+            )
+        )
+        assert calls["settle"] == 1, "exactly one terminal action per reservation"
+        assert calls["record"] == 0, "settle is the canonical primitive (never record)"
+        assert calls["release"] == 0, "never release-then-record"
+        snap = asyncio.run(budget.snapshot())
+        assert snap["reserved"] == 0.0
+        assert snap["spent"] == 0.0
+    assert result["chain"] == ["otari->demo"]
+    assert result["note"] and "otari error" in result["note"]
+
+
+def test_spend_never_exceeds_cap(monkeypatch):
+    monkeypatch.setattr(gw, "otari_client", _FakeOtari(cost=100.0))
+    with _isolated_budget(cap=0.5) as budget:
+        result = asyncio.run(
+            gw.execute_chat_step(
+                {"id": "n1", "type": "chat"},
+                [{"role": "user", "content": "hi"}],
+                gw.FALLBACK_CATALOG,
+                100,
+            )
+        )
+        snap = asyncio.run(budget.snapshot())
+        assert snap["spent"] <= snap["cap"]
+        assert snap["spent"] == 0.5
+    assert result["overBudget"] is True
+    assert result["cost"] <= 0.5
+
+
+def test_budget_cap_still_answers_402():
+    with _isolated_budget(cap=0.0):
+        r = client.post(
+            "/api/v1/chat/completions",
+            json={"messages": [{"role": "user", "content": "hi"}]},
+        )
+        assert r.status_code == 402
+
+
+def test_workflow_aborts_at_budget_cap():
+    with _isolated_budget(cap=0.0):
+        r = client.post(
+            "/api/v1/workflow/run",
+            json={"nodes": [{"id": "n1", "type": "chat", "data": {"prompt": "hi"}}], "edges": []},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["aborted"] == "n1"
+        assert body["budget"]["spent"] <= body["budget"]["cap"]
+
+
+# --- P1-7 / P1-8: routing step type and search objective ------------------------
+
+def test_routing_step_type_mapping():
+    assert gw._routing_step_type({"type": "chat"}) == "chat"
+    assert gw._routing_step_type({"type": "code-exec"}) == "code"
+    assert gw._routing_step_type({"type": "web-search"}) == "search"
+    assert gw._routing_step_type({"type": "guardrails"}) == "chat"
+    assert gw._routing_step_type(None) == "chat"
+
+
+def test_chat_step_routes_with_keyword_step_type(monkeypatch):
+    seen = {}
+
+    def fake_select(candidates, *args, **kwargs):
+        seen["args"] = args
+        seen["kwargs"] = kwargs
+        return {"id": "demo", "name": "demo", "cost_per_token": 0.0, "latency": 1, "health": 1.0}, 0.0, "demo"
+
+    monkeypatch.setattr(gw, "select_model", fake_select)
+    r = client.post(
+        "/api/v1/workflow/run",
+        json={"nodes": [{"id": "n1", "type": "chat", "data": {"prompt": "hi"}}], "edges": []},
+    )
+    assert r.status_code == 200
+    assert seen["kwargs"].get("step_type") == "chat"
+    assert "budget_remaining" in seen["kwargs"]
+
+
+def test_web_search_passes_objective_to_helper(monkeypatch):
+    captured = {}
+
+    async def fake_search(query, objective=None):
+        captured["query"] = query
+        captured["objective"] = objective
+        return {"results_text": "stub result", "cost": 0.0, "provider": "stub", "objective": objective}
+
+    monkeypatch.setattr(gw, "_web_search", fake_search)
+    r = client.post(
+        "/api/v1/workflow/run",
+        json={
+            "nodes": [
+                {
+                    "id": "s1",
+                    "type": "web-search",
+                    "data": {"query": "otari pricing", "objective": "find current pricing"},
+                }
+            ],
+            "edges": [],
+        },
+    )
+    assert r.status_code == 200
+    assert captured["objective"] == "find current pricing"
+    step = r.json()["steps"][0]
+    assert step["objective"] == "find current pricing"
+
+
+# --- V1: one shared cost estimate (gateway <-> router) --------------------------
+
+def test_gateway_estimate_is_the_router_estimate():
+    """The gateway must estimate exactly like the router does."""
+    model = {"id": "openai:gpt-4o-mini", "cost_per_token": 0.00000015, "latency": 600, "health": 0.95}
+    router_est = gw.router_mod.estimated_call_cost(model)
+    assert router_est > 0
+    for messages in ([{"role": "user", "content": "hi"}], [{"role": "user", "content": "x" * 4000}]):
+        assert gw._estimate_cost(model, messages, 4000) == pytest.approx(router_est)
+    # The model's own max_tokens hint wins, exactly like in the router.
+    hinted = dict(model, max_tokens=2000)
+    assert gw._estimate_cost(hinted, [], 4000) == pytest.approx(
+        gw.router_mod.estimated_call_cost(hinted)
+    )
+    # A free tier costs nothing in both places.
+    free = {"id": "demo", "cost_per_token": 0.0, "latency": 1, "health": 1.0}
+    assert gw._estimate_cost(free, [{"role": "user", "content": "hi"}], 4000) == 0.0
+
+
+def test_reservation_never_exceeds_the_router_estimate(monkeypatch):
+    """A model the router called affordable must not be rejected by reserve()."""
+    reserved = {}
+    original_reserve = gw.budget.reserve
+
+    async def spy_reserve(est):
+        reserved["est"] = est
+        return await original_reserve(est)
+
+    monkeypatch.setattr(gw.budget, "reserve", spy_reserve)
+    monkeypatch.setattr(gw, "otari_client", _FakeOtari(cost=0.0))
+
+    models = [
+        {"id": "paid-cheap", "name": "paid-cheap", "cost_per_token": 0.0000002, "latency": 600, "health": 0.95},
+    ]
+    router_est = gw.router_mod.estimated_call_cost(models[0])
+    with _isolated_budget(cap=5.0):
+        result = asyncio.run(
+            gw.execute_chat_step(
+                {"id": "n1", "type": "chat"},
+                [{"role": "user", "content": "hi"}],
+                models,
+                100,
+            )
+        )
+    assert reserved["est"] == pytest.approx(router_est)
+    assert reserved["est"] <= router_est  # never larger than the router checked
+    assert result["cost"] == pytest.approx(router_est)
+
+
+def test_router_affordable_model_is_not_rejected_with_402():
+    """The router's verdict and the gateway's reservation must agree."""
+    models = [
+        {"id": "paid-cheap", "name": "paid-cheap", "cost_per_token": 0.0000002, "latency": 600, "health": 0.95},
+    ]
+    cap = 0.001  # tight but sufficient for one call
+    with _isolated_budget(cap=cap):
+        remaining = asyncio.run(gw.budget.get_remaining())
+        chosen, _score, reason = gw._select_model(models, remaining, "chat")
+        assert chosen is not None, reason
+        est = gw._estimate_cost(chosen, [], 100)
+        ok, _rid = asyncio.run(gw.budget.reserve(est))
+        assert ok, "router-affordable model was rejected by reserve()"
+        assert est <= remaining
+
+
+# --- V1: provider response bodies never reach a client -------------------------
+
+class _FakeProviderResponse:
+    def __init__(self, status_code: int, text: str) -> None:
+        self.status_code = status_code
+        self.text = text
+
+    def json(self):
+        return {}
+
+
+class _FakeGroqClient:
+    """Groq stand-in that always fails with a body full of secrets."""
+
+    BODY = '{"error":{"message":"invalid key sk_live_supersecretvalue"}}'
+
+    async def get(self, path, *args, **kwargs):
+        return _FakeProviderResponse(429, self.BODY)
+
+    async def post(self, path, *args, **kwargs):
+        return _FakeProviderResponse(429, self.BODY)
+
+
+def test_groq_error_message_contains_no_response_body(monkeypatch):
+    monkeypatch.setattr(gw, "groq_client", _FakeGroqClient())
+    with pytest.raises(RuntimeError) as err:
+        asyncio.run(gw._groq_chat([{"role": "user", "content": "hi"}], 100))
+    text = str(err.value)
+    assert "429" in text
+    assert "supersecretvalue" not in text
+    assert "sk_live" not in text
+
+
+def test_fallback_note_never_echoes_a_provider_body(monkeypatch):
+    monkeypatch.setattr(gw, "groq_client", _FakeGroqClient())
+    models = [
+        {"id": "paid", "name": "paid", "cost_per_token": 0.0000002, "latency": 600, "health": 0.95},
+    ]
+    with _isolated_budget():
+        result = asyncio.run(
+            gw.execute_chat_step(
+                {"id": "n1", "type": "chat"},
+                [{"role": "user", "content": "hi"}],
+                models,
+                100,
+            )
+        )
+    assert result["chain"] == ["groq->demo"]
+    assert result["note"] and "groq error" in result["note"]
+    assert "429" in result["note"]
+    assert "supersecretvalue" not in json.dumps(result)
+    recent = [e for e in gw.ACTIVITY_LOG if e.get("event") == "node.completed"][-1]
+    assert "supersecretvalue" not in json.dumps(recent)
+
+
+# --- V1: import-time side effects (Vercel) ------------------------------------
+
+def _load_module_from_path(name: str, path: Path):
+    """Load a module fresh (not from sys.modules) under ``name``."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _scrub_provider_env(monkeypatch) -> None:
+    """Remove every provider credential and the .env loader from the env."""
+    import dotenv
+
+    monkeypatch.setattr(dotenv, "load_dotenv", lambda *a, **k: False)
+    for key in ("OTARI_API_KEY", "GROQ_API_KEY", "EXA_API_KEY", "RESEND_API_KEY"):
+        monkeypatch.delenv(key, raising=False)
+
+
+def test_import_needs_no_env_vars_config_or_network(tmp_path, monkeypatch):
+    """Importing the gateway must not require env vars or a config file."""
+    _scrub_provider_env(monkeypatch)
+    monkeypatch.setenv("OTARIOPTM_CONFIG", str(tmp_path / "missing-config.yml"))
+    module = _load_module_from_path(
+        "otari_gateway_fresh_import", PROJECT_ROOT / "src" / "gateway" / "main.py"
+    )
+    assert module.app is not None
+    # No config file -> the built-in defaults are used, not a crash.
+    assert module.budget.config["budget"]["project_cap"] == 5.0
+    assert module.budget.config["workflows"]["max_steps"] >= 2
+    # No provider key -> the gateway stays in demo mode, it does not fail.
+    assert module.otari_client is None and module.groq_client is None
+
+
+def test_vercel_entrypoint_imports_cleanly(tmp_path, monkeypatch):
+    """api/index.py (the Vercel entrypoint) must import with a bare env."""
+    _scrub_provider_env(monkeypatch)
+    monkeypatch.setenv("OTARIOPTM_CONFIG", str(tmp_path / "missing-config.yml"))
+    module = _load_module_from_path("otari_vercel_entry", PROJECT_ROOT / "api" / "index.py")
+    assert module.app is not None
+
+
+# --- V2: the background health probe is actually scheduled ---------------------
+
+def test_health_probe_task_is_scheduled_on_startup_and_cancelled_on_shutdown(monkeypatch):
+    """The periodic health-probe loop must really run.
+
+    The suite never starts the ASGI lifespan (the TestClient is used without a
+    context manager, so the lifespan must not run), therefore the
+    startup/shutdown handlers are driven directly here.
+    """
+    monkeypatch.delenv("OTARI_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+
+    async def _scenario():
+        await gw.startup()
+        task = gw._probe_task
+        assert task is not None, "startup must schedule the health-probe loop"
+        assert not task.done(), "the probe loop must be running"
+        # Scheduling again must not start a second, competing loop.
+        assert gw._schedule_health_probe() is task
+        await gw.shutdown()
+        return task
+
+    task = asyncio.run(_scenario())
+    assert task.cancelled(), "shutdown must cancel the probe task"
+    assert gw._probe_task is None

@@ -6,8 +6,9 @@ import type {
   WorkflowNode,
 } from "./types";
 
-const GATEWAY_URL =
-  process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:8000";
+// Empty base = same-origin relative requests. On Vercel the /api/(.*) rewrite
+// routes them to the FastAPI service; locally .env points at :8000.
+const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${GATEWAY_URL}${path}`, {
@@ -61,7 +62,10 @@ export function runWorkflow(
 }
 
 export function activityWebSocketUrl(): string {
-  return `${GATEWAY_URL.replace(/^http/, "ws")}/api/v1/activity`;
+  const base =
+    GATEWAY_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+  return `${base.replace(/^http/, "ws")}/api/v1/activity`;
 }
 
 export const CSV_EXPORT_URL = `${GATEWAY_URL}/api/v1/export`;

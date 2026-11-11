@@ -20,6 +20,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY run_server.py ./
 COPY src ./src
+# Ships the LIVE config: config/config.yml is what the gateway loads at startup
+# (src/services/budget.py:43 -> /app/config/config.yml), so the budget cap,
+# workflow limits and rate limit come from the file, not the built-in defaults.
+# config/example.yml (the template) rides along as documentation.
 COPY config ./config
 
 USER appuser

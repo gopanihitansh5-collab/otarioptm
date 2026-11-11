@@ -1,8 +1,7 @@
-import {
-  ActivityFeed,
-} from "@/components/ActivityFeed";
+import { ActivityFeed } from "@/components/ActivityFeed";
 import { BudgetMeter } from "@/components/BudgetMeter";
 import { CLOSE_BTN, DANGER_BTN, FOCUS_RING } from "@/components/studio/ui";
+import { STATUS_CHIPS, TYPE_DOT } from "@/components/nodes/theme";
 import {
   NODE_LABELS,
   type ActivityEvent,
@@ -23,22 +22,9 @@ type SidebarProps = {
   events: ActivityEvent[];
 };
 
-const TYPE_COLORS: Record<NodeType, string> = {
-  chat: "bg-lime",
-  "web-search": "bg-signal",
-  "code-exec": "bg-silver",
-  guardrails: "bg-amber",
-};
+const TYPE_COLORS: Record<NodeType, string> = TYPE_DOT;
 
-const STATUS_CHIPS: Record<NodeRunStatus, string> = {
-  idle: "border-steel-dim bg-graphite text-silver",
-  running: "border-lime/40 bg-lime/10 text-lime",
-  done: "border-steel bg-elevated text-ice",
-  error: "border-fail/40 bg-fail/10 text-fail",
-  skipped: "border-amber/30 bg-amber/10 text-amber",
-};
-
-const FIELD = `nodrag w-full rounded-md border border-steel-dim bg-obsidian px-2 py-1.5 text-[11px] text-ice outline-none transition-colors duration-150 placeholder:text-silver/60 focus:border-lime/60 ${FOCUS_RING}`;
+const FIELD = `nodrag w-full rounded-md border border-steel-dim bg-obsidian px-2 py-1.5 text-[11px] text-ice outline-none transition-colors duration-150 placeholder:text-silver focus:border-lime/60 ${FOCUS_RING}`;
 
 function Inspector({
   node,
@@ -93,12 +79,14 @@ function Inspector({
             <textarea
               className={FIELD}
               rows={2}
+              aria-label="Chat prompt"
               placeholder="Prompt..."
               value={data.prompt ?? ""}
               onChange={(e) => patch({ prompt: e.target.value })}
             />
             <input
               className={FIELD}
+              aria-label="Chat system prompt"
               placeholder="System text..."
               value={data.system ?? ""}
               onChange={(e) => patch({ system: e.target.value })}
@@ -108,6 +96,7 @@ function Inspector({
         {type === "web-search" && (
           <input
             className={FIELD}
+            aria-label="Web search query"
             placeholder="Query..."
             value={data.query ?? ""}
             onChange={(e) => patch({ query: e.target.value })}
@@ -117,6 +106,7 @@ function Inspector({
           <textarea
             className={`${FIELD} font-mono text-[10px]`}
             rows={3}
+            aria-label="Python code"
             placeholder="// python code..."
             spellCheck={false}
             value={data.code ?? ""}
@@ -127,6 +117,7 @@ function Inspector({
           <>
             <input
               className={FIELD}
+              aria-label="Banned terms"
               placeholder="banned, terms, comma sep"
               value={Array.isArray(data.banned) ? data.banned.join(", ") : ""}
               onChange={(e) =>
@@ -138,12 +129,12 @@ function Inspector({
                 })
               }
             />
-            <label className="flex items-center gap-2 text-[10px] text-silver">
+            <label className="flex min-h-[44px] items-center gap-2 text-[10px] text-silver">
               <input
                 type="checkbox"
                 checked={data.stop_on_block ?? false}
                 onChange={(e) => patch({ stop_on_block: e.target.checked })}
-                className="h-3 w-3 accent-amber"
+                className={`h-4 w-4 accent-amber ${FOCUS_RING}`}
               />
               Stop on block
             </label>
@@ -155,10 +146,14 @@ function Inspector({
         <div className="mt-3 rounded-lg border border-steel-dim bg-obsidian p-2.5 text-[10px] text-silver">
           <div className="flex items-center gap-1.5">
             {step.blocked && (
-              <span className="rounded bg-fail/15 px-1 py-0.5 text-fail">blocked</span>
+              <span className="rounded border border-fail/40 bg-obsidian px-1 py-0.5 font-mono text-[9px] uppercase tracking-widest text-fail">
+                blocked
+              </span>
             )}
             {step.demo && (
-              <span className="rounded bg-signal/15 px-1 py-0.5 text-signal">demo</span>
+              <span className="rounded border border-steel bg-elevated px-1 py-0.5 font-mono text-[9px] uppercase tracking-widest text-silver">
+                demo
+              </span>
             )}
             {step.error && <span className="truncate text-fail">{step.error}</span>}
           </div>

@@ -71,35 +71,59 @@ export function CountUp({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const ref = useRef<HTMLSpanElement | null>(null);
-  const started = useRef(false);
+  const visible = useRef(false);
+  const shown = useRef(0);
+  const frame = useRef<number | null>(null);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || reduced) return;
-    const io = new IntersectionObserver((entries) => {
-      if (!entries.some((e) => e.isIntersecting) || started.current) return;
-      started.current = true;
-      io.disconnect();
+    if (!el) return;
+
+    const render = (target: number) => {
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+      if (reduced) {
+        shown.current = target;
+        setDisplay(target);
+        return;
+      }
+      const from = shown.current;
       const t0 = performance.now();
       const dur = 900;
       const tick = (t: number) => {
         const p = Math.min(1, (t - t0) / dur);
         const eased = 1 - Math.pow(1 - p, 3);
-        setDisplay(value * eased);
-        if (p < 1) requestAnimationFrame(tick);
+        const next = from + (target - from) * eased;
+        shown.current = next;
+        setDisplay(next);
+        if (p < 1) {
+          frame.current = requestAnimationFrame(tick);
+        } else {
+          frame.current = null;
+        }
       };
-      requestAnimationFrame(tick);
+      frame.current = requestAnimationFrame(tick);
+    };
+
+    const io = new IntersectionObserver((entries) => {
+      const inView = entries.some((e) => e.isIntersecting);
+      if (inView && !visible.current) render(value);
+      visible.current = inView;
     });
     io.observe(el);
-    return () => io.disconnect();
+    if (visible.current) render(value);
+
+    return () => {
+      io.disconnect();
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    };
   }, [value, reduced]);
 
-  const shown = reduced ? value : display;
+  const current = reduced ? value : display;
   return (
     <span ref={ref} className={className}>
       {format
-        ? format(shown)
-        : shown.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+        ? format(current)
+        : current.toLocaleString(undefined, { maximumFractionDigits: 2 })}
     </span>
   );
 }
@@ -131,8 +155,7 @@ type LiveState = {
   liveProviders?: boolean;
 };
 
-const GATEWAY_URL =
-  process.env.NEXT_PUBLIC_GATEWAY_URL || "http://localhost:8000";
+const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "";
 
 export function useLiveGuard(pollMs = 15000): LiveState {
   const [state, setState] = useState<LiveState>({ status: "idle", events: [] });
@@ -165,7 +188,13 @@ export function useLiveGuard(pollMs = 15000): LiveState {
         });
       } catch {
         if (!cancelled) {
-          setState((s) => (s.budget ? s : { status: "offline", events: [] }));
+          // The gateway is unreachable: keep the last known budget for context,
+          // but never keep claiming the feed is live.
+          setState((s) =>
+            s.budget
+              ? { ...s, status: "offline" }
+              : { status: "offline", events: [] },
+          );
         }
       } finally {
         if (!cancelled) timer = setTimeout(pull, pollMs);

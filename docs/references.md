@@ -7,7 +7,7 @@
 - **Chat Completions**: `POST /api/v1/chat/completions`
 - **Models List**: `GET /api/v1/models`
 - **Activity Stream**: `WS /api/v1/activity` (WebSocket)
-- **Budget Endpoints**: `POST /api/v1/budgets`, `GET /api/v1/usage`
+- **Budget Endpoints**: `POST /api/v1/budgets`, `GET /api/v1/usage` (hosted Otari routes, **not verified** against the live gateway; OtariOptm's own budget API is `GET /api/v1/budget`, see `docs/api.md`)
 - **Auth Header**: `Otari-Key: $OTARI_API_KEY`
 - **Content-Type**: `application/json`
 - **Model Format**: `provider:model` (e.g., `openai:gpt-5-mini`, `anthropic:claude-sonnet-4-6`)
@@ -132,7 +132,7 @@
 - `docs/` - Markdown documentation (Diátaxis-styled)
 
 #### Created Project Files
-- `src/services/groq_fallback.py` - Groq fallback handler
+- `src/services/groq_fallback.py` - Groq fallback handler (removed later; the Groq tier and the Otari -> Groq -> demo chain now live in `src/gateway/main.py`)
 - `src/services/router.py` - Auto-model routing algorithm
 - `config/example.yml` - Otari gateway config template
 - `docs/12+ MD files` - Comprehensive documentation

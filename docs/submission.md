@@ -20,8 +20,12 @@ Hackathon: DoraHacks "Devs Wilding Online!" (Mozilla Otari). Deadline:
 
 ## Otari Features Checklist for Submission
 
-- [x] **Model routing** - auto-selection via `/api/v1/models`, scored
-      0.45 cost + 0.35 latency - 0.20 health (`src/services/router.py`)
+- [x] **Model routing** - auto-selection per step from the catalogue served
+      by `/api/v1/models`, scored
+      `cost_w * cost_norm + lat_w * latency_norm + health_w * (health - 0.5)`
+      with per-step weights (chat 0.45 cost / 0.35 latency / 0.20 health,
+      code 0.30 / 0.25 / 0.45, search 0.40 / 0.45 / 0.15)
+      (`src/services/router.py`)
 - [x] **Budget enforcement** - atomic reserve/record, HTTP 402 pre-spend
       block at the project cap (`src/services/budget.py`)
 - [x] **Code execution** - sandboxed Python node, imports blocked,
@@ -34,9 +38,12 @@ Hackathon: DoraHacks "Devs Wilding Online!" (Mozilla Otari). Deadline:
 - [x] **Fallback/reselection** - Otari -> Groq -> local demo chain with
       per-provider diagnostic notes
 
-Landing with the final build (documented in `docs/api.md`): SSE streaming
+Landing with the final build (all documented in `docs/api.md`): SSE streaming
 (`POST /api/v1/chat/completions/stream`), templates gallery
-(`GET /api/v1/templates` + `/{id}`), per-IP rate limiting (HTTP 429).
+(`GET /api/v1/templates` + `/{id}`), per-IP rate limiting (HTTP 429),
+background model-health probes, plus the studio's templates gallery, run
+history, workflow JSON export/import and a clearly labeled local overspend
+demo.
 
 ## Submission Template
 
@@ -71,22 +78,58 @@ activity tracking, fallback/reselection
    tier (responses labeled demo).
 ```
 
+## Judge Kit (30 seconds, 4 copy-paste commands)
+
+Start the gateway (`python run_server.py`, port 8000). No API key is needed:
+with none set the gateway answers from the zero-cost demo tier and labels the
+output `demo`. These four commands exercise the whole product.
+
+```bash
+# 1. Health: gateway up, budget snapshot, provider tiers configured
+curl -s http://localhost:8000/api/v1/health
+
+# 2. Model catalogue: the fields the router scores on (cost, latency, health)
+curl -s http://localhost:8000/api/v1/models
+
+# 3. Starter templates: 4 runnable graphs, each with a full node/edge graph
+curl -s http://localhost:8000/api/v1/templates
+
+# 4. Run a workflow: two nodes, {{nodeId}} substitution, routing + cost
+curl -s -X POST http://localhost:8000/api/v1/workflow/run \
+  -H "Content-Type: application/json" \
+  -d '{"nodes":[{"id":"n1","type":"chat","data":{"prompt":"Say hello in one word."}},{"id":"n2","type":"chat","data":{"prompt":"Repeat this back: {{n1}}"}}],"edges":[{"source":"n1","target":"n2"}]}'
+```
+
+Command 4 answers with the per-step results (model chosen, routing reason,
+tokens, cost, latency), the budget snapshot, and `aborted: null`. To see the
+HTTP 402 pre-spend block: set `budget.project_cap: 0.005` in
+`config/config.yml`, restart the gateway (the file is read at startup) and
+run command 4 again. Every chat step reserves a $0.01 floor before the
+provider is called, so the run is refused up front.
+
+The API reference for every field, status code and error is `docs/api.md`.
+
 ## Demo Video Script (target 4:00, rubric window 3-5 min)
 
 1. **0:00-0:30 - Problem.** "AI workloads leak money: every request someone
    guesses a model, and nothing stops spend before the invoice." Show the
    landing page hero and the problem section.
-2. **0:30-1:20 - Build.** Open `/studio`. Load a starter from the templates
-   gallery (search feeding a routed chat step), then adapt it live: add a
+2. **0:30-1:05 - Templates gallery.** Open `/studio` and open the **Templates**
+   panel. Four starters are listed; pick "Research then summarize" and hit
+   **Load and run**. Say: "these are not screenshots, each one is a runnable
+   graph served by the gateway."
+3. **1:05-2:00 - Build.** In the studio, adapt the loaded graph live: add a
    Guardrails node, wire it, and show `{{nodeId}}` pulling the search result
    into the chat prompt.
-3. **1:20-2:15 - Run + routing.** Press Run Workflow. Point at the activity
+4. **2:00-2:45 - Run + routing.** Press Run Workflow. Point at the activity
    feed: model chosen per step, the routing score line, and the fallback
    note when a provider is down.
-4. **2:15-3:10 - Budget.** Show the budget meter before/after the run, then
-   `GET /api/v1/budget`. Mention the atomic reserve -> record flow and the
-   HTTP 402 pre-spend block (config: `budget.project_cap`).
-5. **3:10-4:00 - Export + close.** Click Export CSV, show the totals row.
+5. **2:45-3:25 - Budget, including the 402 block.** Show the budget meter
+   before/after the run, then `GET /api/v1/budget`. Explain the atomic
+   reserve -> record flow, then trigger the **Try overspend demo** control in
+   the studio: it applies a local, labeled DEMO CAP and the next run is
+   refused before the provider is called (HTTP 402 pre-spend block).
+6. **3:25-4:00 - Export + close.** Click Export CSV, show the totals row.
    Close on the landing observability section reading the same live
    gateway. "Every token accounted for, before it is spent."
 

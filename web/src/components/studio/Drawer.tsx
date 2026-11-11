@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { useFocusTrap } from "./useFocusTrap";
 
 type DrawerProps = {
   open: boolean;
@@ -13,26 +14,7 @@ type DrawerProps = {
 
 export function Drawer({ open, onClose, side, label, panelId, children }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const panel = panelRef.current;
-    const first =
-      panel?.querySelector<HTMLElement>("[data-autofocus]") ??
-      panel?.querySelector<HTMLElement>(
-        "button, a, input, select, textarea, [tabindex]:not([tabindex='-1'])",
-      );
-    first?.focus();
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        onClose();
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  useFocusTrap({ active: open, containerRef: panelRef, onEscape: onClose });
 
   return (
     <div

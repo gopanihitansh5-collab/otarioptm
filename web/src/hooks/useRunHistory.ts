@@ -17,12 +17,16 @@ export function useRunHistory(): {
   const runsRef = useRef<RunRecord[]>([]);
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
-      const loaded = loadRunHistory();
-      runsRef.current = loaded;
-      setRuns(loaded);
-    }, 0);
-    return () => window.clearTimeout(t);
+    const loaded = loadRunHistory();
+    // A run can be recorded before this effect runs. Merge instead of
+    // overwriting so an early run is never lost.
+    const pending = runsRef.current;
+    const merged = [...pending, ...loaded]
+      .filter((run, index, all) => all.findIndex((r) => r.id === run.id) === index)
+      .slice(0, MAX_RUNS);
+    runsRef.current = merged;
+    setRuns(merged);
+    if (pending.length > 0) saveRunHistory(merged);
   }, []);
 
   const recordRun = useCallback((record: RunRecord) => {

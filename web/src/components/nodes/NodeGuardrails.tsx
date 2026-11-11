@@ -10,19 +10,20 @@ import {
   type WorkflowNodeData,
 } from "@/lib/types";
 import { useNodePatch } from "@/components/nodeDataPatch";
-
-const ACCENT = "#fbbf24";
-
-const STATUS_CHIPS: Record<NodeRunStatus, string> = {
-  idle: "border-white/10 bg-neutral-800 text-neutral-400",
-  running: "animate-pulse border-indigo-500/40 bg-indigo-500/10 text-indigo-300",
-  done: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-  error: "border-red-500/40 bg-red-500/10 text-red-300",
-  skipped: "border-amber-500/40 bg-amber-500/10 text-amber-300",
-};
-
-const FIELD =
-  "nodrag w-full rounded-md border border-white/10 bg-neutral-950/80 px-2 py-1.5 text-[11px] text-neutral-200 outline-none focus:border-amber-500/60";
+import { RunBadge } from "@/components/nodes/RunBadge";
+import { FOCUS_RING } from "@/components/studio/ui";
+import {
+  BADGE,
+  CARD,
+  FIELD_PLAIN,
+  NODE_ACCENT,
+  NODE_FAIL,
+  RESULT_PANEL,
+  STATUS_CHIPS,
+  STATUS_DOT,
+  TYPE_RULE,
+  handleStyle,
+} from "@/components/nodes/theme";
 
 export function NodeGuardrails(props: NodeProps) {
   const id = props.id;
@@ -37,35 +38,41 @@ export function NodeGuardrails(props: NodeProps) {
 
   return (
     <div
-      className={`w-56 rounded-xl border ${
-        blocked ? "border-[#E05353]" : "border-[#C6F36B]"
-      } bg-[#171D22] p-3`}
+      className={`${CARD} border-t-2 ${
+        blocked ? "border-fail" : `border-steel ${TYPE_RULE[type]}`
+      }`}
     >
+      <RunBadge status={status} step={step} />
       <Handle
         type="target"
         position={Position.Top}
-        style={{ background: blocked ? "#ef4444" : ACCENT, width: 10, height: 10, borderColor: "#18181b" }}
+        style={handleStyle(blocked ? NODE_FAIL : NODE_ACCENT)}
       />
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ background: blocked ? "#ef4444" : ACCENT, width: 10, height: 10, borderColor: "#18181b" }}
+        style={handleStyle(blocked ? NODE_FAIL : NODE_ACCENT)}
       />
 
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-amber-500/90 text-[9px] font-bold text-black">
-          G
+        <span className={BADGE} role="img" aria-label={NODE_LABELS[type]}>
+          <span aria-hidden="true">G</span>
         </span>
-        <span className="flex-1 truncate text-xs font-medium text-neutral-100">{title}</span>
+        <span className="flex-1 truncate text-xs font-medium text-ice">{title}</span>
         <span
-          className={`rounded border px-1 py-0.5 text-[9px] uppercase tracking-wide ${STATUS_CHIPS[status]}`}
+          className={`flex items-center gap-1 rounded border px-1 py-0.5 font-mono text-[9px] uppercase tracking-widest ${STATUS_CHIPS[status]}`}
         >
+          <span
+            className={`h-1 w-1 shrink-0 rounded-full ${STATUS_DOT[status]}`}
+            aria-hidden="true"
+          />
           {status}
         </span>
       </div>
 
       <input
-        className={`${FIELD} mt-2`}
+        className={`${FIELD_PLAIN} mt-2`}
+        aria-label="Banned terms"
         placeholder="banned, terms, comma sep"
         value={Array.isArray(data.banned) ? data.banned.join(", ") : ""}
         onChange={(e) =>
@@ -78,21 +85,23 @@ export function NodeGuardrails(props: NodeProps) {
         }
       />
 
-      <label className="nodrag mt-1.5 flex items-center gap-2 text-[10px] text-neutral-400">
+      <label className="nodrag mt-1.5 flex min-h-[44px] items-center gap-2 text-[10px] text-silver">
         <input
           type="checkbox"
           checked={data.stop_on_block ?? false}
           onChange={(e) => onPatch(id, { stop_on_block: e.target.checked })}
-          className="h-3 w-3 accent-amber-500"
+          className={`h-4 w-4 accent-amber ${FOCUS_RING}`}
         />
         Stop on block
       </label>
 
       {blocked && step?.violations && step.violations.length > 0 && (
-        <div className="mt-2 space-y-0.5 border-t border-red-500/30 pt-1.5">
-          <div className="text-[9px] uppercase tracking-widest text-red-400">Violations</div>
+        <div className="mt-2 space-y-1 rounded-lg border border-fail/30 bg-obsidian p-2">
+          <div className="font-mono text-[9px] uppercase tracking-widest text-fail">
+            violations
+          </div>
           {step.violations.map((v, i) => (
-            <div key={i} className="truncate text-[10px] text-red-300">
+            <div key={i} className="truncate text-[10px] text-fail" title={v.rule}>
               · {v.rule}
             </div>
           ))}
@@ -100,17 +109,17 @@ export function NodeGuardrails(props: NodeProps) {
       )}
 
       {step && (status === "done" || status === "error") && (
-        <div className="mt-2 space-y-0.5 border-t border-white/10 pt-1.5 text-[10px] text-neutral-400">
-          <div className="font-mono text-neutral-500">
+        <div className={RESULT_PANEL}>
+          <div className="font-mono text-silver">
             {step.latencyMs ?? 0} ms{step.tokens != null ? ` · ${step.tokens} tok` : ""}
             {step.cost != null ? ` · $${step.cost.toFixed(4)}` : ""}
           </div>
           {step.output && (
-            <div className="text-neutral-300">
+            <div className="text-ice">
               {step.output.length > 80 ? `${step.output.slice(0, 80)}...` : step.output}
             </div>
           )}
-          <div className="text-[8px] uppercase tracking-widest text-neutral-700">
+          <div className="font-mono text-[8px] uppercase tracking-widest text-silver">
             showing latest run
           </div>
         </div>

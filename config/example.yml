@@ -1,20 +1,34 @@
-# OtariOptm Configuration Example
+# OtariOptm Configuration Example (template).
+#
+# This file is the documented TEMPLATE. The live config is config/config.yml -
+# copy this file over it (or edit it in place) to change behaviour:
+#
+#   cp config/example.yml config/config.yml
+#
+# Every key below also exists in config/config.yml and in the built-in
+# DEFAULT_CONFIG (src/services/budget.py:7-36). The loader merges ONE level
+# deep only (src/services/budget.py:51-64): a section you declare REPLACES
+# that whole default section, so keep every key of a section you edit.
+#
+# Placeholders below are the values the code already defaults to; replace them
+# with your own numbers. Never put a real API key in this file - secrets live
+# in the environment (.env / OTARI_API_KEY, see .env.example).
 
 otari:
-  base_url: "https://eu.api.otari.ai/api/v1"
-  auth_token: "${OTARI_API_KEY}"  # Read from environment
+  base_url: "https://eu.api.otari.ai/api/v1"   # Otari hosted gateway base URL
+  auth_token: "${OTARI_API_KEY}"                # Resolved from the environment, never a literal key
 
 models:
-  default: "alibaba/qwen-3.5-35b-a3b"
-  fallback: "openai:gpt-4o-mini"
+  default: "alibaba/qwen-3.5-35b-a3b"          # Preferred model id
+  fallback: "openai:gpt-4o-mini"               # Used when the default is unavailable
 
 budget:
-  project_cap: 5.00  # USD per project
-  per_user: 2.00     # USD per user
+  project_cap: 5.00  # USD per project (hard ceiling, enforced atomically)
+  per_user: 2.00     # USD per user (reserved, not enforced yet)
 
 workflows:
-  max_steps: 10
-  max_tokens: 4000
+  max_steps: 10      # Max nodes per compiled run (HTTP 400 above this)
+  max_tokens: 4000   # Default completion-token budget for chat steps
 
 profiles:
   code-exec: true

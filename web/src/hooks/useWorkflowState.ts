@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NODE_LABELS, type NodeType, type WorkflowNodeData } from "@/lib/types";
+import {
+  WORKFLOW_STORAGE_KEY,
+  loadWorkflowSnapshot,
+  serializeWorkflowSnapshot,
+} from "@/lib/workflow/snapshot";
 import { useAutosave } from "./useAutosave";
 import type { AutosaveStatus } from "./useAutosave";
 
@@ -11,32 +16,10 @@ import type { WorkflowNode, WorkflowEdge } from "@/lib/types";
 export type { NodeChange, EdgeChange } from "@xyflow/react";
 import type { Connection, NodeChange, EdgeChange } from "@xyflow/react";
 
-const STORAGE_KEY = "otarioptm.workflow.v1";
 const SAVE_DEBOUNCE_MS = 300;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
-
-function loadSnapshot(persist: boolean): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
-  if (!persist || typeof window === "undefined") return { nodes: [], edges: [] };
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { nodes: [], edges: [] };
-    const parsed = JSON.parse(raw) as {
-      nodes?: unknown;
-      edges?: unknown;
-    };
-    if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
-      return {
-        nodes: parsed.nodes as WorkflowNode[],
-        edges: parsed.edges as WorkflowEdge[],
-      };
-    }
-  } catch {
-    /* corrupt snapshot ignored */
-  }
-  return { nodes: [], edges: [] };
-}
 
 function defaultNodeData(type: NodeType): WorkflowNodeData {
   switch (type) {
@@ -64,6 +47,7 @@ export function useWorkflowState(options?: { persist?: boolean }): {
   setGraph: (nodes: WorkflowNode[], edges: WorkflowEdge[]) => void;
   saveStatus: AutosaveStatus;
   saveNow: () => void;
+  loadNotice: string | null;
 } {
   const persist = options?.persist !== false;
   // Start empty so SSR and first client render match; hydrate from
@@ -72,24 +56,44 @@ export function useWorkflowState(options?: { persist?: boolean }): {
   const [nodes, setNodes] = useState<WorkflowNode[]>([]);
   const [edges, setEdges] = useState<WorkflowEdge[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [loadNotice, setLoadNotice] = useState<string | null>(null);
   const counterRef = useRef(0);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      const snapshot = loadSnapshot(persist);
-      if (snapshot.nodes.length > 0 || snapshot.edges.length > 0) {
-        setNodes(snapshot.nodes);
-        setEdges(snapshot.edges);
+      if (!persist) {
+        setHydrated(true);
+        return;
+      }
+      const result = loadWorkflowSnapshot();
+      if (result.status === "loaded") {
+        if (result.nodes.length > 0 || result.edges.length > 0) {
+          setNodes(result.nodes);
+          setEdges(result.edges);
+        }
+        if (result.migrated) {
+          setLoadNotice(
+            "Your saved draft was migrated to the current workflow format.",
+          );
+        }
+      } else if (result.status === "invalid") {
+        // The stored copy is kept untouched: it is only reported, never
+        // silently dropped.
+        setLoadNotice(
+          `Your saved draft could not be read, so it was not loaded. The stored copy was left untouched. Reason: ${result.reason}`,
+        );
+      } else if (result.status === "unavailable") {
+        setLoadNotice(result.reason);
       }
       setHydrated(true);
     }, 0);
     return () => window.clearTimeout(t);
   }, [persist]);
 
-  const serialized = JSON.stringify({ nodes, edges });
+  const serialized = serializeWorkflowSnapshot(nodes, edges);
 
   const { status: saveStatus, saveNow } = useAutosave(
-    STORAGE_KEY,
+    WORKFLOW_STORAGE_KEY,
     serialized,
     persist && hydrated,
     { debounceMs: SAVE_DEBOUNCE_MS },
@@ -207,5 +211,6 @@ export function useWorkflowState(options?: { persist?: boolean }): {
     setGraph,
     saveStatus,
     saveNow,
+    loadNotice,
   };
 }
