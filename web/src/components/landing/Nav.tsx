@@ -168,7 +168,7 @@ export default function Nav() {
             title="Coming soon"
             className="hidden h-11 cursor-not-allowed items-center rounded-lg border border-[var(--color-steel)] px-4 text-sm text-[var(--color-silver)]/60 md:inline-flex"
           >
-            Sign in
+            Sign in · soon
           </span>
           <a
             href="/studio"
