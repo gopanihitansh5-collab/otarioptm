@@ -380,19 +380,56 @@ def _safe_provider_error(provider: str, exc: BaseException) -> str:
     return f"{provider} error{status} ({exc.__class__.__name__})"
 
 
+def _demo_answer_lines(content: str) -> List[str]:
+    """Pull up to five presentable lines out of a node's input for the demo answer.
+
+    Numbered search results and bullet lines survive intact; prose is wrapped
+    into short chunks. Everything returned here is a verbatim excerpt of the
+    node's real input, never invented content.
+    """
+    lines: List[str] = []
+    for raw in content.splitlines():
+        line = raw.strip().lstrip("-* ").strip()
+        if len(line) < 24 or line.endswith(":"):
+            continue
+        lines.append(line[:220])
+        if len(lines) >= 5:
+            break
+    if not lines and content.strip():
+        text = " ".join(content.split())
+        while text and len(lines) < 3:
+            lines.append(text[:220])
+            text = text[220:].strip()
+    return lines
+
+
 async def _demo_chat(messages: List[Dict[str, Any]], node_id: str) -> Dict[str, Any]:
-    """Deterministic local completion so demos run without any API key."""
+    """Deterministic local completion so demos run without any API key.
+
+    The answer is built only from the input this node actually received
+    (prompt plus upstream outputs) and is labeled as simulated on its first
+    line, so a demo run shows a real, readable answer shape without ever
+    pretending a live model produced it.
+    """
     user = next((m for m in reversed(messages) if m.get("role") == "user"), {})
     content = str(user.get("content", ""))
     ws_count = sum(1 for e in ACTIVITY_LOG if e.get("event") == "workflow.started")
     hint = (
-        "Live provider unavailable in this environment; the gateway fell back."
-        " Set OTARI_API_KEY (onboarded) or GROQ_API_KEY to enable live models."
+        "Simulated answer - no live model is connected in this environment."
+        " Set OTARI_API_KEY or GROQ_API_KEY for real model output."
     )
-    demo = (
-        f"[demo mode | node {node_id}] {len(content)} chars received, "
-        f"workflow #{ws_count}. {hint} Echoing intent: {content[:220]}"
-    )
+    bullets = _demo_answer_lines(content)
+    if bullets:
+        body = "\n".join(f"- {line}" for line in bullets)
+        demo = (
+            f"[DEMO | node {node_id} | workflow #{ws_count}] {hint}\n\n"
+            f"Key points from this node's input:\n{body}"
+        )
+    else:
+        demo = (
+            f"[DEMO | node {node_id} | workflow #{ws_count}] {hint}\n\n"
+            "This node received an empty prompt, so there is nothing to answer."
+        )
     return {
         "id": f"demo-{node_id}-{int(time.time() * 1000)}",
         "model": "demo",
