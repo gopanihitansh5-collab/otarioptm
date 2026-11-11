@@ -168,7 +168,7 @@ export default function BudgetGovernance() {
                         ? "CONNECTING TO GATEWAY..."
                         : `GATEWAY NOT REACHABLE AT ${GATEWAY_BASE}. START THE BACKEND: python run_server.py`}
                     </p>
-                    <p className="mt-2 text-[var(--color-steel)]">
+                    <p className="mt-2 text-[var(--color-silver)]">
                       DEFAULTS: PROJECT CAP $5.00, OVER-BUDGET CALLS REFUSED
                       WITH HTTP 402, ALERT EMAIL VIA RESEND.
                     </p>

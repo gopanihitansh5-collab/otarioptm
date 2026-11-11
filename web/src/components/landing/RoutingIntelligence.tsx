@@ -333,7 +333,7 @@ export default function RoutingIntelligence() {
               </p>
             </div>
 
-            <p className="mt-6 font-mono text-[9px] tracking-[0.2em] text-[var(--color-steel)]">
+            <p className="mt-6 font-mono text-[9px] tracking-[0.2em] text-[var(--color-silver)]">
               WEIGHTS AND FORMULA FROM src/services/router.py. INPUT VALUES ARE
               ILLUSTRATIVE; PRODUCTION ROUTING USES THE LIVE MODEL CATALOGUE,
               REAL PRICES AND MEASURED PERFORMANCE.
