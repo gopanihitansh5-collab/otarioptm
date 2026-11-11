@@ -1,35 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import { Reveal, CountUp, useLiveGuard } from "../../lib/landing/Reveal";
-import KineticType from "../motion/KineticType";
-
-// The 3D routing sphere loads only on the client, after hydration, so the
-// three.js bundle never blocks the first paint.
-const RoutingVisualizer = dynamic(
-  () => import("../motion/RoutingVisualizer"),
-  { ssr: false },
-);
-
-function useRoutingSphere(): boolean {
-  const [enabled, setEnabled] = useState(false);
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-      // Small screens keep the lightweight static SVG trace.
-      if (window.innerWidth < 768) return;
-      try {
-        const c = document.createElement("canvas");
-        if (c.getContext("webgl2") || c.getContext("webgl")) setEnabled(true);
-      } catch {
-        /* no WebGL: keep the SVG fallback */
-      }
-    }, 0);
-    return () => window.clearTimeout(t);
-  }, []);
-  return enabled;
-}
 
 const PRIMARY =
   "group inline-flex h-12 items-center gap-2 rounded-lg bg-[var(--color-lime)] px-6 text-sm font-semibold text-[var(--color-obsidian)] shadow-[0_0_28px_rgba(184,169,143,0.18)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-lime)]/50";
@@ -79,23 +50,7 @@ type DotStyle = React.CSSProperties & Record<"--dx" | "--dy", string>;
 const HEX = "234,150 217,179.4 183,179.4 166,150 183,120.6 217,120.6";
 
 export default function Hero() {
-  const panelRef = useRef<HTMLDivElement | null>(null);
   const live = useLiveGuard();
-  const sphere = useRoutingSphere();
-
-  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = panelRef.current;
-    if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const r = el.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    el.style.transform = `translate(${px * -6}px, ${py * -6}px)`;
-  };
-  const onLeave = () => {
-    const el = panelRef.current;
-    if (el) el.style.transform = "translate(0px, 0px)";
-  };
 
   const status =
     live.status === "live"
@@ -117,29 +72,19 @@ export default function Hero() {
         <div className="flex flex-col items-start">
           <Reveal as="span">
             <p className="font-mono text-[10px] tracking-[0.25em] text-[var(--color-lime)]">
-              V0.1 BETA / AI ORCHESTRATION, OPTIMIZED
+              v0.1 beta · built on the Otari hosted gateway
             </p>
           </Reveal>
           <Reveal delay={60}>
-            <h1 className="mt-5 font-display text-[clamp(44px,6vw,76px)] font-normal leading-[1.05] tracking-tight text-[var(--color-ice)]">
-              <KineticType text="Intelligence," speed={40} startDelay={350} />{" "}
-              <KineticType
-                text="without the overhead."
-                speed={40}
-                startDelay={950}
-                className="otari-gradient-text"
-              />
+            <h1 className="mt-5 font-display text-[clamp(40px,4.6vw,60px)] font-normal leading-[1.08] tracking-tight text-[var(--color-ice)]">
+              Route AI requests by cost, latency and budget.
             </h1>
           </Reveal>
           <Reveal delay={120}>
-            <p className="mt-5 text-lg font-medium text-[var(--color-lime)]/90">
-              Route intelligently. Spend deliberately. Operate confidently.
-            </p>
-            <p className="mt-3 max-w-lg text-base leading-relaxed text-[var(--color-silver)] md:text-lg">
-              An intelligent orchestration layer for cost-aware AI
-              infrastructure. Route every workload to the right model, control
-              spending and monitor every execution through one unified gateway
-              built on the Otari hosted gateway.
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-[var(--color-silver)] md:text-lg">
+              OtariOptm ranks candidate models by cost and latency for each
+              step, reserves budget before execution, and shows the actual
+              provider, tokens and spend of every run.
             </p>
           </Reveal>
           <Reveal delay={180}>
@@ -160,30 +105,13 @@ export default function Hero() {
             </div>
           </Reveal>
           <Reveal delay={240}>
-            <div className="mt-10 flex flex-wrap gap-3">
-              {[
-                "01 SMART ROUTING",
-                "02 BUDGET CONTROL",
-                "03 LIVE OBSERVABILITY",
-              ].map((chip) => (
-                <span
-                  key={chip}
-                  className="rounded-md border border-[var(--color-steel)] bg-[var(--color-graphite)] px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]"
-                >
-                  <span className="text-[var(--color-lime)]">{chip.slice(0, 2)}</span>{" "}
-                  {chip.slice(3)}
-                </span>
-              ))}
-            </div>
-          </Reveal>
-          <Reveal delay={300}>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
               <span>
                 GATEWAY: <span className={live.status === "offline" ? "text-[var(--color-fail)]" : "text-[var(--color-lime)]"}>{status}</span>
               </span>
               {live.budget && (
                 <span>
-                  BUDGET CAP ${" "}
+                  RUN BUDGET ${" "}
                   <CountUp value={live.budget.cap} className="text-[var(--color-ice)]" />
                 </span>
               )}
@@ -201,44 +129,12 @@ export default function Hero() {
           </Reveal>
         </div>
 
-        <div
-          className="relative mx-auto w-full max-w-[580px]"
-          onPointerMove={onMove}
-          onPointerLeave={onLeave}
-          style={{ willChange: "transform" }}
-        >
-          <div ref={panelRef} className="oo-anim relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[var(--color-steel)] bg-[var(--color-graphite)] transition-transform duration-300">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[radial-gradient(closest-side,rgba(101,201,232,0.08),transparent)]"
-            />
+        <div className="relative mx-auto w-full max-w-[580px]">
+          <div className="oo-anim relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[var(--color-steel)] bg-[var(--color-graphite)]">
             <p className="absolute left-4 top-3 z-10 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
-              GATEWAY LIVE TRACE (DEMO)
+              Routing trace · illustrative
             </p>
-            {!sphere && (
-              <p className="absolute bottom-3 right-4 z-10 font-mono text-[10px] tracking-[0.2em] text-[var(--color-steel)]">
-                LOOP 4.2S
-              </p>
-            )}
-
-            {sphere && (
-              <div className="absolute inset-0 p-3" aria-hidden>
-                <RoutingVisualizer />
-              </div>
-            )}
-            {sphere && (
-              <div className="oo-anim absolute right-4 top-3 z-10 flex gap-2 font-mono text-[9px] tracking-[0.15em] text-[var(--color-silver)]" aria-hidden>
-                <span className="oo-stage oo-st0">RECEIVED</span>
-                <span aria-hidden>→</span>
-                <span className="oo-stage oo-st1">CLASSIFYING</span>
-                <span aria-hidden>→</span>
-                <span className="oo-stage oo-st2">ROUTING</span>
-                <span aria-hidden>→</span>
-                <span className="oo-stage oo-st3">EXECUTED</span>
-              </div>
-            )}
-            {!sphere && (
-            <svg viewBox="0 0 400 300" className="absolute inset-0 h-full w-full" aria-hidden>
+            <svg viewBox="0 0 400 300" className="hero-trace absolute inset-0 h-full w-full" aria-hidden>
               <line x1="16" y1="150" x2="166" y2="150" stroke="#34322D" strokeWidth="1" />
               <text x="52" y="136" fill="#A6A197" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="2">REQUEST</text>
 
@@ -281,10 +177,9 @@ export default function Hero() {
                 </g>
               ))}
             </svg>
-            )}
 
             <div
-              className={`absolute bottom-3 left-4 z-10 w-52 rounded-lg border border-[var(--color-steel)] bg-[var(--color-obsidian)]/90 px-3 py-2.5${sphere ? " hidden" : ""}`}
+              className="absolute bottom-3 left-4 z-10 w-52 rounded-lg border border-[var(--color-steel)] bg-[var(--color-obsidian)]/90 px-3 py-2.5"
             >
               <p className="font-mono text-[9px] tracking-[0.2em] text-[var(--color-silver)]">
                 ROUTED BY POLICY (ILLUSTRATIVE)
