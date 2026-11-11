@@ -69,10 +69,11 @@ and the money is on every step (`cost`).
 Captured 2026-11-11 against the production deployment (https://otarioptm.vercel.app),
 default routing (no model pinned).
 
-![Actual live Otari-only activity, formatted for readability](docs/evidence/otari-live-activity-2026-11-11.png)
+![Actual live Otari-only activity, formatted for readability](docs/evidence/otari-live-activity-detail-2026-11-11.png)
 
-Screenshot: client-side pretty-printed **verbatim events from the live activity
-response**, not a staged Studio result. [Original raw screenshot](docs/evidence/otari-live-activity-raw-2026-11-11.png)
+Screenshot: cropped detail from client-side pretty-printed **verbatim events from
+the live activity response**, not a staged Studio result.
+[Full formatted capture](docs/evidence/otari-live-activity-2026-11-11.png) is preserved. [Original raw screenshot](docs/evidence/otari-live-activity-raw-2026-11-11.png)
 and [copyable evidence JSON](docs/evidence/otari-success-2026-11-11.json) are preserved.
 The historical `free` label visible in this capture was incorrect and is now
 `catalog-zero`: reported $0 does not prove zero wallet charges.
