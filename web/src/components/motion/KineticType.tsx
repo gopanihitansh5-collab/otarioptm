@@ -85,21 +85,70 @@ export default function KineticType({
   }, [reduced, text, step, startDelay]);
 
   const animate = !reduced && playing;
-  const chars = text.split("");
+  // Group characters into unbreakable word spans: bare inline-block chars
+  // let the browser wrap mid-word; word spans wrap at spaces only.
+  const tokens = text.split(/(\s+)/).filter(Boolean);
+  const laid: { token: string; start: number }[] = [];
+  {
+    let i = 0;
+    for (const token of tokens) {
+      laid.push({ token, start: i });
+      i += token.length;
+    }
+  }
 
   return (
     <Tag className={className} aria-label={text}>
       <span aria-hidden>
-        {chars.map((c, i) => (
-          <span
-            key={i}
-            className={`${styles.char} ${
-              animate ? (i < shown ? styles.charShown : styles.charPending) : ""
-            }`}
-          >
-            {c}
-          </span>
-        ))}
+        {laid.map(({ token, start }, ti) => {
+          if (/^\s+$/.test(token)) {
+            return (
+              <span key={`t${ti}`}>
+                {token.split("").map((c, k) => {
+                  const i = start + k;
+                  return (
+                    <span
+                      key={i}
+                      className={`${styles.char} ${
+                        animate
+                          ? i < shown
+                            ? styles.charShown
+                            : styles.charPending
+                          : ""
+                      }`}
+                    >
+                      {c}
+                    </span>
+                  );
+                })}
+              </span>
+            );
+          }
+          return (
+            <span
+              key={`t${ti}`}
+              style={{ display: "inline-block", whiteSpace: "nowrap" }}
+            >
+              {token.split("").map((c, k) => {
+                const i = start + k;
+                return (
+                  <span
+                    key={i}
+                    className={`${styles.char} ${
+                      animate
+                        ? i < shown
+                          ? styles.charShown
+                          : styles.charPending
+                        : ""
+                    }`}
+                  >
+                    {c}
+                  </span>
+                );
+              })}
+            </span>
+          );
+        })}
         {animate && <span className={styles.cursor} />}
       </span>
       {animate && (

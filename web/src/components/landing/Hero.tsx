@@ -215,9 +215,11 @@ export default function Hero() {
             <p className="absolute left-4 top-3 z-10 font-mono text-[10px] tracking-[0.2em] text-[var(--color-silver)]">
               GATEWAY LIVE TRACE (DEMO)
             </p>
-            <p className="absolute bottom-3 right-4 z-10 font-mono text-[10px] tracking-[0.2em] text-[var(--color-steel)]">
-              {sphere ? "WEBGL ROUTING SPHERE" : "LOOP 4.2S"}
-            </p>
+            {!sphere && (
+              <p className="absolute bottom-3 right-4 z-10 font-mono text-[10px] tracking-[0.2em] text-[var(--color-steel)]">
+                LOOP 4.2S
+              </p>
+            )}
 
             {sphere && (
               <div className="absolute inset-0 p-3" aria-hidden>
@@ -281,7 +283,9 @@ export default function Hero() {
             </svg>
             )}
 
-            <div className="absolute bottom-3 left-4 z-10 w-52 rounded-lg border border-[var(--color-steel)] bg-[var(--color-obsidian)]/90 px-3 py-2.5">
+            <div
+              className={`absolute bottom-3 left-4 z-10 w-52 rounded-lg border border-[var(--color-steel)] bg-[var(--color-obsidian)]/90 px-3 py-2.5${sphere ? " hidden" : ""}`}
+            >
               <p className="font-mono text-[9px] tracking-[0.2em] text-[var(--color-silver)]">
                 ROUTED BY POLICY (ILLUSTRATIVE)
               </p>
