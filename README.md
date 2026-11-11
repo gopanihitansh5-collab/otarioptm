@@ -64,11 +64,20 @@ real usage-based costs; nothing else changes. The fallback chain is visible on e
 step (`chain`), the reason the router picked a candidate is on every step (`routing`),
 and the money is on every step (`cost`).
 
-## ✅ Verified live: Otari answering on production
+## ✅ Verified live Otari execution
 
 Captured 2026-11-11 against the production deployment (https://otarioptm.vercel.app),
-default routing (no model pinned). The request, the response and the gateway's own
-activity record:
+default routing (no model pinned).
+
+![Actual live Otari-only activity, formatted for readability](docs/evidence/otari-live-activity-2026-11-11.png)
+
+Screenshot: client-side pretty-printed **verbatim events from the live activity
+response**, not a staged Studio result. [Original raw screenshot](docs/evidence/otari-live-activity-raw-2026-11-11.png)
+and [copyable evidence JSON](docs/evidence/otari-success-2026-11-11.json) are preserved.
+The historical `free` label visible in this capture was incorrect and is now
+`catalog-zero`: reported $0 does not prove zero wallet charges.
+
+The request, the response and the gateway's own activity record:
 
 ```text
 $ curl -s -X POST https://otarioptm.vercel.app/api/v1/chat/completions \
@@ -95,7 +104,9 @@ all show the same Otari-only chain at ~2.3-3.0s.
 What this does **not** claim: not every run stays on Otari (a slow or failing Otari
 leg still falls back to Groq, labeled in `chain`), and `cost: 0.0` is the catalog
 price Otari reports - the wallet's actual charge is tracked separately
-(`costSource: "catalog-zero"` in current builds means exactly that).
+(`costSource: "catalog-zero"` in current builds means exactly that). The app meter
+excludes unreported Otari wallet charges. Provider-side organization caps are a
+separate backstop; the app meter is not a strict cap on those charges.
 
 ## Task-to-workflow studio
 

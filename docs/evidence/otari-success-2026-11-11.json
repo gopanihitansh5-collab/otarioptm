@@ -1,0 +1,20 @@
+{
+ "evidence": "default-route chat completion answered by Otari alone",
+ "captured_at": "2026-11-11T13:25:04.367870+00:00",
+ "endpoint": "POST https://otarioptm.vercel.app/api/v1/chat/completions (no model field -> default routing)",
+ "activity_event": {
+  "event": "node.completed",
+  "nodeId": "adhoc",
+  "model": "alibaba/qwen3.8-flash",
+  "chain": [
+   "otari"
+  ],
+  "tokens": 108,
+  "cost": 0.0,
+  "costSource": "free",
+  "latencyMs": 3018,
+  "routing": "preferred fast otari model (alibaba/qwen3.8-flash)",
+  "ts": 1794403499.116054,
+  "ts_iso": "2026-11-11T13:24:59.116054+00:00"
+ }
+}
