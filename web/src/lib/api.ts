@@ -99,13 +99,13 @@ export function planWorkflow(task: string): Promise<PlanResponse> {
   return request<PlanResponse>("/api/v1/workflow/plan", { method: "POST", body: JSON.stringify({ task }) });
 }
 
-export type WorkflowStreamEvent = { event: string; nodeId?: string; type?: import("./types").NodeType; error?: string; blocked?: boolean; budget?: BudgetSnapshot; aborted?: string | null; partial?: boolean; failedNodes?: string[]; reportStatus?: string; unverifiedNodes?: string[]; computedData?: Record<string, string>; sources?: string[] } & Partial<import("./types").StepResult>;
+export type WorkflowStreamEvent = { event: string; nodeId?: string; type?: import("./types").NodeType; error?: string; blocked?: boolean; budget?: BudgetSnapshot; aborted?: string | null; partial?: boolean; failedNodes?: string[]; reportStatus?: string; unverifiedNodes?: string[]; computedData?: Record<string, string>; computedJson?: Record<string, unknown>; sources?: string[] } & Partial<import("./types").StepResult>;
 
 /** One POST only. Never retry a partially executed workflow on stream failure. */
-export async function streamWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[], onEvent: (event: WorkflowStreamEvent) => void): Promise<RunResponse> {
+export async function streamWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[], onEvent: (event: WorkflowStreamEvent) => void, searchProvider?: "duckduckgo" | "exa"): Promise<RunResponse> {
   const res = await fetch(`${GATEWAY_URL}/api/v1/workflow/run/stream`, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nodes: nodes.map(n => ({ id: n.id, type: n.type, data: n.data })), edges: edges.map(e => ({ source: e.source, target: e.target })) }),
+    body: JSON.stringify({ searchProvider, nodes: nodes.map(n => ({ id: n.id, type: n.type, data: n.data })), edges: edges.map(e => ({ source: e.source, target: e.target })) }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -128,7 +128,7 @@ export async function streamWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[
     if (eventName === "error") throw new Error(ev.error || "Execution stream failed. Some nodes may have run.");
     if (eventName === "done") return;
     if (ev.event === "node.completed" && ev.nodeId) steps.push(ev as import("./types").StepResult);
-    if (ev.event === "workflow.finished" && ev.budget) finished = { steps, budget: ev.budget, aborted: ev.aborted ?? null, partial: ev.partial, failedNodes: ev.failedNodes, reportStatus: ev.reportStatus, unverifiedNodes: ev.unverifiedNodes, computedData: ev.computedData, sources: ev.sources };
+    if (ev.event === "workflow.finished" && ev.budget) finished = { steps, budget: ev.budget, aborted: ev.aborted ?? null, partial: ev.partial, failedNodes: ev.failedNodes, reportStatus: ev.reportStatus, unverifiedNodes: ev.unverifiedNodes, computedData: ev.computedData, computedJson: ev.computedJson, sources: ev.sources };
     onEvent(ev);
   };
   try {

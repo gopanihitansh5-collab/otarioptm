@@ -863,6 +863,11 @@ async def _web_search(query: str, objective: Optional[str] = None) -> Dict[str, 
             return out
         except Exception:
             pass  # fall through to the free scrape
+    return await _duckduckgo_search(query, objective)
+
+
+async def _duckduckgo_search(query: str, objective: Optional[str] = None) -> Dict[str, Any]:
+    """Free DuckDuckGo scrape. Makes NO paid API calls, whatever keys exist."""
     try:
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as client:
             resp = await client.post("https://html.duckduckgo.com/html/", data={"q": query})
@@ -1314,6 +1319,7 @@ async def _execute_graph(
     models: List[Dict[str, Any]],
     max_tokens: int,
     on_event: Any = None,
+    search_provider: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute a validated graph; optionally emit real per-node events.
 
@@ -1372,6 +1378,13 @@ async def _execute_graph(
                     stop = True
 
             elif ntype == "web-search":
+                # Explicit free-path enforcement: a run-level searchProvider
+                # or node-level data.provider of "duckduckgo" guarantees NO
+                # paid search API is invoked, without touching credentials.
+                force_free = (
+                    str(data.get("provider") or "").lower() == "duckduckgo"
+                    or (search_provider or "").lower() == "duckduckgo"
+                )
                 query = _substitute(str(data.get("query", "")), outputs) or _gather_upstream(nid, edges, outputs)
                 query = _trim(query)
                 raw_objective = data.get("objective")
@@ -1386,7 +1399,10 @@ async def _execute_graph(
                     raise HTTPException(status_code=402, detail="Budget cap reached - search skipped")
                 settled = False
                 try:
-                    search_out = await _web_search(query, objective)
+                    if force_free:
+                        search_out = await _duckduckgo_search(query, objective)
+                    else:
+                        search_out = await _web_search(query, objective)
                     search_cost, search_over_budget = await _settle_reservation(rid, float(search_out.get("cost") or 0.0))
                     settled = True
                 finally:
@@ -1498,6 +1514,22 @@ async def _execute_graph(
         for r in results
         if r.get("type") == "code-exec" and r.get("status") == "completed"
     }
+    # Structured form when a code node printed JSON (or a Python dict repr):
+    # the report table reads model/rate/volume/total fields from HERE, never
+    # from LLM prose or UI invention. Unparseable stdout has no entry.
+    computed_json: Dict[str, Any] = {}
+    for _nid, _raw in computed_data.items():
+        _text = _raw.strip().strip("`")
+        try:
+            computed_json[_nid] = json.loads(_text)
+            continue
+        except (ValueError, TypeError):
+            pass
+        try:
+            computed_json[_nid] = ast.literal_eval(_text)
+        except (ValueError, SyntaxError, MemoryError):
+            continue
+
     source_urls: List[str] = []
     for r in results:
         if r.get("type") == "web-search" and r.get("output"):
@@ -1525,6 +1557,7 @@ async def _execute_graph(
         # computedData/sources. Never render this as "verified".
         "reportStatus": "incomplete" if incomplete else "mechanically-complete",
         "computedData": computed_data,
+        "computedJson": computed_json,
         "sources": sorted(set(source_urls))[:20],
         "overBudget": any(bool(r.get("overBudget")) for r in results),
         # Nodes whose answer came from the simulated demo tier. These never
@@ -1542,6 +1575,7 @@ async def _execute_graph(
             "unverifiedNodes": unverified_nodes,
             "reportStatus": payload["reportStatus"],
             "computedData": computed_data,
+            "computedJson": computed_json,
             "sources": payload["sources"],
             "overBudget": payload["overBudget"],
             "demoNodes": payload["demoNodes"],
@@ -1554,7 +1588,8 @@ async def workflow_run(request: Request) -> Dict[str, Any]:
     """Compile {nodes, edges} into topological steps and execute them."""
     body = await _json_body(request)
     ordered, edges, models, max_tokens = await _prepare_workflow(body)
-    return await _execute_graph(ordered, edges, models, max_tokens)
+    return await _execute_graph(ordered, edges, models, max_tokens,
+                                search_provider=body.get("searchProvider"))
 
 
 async def workflow_run_stream(request: Request) -> Response:
@@ -1576,7 +1611,8 @@ async def workflow_run_stream(request: Request) -> Response:
                     await queue.put(("event", ev))
 
                 stream_state["result"] = await _execute_graph(
-                    ordered, edges, models, max_tokens, on_event=_emit
+                    ordered, edges, models, max_tokens, on_event=_emit,
+                    search_provider=body.get("searchProvider"),
                 )
                 await queue.put(("done", ""))
             except HTTPException as exc:

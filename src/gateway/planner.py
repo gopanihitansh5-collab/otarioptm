@@ -31,6 +31,10 @@ Node types (the ONLY types), with their fields:
 - {"id": "...", "type": "code-exec", "code": "<python program; print() the result>"}
   Code rules: plain stdlib Python, define every variable before use and keep
   names consistent - generated code is statically checked and run as-is.
+  When computing or comparing, print() EXACTLY ONE JSON object with named
+  fields (e.g. {"rows": [{"model": "...", "input_rate": 0.0, "output_rate":
+  0.0, "volume": 0, "monthly_cost": 0.0}], "currency": "USD"}) - the final
+  report table is built from that JSON, never from chat text.
 Edges: {"source": "<node id>", "target": "<node id>"} - source output feeds target.
 Inside any prompt/query/code, {{node-id}} inserts that node's output.
 

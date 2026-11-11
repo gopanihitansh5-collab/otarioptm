@@ -66,6 +66,7 @@ export type RunResponse = {
   reportStatus?: string;
   unverifiedNodes?: string[];
   computedData?: Record<string, string>;
+  computedJson?: Record<string, unknown>;
   sources?: string[];
   partial?: boolean;
   failedNodes?: string[];

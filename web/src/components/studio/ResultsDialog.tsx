@@ -21,6 +21,7 @@ export type RunDeliverable = {
   reportStatus?: string;
   unverifiedNodes?: string[];
   computedData?: Record<string, string>;
+  computedJson?: Record<string, unknown>;
   sources?: string[];
 };
 
@@ -29,6 +30,7 @@ function reportMarkdown(run: RunDeliverable): string {
   const demo = run.steps.some(s => s.demo);
   const sections = ["# OtariOptm run report", `Recorded: ${run.completedAt}`, `Status: ${incomplete ? "Incomplete or blocked" : "Returned by gateway"}${demo ? " (includes demo output)" : ""}`];
   if (run.failedNodes?.length) sections.push(`Failed or skipped nodes: ${run.failedNodes.join(", ")}`);
+  if (run.computedJson) sections.push(`## Structured computed output\n\n${JSON.stringify(run.computedJson, null, 2)}`);
   if (run.computedData) for (const [id, output] of Object.entries(run.computedData)) sections.push(`## Computed data: ${id}\n\nExact successful Python stdout, not model prose:\n\n${output}`);
   if (run.sources?.length) sections.push(`## Search source URLs\n\n${run.sources.join("\n")}\n\nSearch URLs are returned references, not verification of every report claim.`);
   if (run.task) sections.push(`## Task\n\n${run.task}`);
@@ -74,6 +76,15 @@ export function ResultsDialog({ run, open, onClose }: { run: RunDeliverable | nu
       <div className="scroll-thin overflow-y-auto p-5">
         {(failed || demo) && <p role="status" className="mb-5 rounded-xl border border-amber/40 bg-amber/10 p-3 text-sm text-amber">{failed ? "This run is incomplete or contains blocked/failed steps. " : ""}{demo ? "This run includes explicitly labeled demo output, not live model inference." : ""}</p>}
         {run.task && <p className="mb-5 whitespace-pre-wrap text-sm text-silver">{run.task}</p>}
+        {run.computedJson && Object.entries(run.computedJson).map(([id, value]) => {
+          if (!value || typeof value !== "object" || !Array.isArray((value as { rows?: unknown }).rows)) return null;
+          const obj = value as { rows: unknown[]; currency?: unknown };
+          const rows = obj.rows.filter((r): r is Record<string, unknown> => !!r && typeof r === "object" && !Array.isArray(r));
+          if (!rows.length) return null;
+          const columns = ["model", "input_rate", "output_rate", "volume", "monthly_cost"].filter(k => rows.some(r => k in r));
+          if (!columns.length) return null;
+          return <section key={id} className="mb-6"><h3 className="mb-2 text-sm font-semibold text-ice">Structured computation: {id}</h3><p className="mb-3 text-xs text-silver">Fields from actual parsed Python output. Currency: {typeof obj.currency === "string" ? obj.currency : "not reported"}. Rate units and source accuracy must be checked against the inputs.</p><div className="overflow-x-auto rounded-xl border border-steel"><table className="w-full text-left text-xs"><thead><tr>{columns.map(c => <th key={c} className="bg-elevated p-3 text-silver">{c}</th>)}</tr></thead><tbody>{rows.map((r, i) => <tr key={i} className="border-t border-steel">{columns.map(c => <td key={c} className="p-3 text-ice">{typeof r[c] === "string" || typeof r[c] === "number" ? String(r[c]) : "not reported"}</td>)}</tr>)}</tbody></table></div></section>;
+        })}
         {run.computedData && Object.keys(run.computedData).length > 0 && <section className="mb-6"><h3 className="mb-2 text-sm font-semibold text-ice">Computed data</h3><p className="mb-3 text-xs text-silver">Exact successful Python output. Model commentary below cannot replace these values. Correct computation does not verify the input data.</p><div className="overflow-x-auto rounded-xl border border-steel"><table className="w-full text-left text-xs"><thead className="bg-elevated text-silver"><tr><th className="p-3">Node</th><th className="p-3">Actual stdout</th></tr></thead><tbody>{Object.entries(run.computedData).map(([id, output]) => <tr key={id} className="border-t border-steel"><th className="p-3 align-top font-medium text-ice">{id}</th><td className="p-3"><pre className="whitespace-pre-wrap break-words font-mono leading-6 text-ice">{output}</pre></td></tr>)}</tbody></table></div></section>}
         {run.sources && run.sources.length > 0 && <section className="mb-6"><h3 className="mb-2 text-sm font-semibold text-ice">Search source URLs</h3><p className="mb-2 text-xs text-silver">Returned references, not verification of every claim.</p><ul className="space-y-2">{run.sources.filter(url => /^https?:\/\//.test(url)).map(url => <li key={url}><a href={url} target="_blank" rel="noopener noreferrer" className="break-all text-xs text-lime underline">{url}</a></li>)}</ul></section>}
         <p className="mb-3 text-xs text-silver">Model output / commentary. Execution completion is not factual verification.</p>

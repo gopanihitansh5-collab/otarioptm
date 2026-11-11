@@ -105,6 +105,7 @@ function StudioInner() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [fitKey, setFitKey] = useState(0);
+  const [searchProvider, setSearchProvider] = useState<"duckduckgo" | "exa">("duckduckgo");
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [planStages, setPlanStages] = useState<PlanResponse["stages"]>();
   const [planProvenance, setPlanProvenance] = useState<PlanResponse["planner"] | undefined>();
@@ -280,8 +281,8 @@ function StudioInner() {
           if (event.event === "node.started") updateNodeData(event.nodeId, { status: "running", statusInfo: null });
           if (event.event === "node.completed") updateNodeData(event.nodeId, { status: stepFailed(event as import("@/lib/types").StepResult) ? "error" : "done", statusInfo: event as import("@/lib/types").StepResult });
           if (event.event === "node.blocked") updateNodeData(event.nodeId, { status: "error" });
-        });
-        setLastDeliverable({ steps: response.steps, edges: runEdges, aborted: response.aborted, completedAt: new Date().toISOString(), task: generatedTask, planner: planProvenance, stages: planStages, partial: response.partial, failedNodes: response.failedNodes, reportStatus: response.reportStatus, unverifiedNodes: response.unverifiedNodes, computedData: response.computedData, sources: response.sources });
+        }, searchProvider);
+        setLastDeliverable({ steps: response.steps, edges: runEdges, aborted: response.aborted, completedAt: new Date().toISOString(), task: generatedTask, planner: planProvenance, stages: planStages, partial: response.partial, failedNodes: response.failedNodes, reportStatus: response.reportStatus, unverifiedNodes: response.unverifiedNodes, computedData: response.computedData, computedJson: response.computedJson, sources: response.sources });
         const byId = new Map(response.steps.map((s) => [s.nodeId, s]));
         // Batch responses carry real results, but not live per-node start times.
         for (const step of response.steps) {
@@ -518,6 +519,7 @@ function StudioInner() {
 
           <button type="button" onClick={() => setPlannerOpen(true)} disabled={running} className={`${SECONDARY_BTN} disabled:opacity-40`}>Plan a task</button>
           <button type="button" onClick={() => setResultsOpen(true)} disabled={!lastDeliverable || running} className={`${SECONDARY_BTN} disabled:opacity-40`} aria-label="View run results">Results</button>
+          <select aria-label="Search provider for this run" value={searchProvider} disabled={running} onChange={e => setSearchProvider(e.target.value as "duckduckgo" | "exa")} className="h-11 rounded-lg border border-steel bg-elevated px-2 text-xs text-ice"><option value="duckduckgo">Search: DuckDuckGo (free)</option><option value="exa">Search: Exa (separate credits)</option></select>
           <SaveIndicator status={saveStatus} />
         </div>
 
