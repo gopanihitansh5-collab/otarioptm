@@ -741,6 +741,23 @@ async def _send_budget_alert(node_id: str) -> None:
         pass  # alerts must never break workflow execution
 
 
+def _runtime_info() -> Dict[str, Any]:
+    """Truthful runtime/transport labels for the dashboard.
+
+    On Vercel serverless (VERCEL env set) the /api/v1/activity WebSocket
+    cannot stay open, in-memory activity/budget state is per-invocation,
+    and the supported live path is polling GET /api/v1/activity. The
+    dashboard must render "polling" / "snapshot" state there instead of a
+    fake live WebSocket panel. Locally both WebSocket and polling work.
+    """
+    serverless = bool(os.environ.get("VERCEL"))
+    return {
+        "runtime": "vercel-serverless" if serverless else "local",
+        "activity_transport": "poll" if serverless else "websocket+poll",
+        "activity_snapshot_path": "/api/v1/activity",
+    }
+
+
 async def health() -> Dict[str, Any]:
     snap = await budget.snapshot()
     return {
@@ -748,6 +765,7 @@ async def health() -> Dict[str, Any]:
         "otari": otari_client is not None,
         "groq": groq_client is not None,
         "budget": snap,
+        **_runtime_info(),
     }
 
 
@@ -981,7 +999,9 @@ def _trim(text: str, limit: int = 2000) -> str:
 
 
 async def activity_snapshot() -> Dict[str, Any]:
-    return {"events": ACTIVITY_LOG[-200:], "budget": await budget.snapshot()}
+    # Serverless-compatible activity feed: this snapshot is the supported
+    # transport where WebSockets cannot stay open (see _runtime_info).
+    return {"events": ACTIVITY_LOG[-200:], "budget": await budget.snapshot(), **_runtime_info()}
 
 
 async def activity_ws(websocket: WebSocket) -> None:
