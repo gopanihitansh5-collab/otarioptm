@@ -1,0 +1,167 @@
+/*
+ * Kinetic editorial motion kit - scoped module styles.
+ * Consumes the landing brand tokens with literal fallbacks so it works
+ * before and after the global token repaint (--accent, --accent-strong,
+ * --color-ice, --otari-material-gradient, --glow-champagne, --dur-*,
+ * --ease-out-sharp). No globals, no scroll hijack, no layout shift:
+ * every animation is opacity/transform/filter on already-rendered text.
+ */
+
+/* ---- gradient phrase (champagne material) ----------------------------- */
+.gradientText {
+  background-image: var(
+    --otari-material-gradient,
+    linear-gradient(
+      125deg,
+      #665747 0%,
+      #b8a98f 30%,
+      #d8cbb8 48%,
+      #9d8f87 72%,
+      #555c60 100%
+    )
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- KineticType -------------------------------------------------------- */
+/* Every character is rendered at first paint (SSR-safe, zero layout shift);
+ * animation only toggles opacity/transform of existing glyphs. */
+.char {
+  display: inline-block;
+  white-space: pre;
+  opacity: 1;
+}
+.charPending {
+  opacity: 0;
+  transform: translateY(0.25em);
+}
+.charShown {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity var(--dur-fast, 160ms) var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1)),
+    transform var(--dur-fast, 160ms) var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1));
+}
+.cursor {
+  display: inline-block;
+  width: 0.08em;
+  height: 0.95em;
+  margin-left: 0.06em;
+  vertical-align: -0.12em;
+  background: currentColor;
+  animation: cursorBlink 1.05s steps(1) infinite;
+}
+@keyframes cursorBlink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+.skipHint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- Reveal -------------------------------------------------------------- */
+/* Content starts visible (SSR/no-JS safe); the hidden-start state is only
+ * armed client-side when motion is allowed. */
+.fadeUp[data-armed="true"] {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity var(--dur-reveal, 600ms) var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1)),
+    transform var(--dur-reveal, 600ms) var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1));
+  transition-delay: var(--motion-delay, 0ms);
+}
+.fadeUp[data-armed="true"].inView {
+  opacity: 1;
+  transform: translateY(0);
+}
+.mask[data-armed="true"] {
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path var(--dur-reveal, 600ms)
+    var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1));
+  transition-delay: var(--motion-delay, 0ms);
+}
+.mask[data-armed="true"].inView {
+  clip-path: inset(0 0 0% 0);
+}
+.word {
+  display: inline-block;
+  white-space: pre;
+}
+.word[data-armed="true"] {
+  opacity: 0;
+  transform: translateY(0.35em);
+  transition:
+    opacity var(--dur-base, 320ms) var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1)),
+    transform var(--dur-base, 320ms) var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1));
+  transition-delay: var(--motion-delay, 0ms);
+}
+.word[data-armed="true"].inView {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- WordmarkSignature ----------------------------------------------------- */
+.sigChar {
+  display: inline-block;
+  opacity: 1;
+}
+.sigChar[data-armed="true"] {
+  opacity: 0;
+  transform: translateY(0.5em);
+  filter: blur(4px);
+  transition:
+    opacity var(--dur-base, 320ms) var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1)),
+    transform var(--dur-base, 320ms) var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1)),
+    filter var(--dur-base, 320ms) var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1));
+  transition-delay: var(--motion-delay, 0ms);
+}
+.sigChar[data-armed="true"].inView {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+.sigUnderline {
+  display: block;
+  height: 1px;
+  margin-top: 0.15em;
+  background: var(--accent, #b8a98f);
+  transform-origin: left center;
+}
+.sigUnderline[data-armed="true"] {
+  transform: scaleX(0);
+  transition: transform var(--dur-activate, 700ms)
+    var(--ease-out-sharp, cubic-bezier(0.22, 0.61, 0.36, 1));
+  transition-delay: var(--motion-delay, 0ms);
+}
+.sigUnderline[data-armed="true"].inView {
+  transform: scaleX(1);
+}
+
+/* ---- reduced motion: everything static and visible ------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .cursor { animation: none; }
+  .charPending,
+  .charShown {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .fadeUp[data-armed="true"],
+  .mask[data-armed="true"],
+  .word[data-armed="true"],
+  .sigChar[data-armed="true"],
+  .sigUnderline[data-armed="true"] {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    clip-path: none;
+    transition: none;
+  }
+}
